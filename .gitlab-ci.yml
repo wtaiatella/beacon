@@ -1,0 +1,416 @@
+# Agentic Workspace CI Pipeline
+#
+# Validates workspace integrity through relationship-based checks.
+# No hardcoded counts — validation adapts as files are added/removed.
+#
+# workflow:rules (GitLab 15+):
+#   - merge_request_event  → MR pipelines (source branch vs target)
+#   - $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH → default-branch push pipelines (e.g. main)
+#   - else → never (suppresses ad-hoc topic-branch push pipelines; open an MR instead)
+#
+# Job scoping (within allowed workflows):
+#   MRs:       lint + validate + consistency + parallel test jobs + SAST
+#   Default:   same + release (manual tag on main)
+#
+# Versioning: YY.M.RELEASE (e.g., 26.4.1) via manual tag job on main.
+# Runners: prd-gitlab-runner (instance runners, Linux, AWS us-west-2)
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+workflow:
+  rules:
+    # Merge request pipelines — routine code review + CI
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Default branch (e.g. main) — post-merge validation + manual release job
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - when: never
+
+stages:
+  - lint
+  - validate
+  - consistency
+  - test
+  - release
+
+default:
+  tags:
+    - aws
+
+# ---------------------------------------------------------------------------
+# Stage: lint — runs on ALL pipelines (branches, MRs, main)
+# ---------------------------------------------------------------------------
+
+shell-syntax:
+  stage: lint
+  script:
+    - echo "── Shell Syntax Check ──"
+    - >-
+      FAIL=0;
+      for f in .cursor/hooks/*.sh scripts/tools/*.sh scripts/setup.sh scripts/upgrade.sh; do
+        if [ ! -f "$f" ]; then continue; fi;
+        HEAD=$(head -1 "$f");
+        if ! echo "$HEAD" | grep -q '#!/usr/bin/env bash\|#!/bin/bash'; then
+          echo "WARN $f -- non-standard shebang";
+        fi;
+        if bash -n "$f" 2>/dev/null; then
+          echo "OK $f";
+        else
+          echo "FAIL $f -- syntax error"; bash -n "$f" 2>&1 || true; FAIL=1;
+        fi;
+      done;
+      test "$FAIL" -eq 0 || exit 1
+
+executable-bits:
+  stage: lint
+  script:
+    - echo "── Executable Permissions ──"
+    - >-
+      FAIL=0;
+      for f in .cursor/hooks/*.sh scripts/tools/*.sh scripts/setup.sh scripts/upgrade.sh; do
+        if [ ! -f "$f" ]; then continue; fi;
+        if [ -x "$f" ]; then
+          echo "OK $f";
+        else
+          echo "FAIL $f -- not executable (needs chmod +x)"; FAIL=1;
+        fi;
+      done;
+      test "$FAIL" -eq 0 || exit 1
+
+no-secrets:
+  stage: lint
+  script:
+    - echo "── Secrets Scan ──"
+    - FAIL=0
+    - if find . -name '.env' -o -name '.env.*' 2>/dev/null | grep -v node_modules | grep -q .; then echo "FAIL .env file(s) found in repo"; find . -name '.env' -o -name '.env.*' 2>/dev/null | grep -v node_modules; FAIL=1; fi
+    - test "$FAIL" -eq 0 || { exit 1; }
+    - echo "OK No .env files committed"
+
+# ---------------------------------------------------------------------------
+# Stage: validate — runs on MRs and protected branches
+#
+# Ordering: GitLab runs all jobs in this stage in parallel (no `needs:`). They share
+# the same gate below; any failure fails the pipeline. Lint runs after `lint` stage
+# and before `consistency` (see `stages:` at top).
+#
+# `rules` for MR + default protected branches are defined once on
+# `.validate_mr_and_protected`. Agent/spec *content* rules live only in
+# `scripts/tools/lint-workspace-agents.sh` and `lint-workspace-specs.sh` — not
+# duplicated inline here.
+# ---------------------------------------------------------------------------
+
+# Hidden: shared `rules` for validate jobs (same as historical agent/skill-validation).
+.validate_mr_and_protected:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^(main|master|develop)$/
+
+workspace-spec-lint:
+  stage: validate
+  extends:
+    - .validate_mr_and_protected
+  script:
+    - echo "── Workspace Spec Content Lint ──"
+    - ./scripts/tools/lint-workspace-specs.sh
+
+agent-validation:
+  stage: validate
+  extends:
+    - .validate_mr_and_protected
+  # Content + structural checks (name, description, model, Use when): single source in script.
+  script:
+    - echo "── Agent Validation (content lint) ──"
+    - ./scripts/tools/lint-workspace-agents.sh
+
+skill-validation:
+  stage: validate
+  extends:
+    - .validate_mr_and_protected
+  script:
+    - echo "── Skill Validation ──"
+    - >-
+      FAIL=0;
+      for f in $(find .cursor/skills -name 'SKILL.md'); do
+        BASENAME=$(echo "$f" | sed 's|.cursor/skills/||');
+        DASHES=$(grep -c '^---$' "$f" || true);
+        if [ "$DASHES" -lt 2 ]; then
+          echo "FAIL $BASENAME -- missing YAML frontmatter"; FAIL=1; continue;
+        fi;
+        FM=$(sed -n '/^---$/,/^---$/p' "$f" | head -10);
+        echo "$FM" | grep -q '^name:' || { echo "FAIL $BASENAME -- missing name"; FAIL=1; continue; };
+        echo "$FM" | grep -q '^description:' || { echo "FAIL $BASENAME -- missing description"; FAIL=1; continue; };
+        echo "OK $BASENAME";
+      done;
+      test "$FAIL" -eq 0 || exit 1
+
+# Runner default image (e.g. minimal ubuntu:20.04) may not include python3.
+.validate_python_deps:
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq python3 >/dev/null
+
+# Runner image may not include git (docs-check + git-using test jobs need it).
+# Also mark the checkout dir safe to avoid git "dubious ownership" failures when the
+# job container's user differs from the checkout owner.
+.install_git:
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git >/dev/null
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+
+# Some test jobs need both python3 and git — their git-using scripts also invoke
+# python3 (e.g. pipeline-finish.sh runs python3 audit-session-trace.py).
+.install_python_and_git:
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq python3 git >/dev/null
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+
+json-validation:
+  stage: validate
+  extends:
+    - .validate_mr_and_protected
+    - .validate_python_deps
+  script:
+    - echo "── JSON Validation ──"
+    - python3 -c "import json; json.load(open('.cursor/mcp.json')); print('OK mcp.json')"
+    - python3 -c "import json; json.load(open('.cursor/hooks.json')); print('OK hooks.json')"
+
+router-rule:
+  stage: validate
+  extends:
+    - .validate_mr_and_protected
+  script:
+    - echo "── Router Rule ──"
+    - RULE=".cursor/rules/00-workspace-router.mdc"
+    - test -f "$RULE" || { echo "FAIL $RULE missing"; exit 1; }
+    - grep -q 'alwaysApply.*true' "$RULE" || { echo "FAIL $RULE -- must have alwaysApply true"; exit 1; }
+    - echo "OK Router rule valid"
+
+# full-repo lint (ROAD-ID guard, MCP agent rules, etc.) — same as local `./scripts/tools/lint-check.sh .`
+workspace-lint-check:
+  stage: validate
+  extends:
+    - .validate_mr_and_protected
+    - .validate_python_deps
+  script:
+    - echo "── Workspace lint-check ──"
+    - ./scripts/tools/lint-check.sh .
+
+# ---------------------------------------------------------------------------
+# Stage: consistency — runs on MRs and protected branches
+# ---------------------------------------------------------------------------
+
+hooks-sync:
+  stage: consistency
+  extends:
+    - .validate_python_deps
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^(main|master|develop)$/
+  script:
+    - echo "── Hooks Sync (hooks.json ↔ scripts) ──"
+    - |
+      FAIL=0
+      CMDS=$(python3 <<'PY'
+      import json
+      h = json.load(open('.cursor/hooks.json'))
+      for ev in h.get('hooks', {}).values():
+          for e in ev:
+              print(e['command'])
+      PY
+      )
+      for cmd in $CMDS; do
+        if [ -z "$cmd" ]; then continue; fi;
+        if [ -f "$cmd" ]; then
+          echo "OK $cmd";
+        else
+          echo "FAIL hooks.json references $cmd but file missing"; FAIL=1;
+        fi;
+      done;
+      for f in .cursor/hooks/*.sh; do
+        REL=$(echo "$f" | sed 's|^\./||');
+        if echo "$CMDS" | grep -q "$REL"; then
+          echo "OK $REL registered";
+        else
+          echo "FAIL $REL not registered in hooks.json"; FAIL=1;
+        fi;
+      done;
+      test "$FAIL" -eq 0 || exit 1
+
+docs-check:
+  stage: consistency
+  extends:
+    - .install_git
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^(main|master|develop)$/
+  script:
+    - echo "── Documentation Check ──"
+    - TARGET="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-HEAD~1}"
+    - git fetch origin "$TARGET" --depth=50 2>/dev/null || true
+    - CHANGED=$(git diff --name-only "origin/$TARGET"...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+    - echo "Changed files:" && echo "$CHANGED" && echo ""
+    - >-
+      WARN=0;
+      if echo "$CHANGED" | grep -q '.cursor/agents/'; then
+        if ! echo "$CHANGED" | grep -q 'README.md'; then
+          echo "WARN Agent files changed but README.md was not updated"; WARN=1;
+        fi;
+        if ! echo "$CHANGED" | grep -q '00-workspace-router.mdc'; then
+          echo "WARN Agent files changed but router rule was not updated"; WARN=1;
+        fi;
+      fi;
+      if echo "$CHANGED" | grep -q '.cursor/hooks/.*\.sh'; then
+        if ! echo "$CHANGED" | grep -q '.cursor/hooks.json'; then
+          echo "WARN Hook scripts changed but hooks.json was not updated"; WARN=1;
+        fi;
+      fi;
+      if echo "$CHANGED" | grep -q '.cursor/skills/'; then
+        if ! echo "$CHANGED" | grep -q '00-workspace-router.mdc'; then
+          echo "WARN Skills changed but router rule was not updated"; WARN=1;
+        fi;
+      fi;
+      if [ "$WARN" -gt 0 ]; then
+        echo "";
+        echo "Documentation warnings detected (non-blocking). See CONTRIBUTING.md.";
+      else
+        echo "OK All documentation in sync";
+      fi
+    - echo "── Nested Task agent wording (warnings-only) ──"
+    - ./scripts/tools/check-nested-task-docs.sh
+    - echo "── Plan segment doc signals (warnings-only) ──"
+    - ./scripts/tools/check-plan-segment-docs.sh
+    - echo "── Phase 1 pre-plan orchestration docs (blocking) ──"
+    - ./scripts/tools/verify-preplan-orchestration-docs.sh
+    - echo "── QA / Git / Finish boundaries (blocking) ──"
+    - ./scripts/tools/verify-qa-git-boundaries.sh
+    - echo "── Task(do) / session / router (blocking) ──"
+    - ./scripts/tools/verify-taskdo-session-boundaries.sh
+    - echo "── manual checklist — paths & optional md links (blocking) ──"
+    - ./scripts/tools/verify-phased-implementation-checklist-links.sh
+
+# ---------------------------------------------------------------------------
+# Stage: test — GitLab SAST (from included template) + fast script smoke checks
+# ---------------------------------------------------------------------------
+# The `sast` job is defined by the included Security/SAST.gitlab-ci.yml template.
+# It runs automatically on MRs and default branch. No custom configuration needed.
+# Results appear in the MR security widget.
+
+# Parallel test jobs (replaces monolithic session-trace-help-smoke). Same MR + protected
+# gate as validate jobs via `.validate_mr_and_protected`; across jobs, the same
+# scripts/tools/tests/*.sh fixtures and --help smokes as the former monolithic job
+# (including test-cursor-project-hash.sh in test-workspace-multiroot).
+
+test-session-trace-transcript:
+  stage: test
+  extends:
+    - .validate_mr_and_protected
+    - .validate_python_deps
+  script:
+    - echo "── Session trace / transcript (audit, query, session-memory ordering) ──"
+    - echo "── audit-session-trace fixture tests ──"
+    - bash scripts/tools/tests/test-audit-session-trace.sh
+    - echo "── query-transcript fixture tests ──"
+    - bash scripts/tools/tests/test-query-transcript.sh
+    - echo "── Session-memory ordering ──"
+    - bash scripts/tools/tests/test-session-memory-ordering.sh
+
+test-workspace-multiroot:
+  stage: test
+  extends:
+    - .validate_mr_and_protected
+    - .install_python_and_git
+  script:
+    - 'echo "── Workspace / multi-root (ROAD-48): --help + integration tests ──"'
+    - ./scripts/tools/cursor-project-hash.sh --help >/dev/null
+    - echo "── cursor-project-hash fixture tests ──"
+    - bash scripts/tools/tests/test-cursor-project-hash.sh
+    - ./scripts/tools/generate-code-workspace.sh --help >/dev/null
+    - ./scripts/tools/attach-project.sh --help >/dev/null
+    - echo "OK cursor-project-hash, generate-code-workspace, attach-project --help"
+    - echo "── Multi-root workspace JSON (ROAD-48) ──"
+    - bash scripts/tools/tests/test-generate-code-workspace.sh
+    - echo "── git-inspect --repo (ROAD-48 target branch probes) ──"
+    - bash scripts/tools/tests/test-git-inspect.sh
+    - echo "── pipeline-finish attach-target + detach-workspace (ROAD-48 Phase 4) ──"
+    - bash scripts/tools/tests/test-pipeline-finish.sh
+
+test-shell-encapsulation:
+  stage: test
+  extends:
+    - .validate_mr_and_protected
+    - .install_python_and_git
+  script:
+    - echo "── Shell encapsulation (pipeline-init, git-inspect, pipeline-finish, log-gate) ──"
+    - bash scripts/tools/tests/test-shell-encapsulation-scripts.sh
+
+# ---------------------------------------------------------------------------
+# Stage: release — manual tag on main only
+# ---------------------------------------------------------------------------
+#
+# create-release — order of operations (must stay consistent):
+#   1) Compute next YY.M.RELEASE tag string (not created yet).
+#   2) generate-changelog.sh → dist/release-notes.md (must run BEFORE git tag so the
+#      previous release tag is still the latest for git describe / commit range).
+#   3) build-release-bundle.sh with VERSION=<tag> → dist/agentic-workspace-<tag>.tar.gz
+#   4) git tag + git push origin <tag> (publish the tag GitLab Release will point at).
+#   5) release-cli create — release notes as description text; tarball via --assets-link
+#      (link_type + direct_asset_path per Releases API).
+#
+# Auth / tokens (no secrets in repo):
+#   - release-cli picks up CI_SERVER_URL, CI_JOB_TOKEN, CI_PROJECT_ID from predefined
+#     CI variables and calls the Releases API for this project. Same-project releases
+#     typically work with the default job token per GitLab docs; if your org restricts
+#     job-token API access, set a project CI variable GITLAB_PRIVATE_TOKEN (api scope)
+#     — release-cli uses it over CI_JOB_TOKEN — configure only in GitLab UI, not in-repo.
+#   - git push uses the credentials GitLab Runner configures for the checkout (not
+#     committed in this repository).
+#
+create-release:
+  stage: release
+  image:
+    name: registry.gitlab.com/gitlab-org/release-cli:latest
+  variables:
+    # Full history + tags so generate-changelog can find the previous tag and list commits.
+    GIT_DEPTH: "0"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  before_script:
+    - apk add --no-cache bash git rsync tar gzip coreutils grep sed gawk jq ca-certificates
+  script:
+    - echo "── Create Release (changelog + bundle + tag + GitLab Release) ──"
+    - git fetch origin --tags
+    # Portable month (GNU date %-m is not available on Alpine/busybox date).
+    - YEAR=$(date -u +%y)
+    - MONTH=$((10#$(date -u +%m)))
+    - PREFIX="${YEAR}.${MONTH}"
+    - LATEST=$(git tag -l "${PREFIX}.*" --sort=-v:refname | head -1 || echo "")
+    - >-
+      if [ -z "$LATEST" ]; then
+        RELEASE=1;
+      else
+        LAST_RELEASE=$(echo "$LATEST" | awk -F. '{print $3}');
+        RELEASE=$((LAST_RELEASE + 1));
+      fi
+    - TAG="${PREFIX}.${RELEASE}"
+    - 'echo "Planned tag: $TAG"'
+    - mkdir -p dist
+    - echo "── Changelog (since previous tag, ref=$CI_COMMIT_SHA) ──"
+    - bash scripts/tools/generate-changelog.sh --ref "$CI_COMMIT_SHA" -o dist/release-notes.md
+    - echo "── Release bundle ──"
+    - VERSION="$TAG" bash scripts/tools/build-release-bundle.sh --version "$TAG" --output-dir dist
+    - TARBALL="dist/agentic-workspace-${TAG}.tar.gz"
+    - test -f "$TARBALL"
+    - echo "── Git tag + push ──"
+    - git tag "$TAG"
+    - git push origin "$TAG"
+    - echo "── GitLab Release (release-cli) ──"
+    - ASSET_JSON=$(jq -cn --arg name "agentic-workspace-${TAG}.tar.gz" --arg url "$CI_PROJECT_URL" --arg path "$TARBALL" '{name:$name,url:$url,link_type:"package",direct_asset_path:$path}')
+    # --description path: release-cli reads the file when the value has no whitespace (avoids shell expansion of commit-message content).
+    - release-cli create --name "Release ${TAG}" --tag-name "$TAG" --description dist/release-notes.md --assets-link "$ASSET_JSON"
+    - echo "OK Release $TAG published"
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - dist/release-notes.md
+      - dist/agentic-workspace-*.tar.gz

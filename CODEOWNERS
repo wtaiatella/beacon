@@ -1,0 +1,14 @@
+# CODEOWNERS — GitLab Code Ownership
+# See https://docs.gitlab.com/ee/user/project/codeowners/
+#
+# Default owner for all files
+* @avatax-platform
+
+# Workspace framework lead
+.cursor/ @vivian.lied
+scripts/ @vivian.lied
+docs/ @vivian.lied
+README.md @vivian.lied
+CONTRIBUTING.md @vivian.lied
+.gitlab-ci.yml @vivian.lied
+.gitignore @vivian.lied

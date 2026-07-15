@@ -1,0 +1,74 @@
+# Ignore everything by default (child repos, temp files, etc.)
+*
+
+# Whitelist workspace framework files
+!.gitignore
+!.gitlab-ci.yml
+!CODEOWNERS
+!README.md
+!CONTRIBUTING.md
+
+# Cursor config (rules, agents, skills, hooks, project MCP)
+!.cursor/
+!.cursor/mcp.json
+!.cursor/hooks.json
+!.cursor/models.yml
+!.cursor/models.user.yml
+!.cursor/settings.json
+!.cursor/hooks/
+!.cursor/hooks/**
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
+!.cursor/agents/
+!.cursor/agents/**
+
+# User-local orchestrator prefs (PROJECTS_ROOT, optional future keys) — not whitelisted; stays ignored via *.
+/.env.local
+
+# Claude Code config (project memory, subagents, commands, skills, hooks, MCP)
+!CLAUDE.md
+!.mcp.json
+!.claude/
+!.claude/settings.json
+!.claude/hooks/
+!.claude/hooks/**
+!.claude/agents/
+!.claude/agents/**
+!.claude/commands/
+!.claude/commands/**
+!.claude/skills/
+!.claude/skills/**
+
+# Local Claude Code overrides (per-developer, NOT tracked)
+.claude/settings.local.json
+
+# Setup, tooling, and documentation
+!scripts/
+!scripts/**
+!docs/
+!docs/**
+
+# Knowledge base (shared project context, tracked in git)
+!knowledge/
+!knowledge/**
+
+# Specs are developer working artifacts, NOT tracked
+# (created at runtime by setup.sh, used locally per developer)
+docs/specs/
+
+# Pipeline summaries are local developer artifacts, NOT tracked
+docs/summaries/
+
+# Session memory (ephemeral, per-developer); README for conventions is tracked
+docs/sessions/*
+!docs/sessions/README.md
+
+# Legacy session shim names at repository root only (ROAD-53); does not affect docs/** or tracked session README
+/exploration
+/qa-artifacts
+
+# Local audit log (created by sessionEnd hook)
+docs/audit.log
+scripts/tools/__pycache__
