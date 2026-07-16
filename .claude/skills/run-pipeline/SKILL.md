@@ -57,7 +57,7 @@ You are the **main session agent** executing this skill. There is **no** `/run` 
 From the user’s `/run` line, extract:
 
 - **Targets:** a **ticket-folder path** or a **Jira key** — never a single-file `spec.md` path (FR-4, FR-5, AC-6):
-  - **Ticket folder:** `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` (folder containing `prd.md`, `spectech.md`, `tasks.md`, `_state.json`, `_notes.md` — see the `ticket-workflow` skill).
+  - **Ticket folder:** `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — folder containing `prd.md`, `spectech.md`, `tasks.md`, `_state.json`, `_notes.md` (see the `ticket-workflow` skill).
   - **Jira key:** e.g. `BG-10965` — resolves to an existing ticket folder (matched via `_state.json.ticket`) or scaffolds a new one; see **Ticket-folder resolution (Jira-key primary argument)** below.
   - **Shorthand:** slug match (finds the folder), `latest` (most recent).
   - Single-file `spec.md` paths and bare target-directory discovery for a spec-authoring persona are **not** accepted — the required orchestrator's front end is always **`Task(prd)`**→**`Task(spectech)`**→**`Task(tasks)`** (FR-3); there is no `Task(plan)` and no `/plan` in this orchestrator (FR-4).
@@ -71,12 +71,12 @@ Implements spectech's **D8**. When the primary argument matches a Jira-key patte
 
 1. Search `docs/specs/*/_state.json` for a `.ticket` field matching the key.
 2. **If found:** use that folder — proceed to **§3-4** using the existing `_state.json`/`_notes.md`.
-3. **If not found:** create the folder scaffold `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` (date = today, slug derived from the key) with a bare `_state.json` (ticket key set, `steps` empty) + `_notes.md` (per the `ticket-workflow` skill), then proceed to **§3-4** with the Jira key passed through as context to `Task(prd)`.
+3. **If not found:** create the folder scaffold `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (date = today, `{TICKET-KEY}` is the Jira key as-is e.g. `BG-10965`, slug is a short kebab-case description derived from the key) with a bare `_state.json` (ticket key set, `steps` empty) + `_notes.md` (per the `ticket-workflow` skill), then proceed to **§3-4** with the Jira key passed through as context to `Task(prd)`.
 4. **Does not** call `ticket-intake` — FR-10 is explicit that the six standalone pieces (including `ticket-intake`) are not wired into the required orchestrator. A user who wants full Jira intake (description/comments/attachments) runs `ticket-intake <KEY>` first, then hands the resulting folder to `/run`.
 
 ### Ticket-folder validation
 
-When the primary argument is a **folder path** (`docs/specs/{YYYY-MM-DD}-ticket-{slug}/`):
+When the primary argument is a **folder path** (`docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` or `docs/specs/{YYYY-MM-DD}-{slug}/`):
 
 1. **Validate folder exists** — if not, ask user: create new or abort.
 2. **Check for files in order:** `tasks.md` → `spectech.md` → `prd.md` → check `_state.json.current_step` / `.steps` for workflow status (see the `ticket-workflow` skill for the schema).
@@ -99,7 +99,7 @@ When suggesting a new branch name (especially after **branch consent** on a prot
 | Feature work | `feature/{spec-slug}` | `feature/road-24-gitlab-integration` |
 | Hotfix | `hotfix/{spec-slug}` | `hotfix/acme-auth-timeout` |
 
-Derive **`{spec-slug}`** from the ticket-folder name: strip `docs/specs/`, the date prefix `YYYY-MM-DD-`, and the `ticket-` prefix (or use the folder's shorthand slug). If **`--branch foo`** is present, treat **`foo`** as the primary suggestion but still obtain **explicit user approval** before any `git checkout -b` / branch create — same as today.
+Derive **`{spec-slug}`** from the ticket-folder name: strip `docs/specs/`, the date prefix `YYYY-MM-DD-`, and the ticket-key prefix `{TICKET-KEY}-` when present (or use the folder's shorthand slug). If **`--branch foo`** is present, treat **`foo`** as the primary suggestion but still obtain **explicit user approval** before any `git checkout -b` / branch create — same as today.
 
 ## Manual step gates (`--manual`)
 

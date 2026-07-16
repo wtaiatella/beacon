@@ -111,7 +111,7 @@ For each unresolved finding (or group):
 ## Formatting tips
 
 - Use stable **IDs** for findings (1, 2, 3...) so "Next Steps" can reference them.
-- **Every finding carries two references:** the **evidence** (`file:line`, or migration/table name for data) **and** the **source-ref** it traces to (`FR-###` / `SC-###` / `AC-#` / task `T###` / spectech section). Findings that trace to no requirement are the scope-creep signal.
+- **Every finding carries two references:** the **evidence** (`file:line`, or migration/table name for data) **and** the **source-ref** it traces to (`FR-###` / `SC-###` / `AC.N` / task `T###` / spectech section). Findings that trace to no requirement are the scope-creep signal.
 - Keep scanner excerpts **summarized** if verbose; full logs can be appendix or CI link.
 - Prefer verifying against the **actual diff/code and fresh command output** — not the implementer's summary.
 

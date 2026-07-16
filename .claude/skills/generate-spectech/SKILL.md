@@ -171,8 +171,8 @@ verified — test type + a concrete check. This is what QA and `/tasks` consume:
 
 | PRD criterion | Verified by |
 |---------------|-------------|
-| AC-1 trial activates < 30s | integration test asserting activation + timing |
-| AC-3 reminder sent once at T-3d | unit test on scheduler + integration on send-once idempotency |
+| AC.1 trial activates < 30s | integration test asserting activation + timing |
+| AC.3 reminder sent once at T-3d | unit test on scheduler + integration on send-once idempotency |
 
 ### 12. ## Security Requirements *(Standard+; expand for Full)*
 

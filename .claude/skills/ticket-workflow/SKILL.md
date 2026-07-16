@@ -19,7 +19,8 @@ retired entirely — no step in the unified workflow may create or update it.
 Under the workspace's `docs/specs/` root, one folder per ticket:
 
 ```
-docs/specs/<YYYY-MM-DD>-ticket-<slug>/
+docs/specs/<YYYY-MM-DD>-<TICKET-KEY>-<slug>/      # with ticket key (e.g. BG-10965)
+docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 ├── _state.json      # machine state — the control file (schema below)
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step
 ├── ticket.md         # issue definition + comments (ticket-intake, when used)
@@ -32,7 +33,8 @@ docs/specs/<YYYY-MM-DD>-ticket-<slug>/
 └── stop-*.md            # any stop-gate halt, with evidence
 ```
 
-- `<slug>` = short, meaningful kebab-case name (e.g. `iss-swagger-redbc`).
+- `<TICKET-KEY>` = Jira key as-is (e.g. `BG-10965`). Omit entirely when no ticket key is provided.
+- `<slug>` = short, meaningful kebab-case description (e.g. `iss-swagger-redbc`).
 - Use the ticket's **created/intake date** for `<YYYY-MM-DD>`.
 - `prd.md`, `spectech.md`, and `tasks.md` stay three separate files — never merged into one
   `spec.md`. `spectech.md`'s Lean/Standard/Full profile is the token/generality control.
@@ -43,7 +45,7 @@ docs/specs/<YYYY-MM-DD>-ticket-<slug>/
 {
   "ticket": "BG-10965",
   "slug": "iss-swagger-redbc",
-  "folder": "docs/specs/2026-07-15-ticket-iss-swagger-redbc",
+  "folder": "docs/specs/2026-07-15-BG-10965-iss-swagger-redbc",
   "jira_url": "https://avalara.atlassian.net/browse/BG-10965",
   "repo": "br-tax-engine",
   "base_branch": "development",

@@ -108,16 +108,16 @@ User-story-driven phases with the normative line format:
 
 ## Phase 3: US1 — Start free trial (P1)
 - [ ] T003 [US1][dev][P] POST /api/trials endpoint (src/routes/trial.ts)
-  - Complexity: M · Covers: AC-1, AC-4
+  - Complexity: M · Covers: AC.1, AC.4
   - Input validation, duplicate check, unit tests (80%+)
 - [ ] T004 [US1][dev] Trial creation logic (src/service/trial-service.ts)
-  - Complexity: M · Covers: AC-1
+  - Complexity: M · Covers: AC.1
 - [ ] T005 [US1][sre] Backup for trials table (infra/backup.tf)
   - Complexity: S
 
 ## Phase 4: US2 — View trial status (P2)
 - [ ] T006 [US2][dev] GET /api/trials/:id (src/routes/trial.ts)
-  - Complexity: S · Covers: AC-2, AC-3
+  - Complexity: S · Covers: AC.2, AC.3
 
 ## Phase 5: Polish / cross-cutting
 - [ ] T007 [dev] Rate limiting on trial creation (src/mw/rate-limit.ts)
@@ -158,8 +158,8 @@ every user story maps to ≥1 task; every task maps back to a requirement (no or
 
 | Source (PRD AC / User Story / spectech component) | Task IDs | Notes |
 |---------------------------------------------------|----------|-------|
-| US1 / AC-1 Start trial | T003, T004 | + E2E happy path |
-| AC-2, AC-3 View status | T006 | |
+| US1 / AC.1 Start trial | T003, T004 | + E2E happy path |
+| AC.2, AC.3 View status | T006 | |
 | FR-1 trials persistence | T002 | |
 | Security: rate limiting | T007 | |
 

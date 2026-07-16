@@ -60,7 +60,8 @@ The persona subagents are write-capable (tools: Read, Write, Edit, Bash, Grep, G
 Every unit of work — a support ticket or a feature — lives in one **ticket working folder**:
 
 ```
-docs/specs/{YYYY-MM-DD}-ticket-{slug}/
+docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with Jira key (e.g. BG-10965)
+docs/specs/{YYYY-MM-DD}-{slug}/                   # without ticket key
 ├── _state.json      # machine state — the ONLY control file (see ticket-workflow skill)
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step
 ├── ticket.md        # issue definition + comments (ticket-intake, when used)
@@ -202,7 +203,7 @@ All subagents live under `.claude/agents/` and are invoked via the Task tool (au
 
 ## Spec Format (ticket-folder contract)
 
-- Path: `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` — one folder per ticket
+- Path: `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — one folder per ticket
 - Control file: `_state.json` (machine-readable — schema below) + `_notes.md` (human-readable running log). **`context.json` is never created** — see the `ticket-workflow` skill's AC-1 regression guard: any step that finds both files in the same folder must stop and surface the collision.
 - `_state.json.steps` is an **open** string-keyed map: the required orchestrator's six keys (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`), or a standalone piece's own key (e.g. `ticket_intake`, `flowchart_check`, `build_test`, `proof`). Values: `pending | in_progress | done | blocked | skipped`.
 - `prd.md`, `spectech.md`, `tasks.md` — three separate files (never merged); `spectech.md`'s frontmatter declares `profile: lean|standard|full`.

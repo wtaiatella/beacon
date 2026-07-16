@@ -20,7 +20,8 @@ Product requirements analyzer that transforms client requirements, documentation
 ## Workflow
 
 1. **Validate folder structure:**
-   - Check if `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` exists (see the `ticket-workflow` skill for
+   - Check if `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with key) or
+     `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) exists (see the `ticket-workflow` skill for
      the folder-naming convention and full layout)
    - If not, create it and initialize with `_state.json` + `_notes.md` (the only control-file
      convention)

@@ -103,10 +103,10 @@ Mark genuinely critical unknowns inline with a `[NEEDS CLARIFICATION: <question>
 Verifiable conditions in **Given/When/Then** form — each scenario is a potential test case.
 No vague language ("user can easily", "system should handle"):
 
-- **AC-1: Given** a visitor on the landing page, **When** they start a trial, **Then** the trial activates within 30 seconds.
-- **AC-2: Given** a new trial, **When** the welcome email is sent, **Then** it contains the start and end dates.
-- **AC-3: Given** a trial 3 days from expiry, **When** the daily job runs, **Then** a billing-reminder notification is sent once.
-- **AC-4: Given** an active trial, **When** the user cancels in account settings, **Then** the trial is marked cancelled and no further notifications are sent.
+- **AC.1: Given** a visitor on the landing page, **When** they start a trial, **Then** the trial activates within 30 seconds.
+- **AC.2: Given** a new trial, **When** the welcome email is sent, **Then** it contains the start and end dates.
+- **AC.3: Given** a trial 3 days from expiry, **When** the daily job runs, **Then** a billing-reminder notification is sent once.
+- **AC.4: Given** an active trial, **When** the user cancels in account settings, **Then** the trial is marked cancelled and no further notifications are sent.
 
 ### 7. ## Success Criteria
 

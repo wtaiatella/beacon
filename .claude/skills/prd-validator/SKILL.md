@@ -133,7 +133,7 @@ Checks that the PRD's structure is built for downstream testability and hand-off
 - [ ] Notification "customization" seems like Phase 2, clarify
 
 **Clarity:**
-- [ ] AC-3 says "notification sent" but doesn't specify: email only or SMS too?
+- [ ] AC.3 says "notification sent" but doesn't specify: email only or SMS too?
 
 ### Summary
 
@@ -216,7 +216,7 @@ For requirement structure & testability:
 - Unresolved [NEEDS CLARIFICATION] marker: -15 points each (also forces BLOCKED)
 - Success criteria missing, non-measurable, or leaking implementation: -10 points
 - User stories not prioritized / missing Independent Test: -5 points
-- Acceptance criteria not in Given/When/Then form: -3 points per AC
+- Acceptance criteria not in Given/When/Then form: -3 points per criterion
 
 Final Score = Max(0, Base Score - Deductions)
 
