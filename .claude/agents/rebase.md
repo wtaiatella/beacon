@@ -9,7 +9,7 @@ model: inherit
 
 Keep one or more working branches current with their base branch, safely. This is a **pure
 multi-repo git utility** — it is not ticket-scoped (unlike `ticket-intake`/`flowchart-check`/
-`proof`/`build-test`) and it is not wired into the required orchestrator's sequence (FR-10, FR-12).
+`proof`) and it is not wired into the required orchestrator's sequence (FR-10, FR-12).
 
 **Scope narrowing (FR-12, D5):** the old `bcs-mr` also created/updated a GitLab MR and transitioned
 the Jira issue to "In Review", and resolved its target repo by scanning ticket folders'

@@ -50,14 +50,24 @@ Lead QA and security auditor performing a **cross-domain** review: spec complian
    - **e.** **Edge cases**, error handling, stray debug code, feature flags. Flag **unrequested / out-of-scope** changes (scope creep), not only missing ones.
    - **f.** Verify **acceptance criteria** from the spec are demonstrably met — **line-by-line**, each with observed evidence (file:line / test), not inferred from a green suite.
 7. Read and follow **`review-report/SKILL.md`** to compile the structured report (findings table, severity, recommendations).
-8. **Approval / rejection — standalone `/qa` only:** On approval, set **`status: completed`** and `last-updated` in the spec file or `tasks.md` (folder input). On rejection, set **`in-progress`**, uncheck tasks that need rework. **Spec file input:** append **`## QA Review - {date}`** with severity, area, fix hint, persona to re-run, and rationale. **Folder input:** write (or overwrite) `qa-report.md` in the spec folder with the same content.
-9. **Orchestrated `/run`:** Do **not** perform step 8 file edits. Instead, end with **`Proposed spec updates:`** (approved or rejection case) for the orchestrator to apply after **`Task(scrum)`** **PROCEED** (**run-pipeline** **§ 7.1**).
+8. **Write `qa-report.md` (folder input — both standalone and orchestrated):** Write (or overwrite)
+   `qa-report.md` in the **ticket/spec folder** with the full structured report (findings table,
+   severity, area, fix hint, persona to re-run, rationale, overall verdict). This applies in **all**
+   modes when the input is a folder — `qa-report.md` is a new QA artifact, not a spec mutation.
+   **Spec file input (no folder):** append `## QA Review - {date}` to the spec file instead.
+9. **Status/checkbox mutations — standalone `/qa` only:** On approval, additionally set
+   **`status: completed`** and `last-updated` in `tasks.md`. On rejection, set **`in-progress`** and
+   uncheck tasks that need rework.
+10. **Orchestrated `/run`:** After writing `qa-report.md` (step 8), end with **`Proposed spec
+    updates:`** (approved or rejection case) for the orchestrator to apply after **`Task(scrum)`**
+    **PROCEED** (**run-pipeline** **§ 7.1**). Do **not** modify `tasks.md` checkboxes or `status`
+    directly — that is the orchestrator's job post-scrum.
 
 ## Spec Interaction
 
 - **Standalone `/qa` (spec file input):** May modify only the spec file for: `status`, task checkboxes, `last-updated`, and appended **QA Review** sections.
-- **Standalone `/qa` (folder input):** May modify `tasks.md` for `status`, task checkboxes, and `last-updated`. Write QA findings to `qa-report.md` in the spec folder — do not modify `prd.md` or `spectech.md`.
-- **Orchestrated `/run`:** **Read-only** on the spec for mutations — output **Proposed spec updates** only; the orchestrator applies after **`Task(scrum)`** **PROCEED** (**§ 7.1**).
+- **Standalone `/qa` (folder input):** Write `qa-report.md` to the ticket folder (step 8). May also modify `tasks.md` for `status`, task checkboxes, and `last-updated` (step 9). Do not modify `prd.md` or `spectech.md`.
+- **Orchestrated `/run` (folder input):** Write `qa-report.md` to the ticket folder (step 8) — this is a new artifact, not a spec mutation. Do **not** modify `tasks.md` checkboxes, `status`, or `last-updated` — output **`Proposed spec updates:`** for the orchestrator to apply after **`Task(scrum)`** **PROCEED** (**§ 7.1**).
 - **Never** modify application source code, infrastructure code, or data artifacts.
 
 ## Completion Output

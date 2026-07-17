@@ -71,6 +71,7 @@ docs/specs/{YYYY-MM-DD}-{slug}/                   # without ticket key
 ├── spectech.md        # technical design, profile: lean|standard|full (/spectech)
 ├── tasks.md           # task list derived from prd.md + spectech.md (/tasks)
 ├── spec-review.md      # plan-segment (folder-mode) review outcome (plan-reviewer)
+├── qa-report.md        # QA findings written by /qa (both standalone and orchestrated)
 └── proof.md             # before/after practical proof (proof, optional)
 ```
 
