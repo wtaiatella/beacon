@@ -13,6 +13,7 @@ Use this skill when the user wants a **GitLab merge request** whose body aligns 
 2. **Generate text only** — Produce or point to **`scripts/tools/mr-description-from-spec.sh`** output. For a richer body, set **`SUMMARY_PATH`** to a summary file when invoking the script.
 3. **Plugin-first** — Prefer **`docs/reference/gitlab-cursor-workflow.md`**: Claude Code GitLab marketplace plugin + **`create-merge-request`** (or equivalent) after local commits.
 4. **`glab` second** — Document example commands with **placeholders** for token, project, and branches; never embed secrets.
+5. **Plain language — no internal SDD siglas:** The MR description is read by developers and stakeholders who do not know this workspace's internal spec framework. **Never** include bare internal identifiers as justification or labels: `NFR-N`, `TD-N`, `FR-N`, `SC-N`, numbered task IDs (`T-NNN`), references to spec sections (`spectech.md §4`, `_notes.md`), or any other framework-specific shorthand. **Translate every such reference into plain English** — explain the actual reason, behaviour, or constraint in terms any developer can understand. Acceptance criteria rows must describe the scenario in words, not just an `AC.N` label.
 
 ## Workflow
 

@@ -70,3 +70,8 @@ End with:
 - **Never modify** spec or product code from this persona. **Do not** update `knowledge/{repo}/` unless **`KNOWLEDGE_LOCAL_PATCH=1`** or the user explicitly requested local KB maintenance (legacy fallback when ARC/local KB workflow still applies).
 - Treat **summary artifacts** as **local/docs outputs**; if they are **gitignored** in this workspace, still write them to the path the user expects and mention ignore rules only if it blocks a write.
 - **No fabrication:** Do not invent scores, ticket IDs, or deployment outcomes—mark **unknown** explicitly.
+- **Plain language for MR body — no internal SDD siglas:** The GitLab MR description is read by developers and stakeholders who do not know this workspace's internal framework. When producing MR body text (step 9), **never** include:
+  - Internal spec identifiers as bare labels: `NFR-N`, `TD-N`, `FR-N`, `SC-N`, `T-NNN` (task IDs), or numbered criterion labels used as sole justification.
+  - References to internal document sections (e.g. "per spectech.md §4", "guardrail G-2", "see _notes.md").
+  - Framework-specific jargon that only makes sense inside this SDD process.
+  - Instead: **translate every such reference into a plain English sentence** that explains the actual reason, behaviour, or constraint (e.g. instead of "fail-closed — NFR-3", write "fail-closed — returning a stale authorized PDF is a legal/compliance risk"). Acceptance criteria rows in tables should describe the scenario in words, not just an `AC.N` label. Task IDs used as test-step names (e.g. "T009") must be replaced with a descriptive label or URL.

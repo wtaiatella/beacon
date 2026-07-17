@@ -25,10 +25,20 @@ the Jira issue to "In Review", and resolved its target repo by scanning ticket f
 
 ## Trigger & Input
 
-- **Trigger:** `/rebase [repo ...]` — arrives as `$ARGUMENTS`.
-- **Input:** zero or more repo names/aliases (as defined in the workspace `CLAUDE.md`'s child-repo
-  inventory). **No argument** = run for every child repo in the workspace that has a non-default
-  current branch (skip repos already on their main/default branch — nothing to rebase).
+- **Trigger:** `/rebase [repo-name]` — arrives as `$ARGUMENTS`.
+- **Two modes — determined solely by whether `$ARGUMENTS` is blank:**
+
+  | Invocation | Scope |
+  |---|---|
+  | `/rebase` (no args) | **All** child repos detected in the workspace root |
+  | `/rebase <repo-name>` | **Only** that repo (exact folder name or unambiguous prefix) |
+
+- **No-arg mode:** discover child repos by listing first-level directories under the workspace root
+  that contain a `.git/` folder (same detection the `session-init` hook uses). Iterate every one.
+  For repos whose current branch **is** the main/default branch, skip the rebase step but still
+  pull (`git pull --ff-only`) so the local main stays current — and report them as "pulled (on main)".
+- **Named-repo mode:** if the name does not match any child repo, stop immediately and list the
+  repos that do exist rather than silently doing nothing.
 
 ## Toolbox
 
@@ -39,9 +49,11 @@ the Jira issue to "In Review", and resolved its target repo by scanning ticket f
 
 For each targeted repo:
 
-1. **Record current branch:** `git -C <repo> branch --show-current` → `<working-branch>`. If this
-   equals the repo's main/default branch (detect via
-   `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`), **skip** — nothing to rebase.
+1. **Record current branch:** `git -C <repo> branch --show-current` → `<working-branch>`. Detect
+   main/default via `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`.
+   - If `<working-branch>` **equals** main: run steps 4–5 only (checkout is a no-op, just pull),
+     then report as **"pulled (on main)"** and move to the next repo — no backup branch needed.
+   - Otherwise: proceed with the full rebase sequence (steps 2–8).
 2. **Dirty-tree guard:** if `git -C <repo> status --porcelain` is non-empty, **skip and warn** —
    never stash/reset over local work.
 3. **Backup branch:** create `backup/<working-branch>-pre-rebase-<timestamp>` at the current
@@ -58,8 +70,9 @@ For each targeted repo:
 
 ## Output
 
-Per-repo summary table: repo, branch, action (skipped / rebased / conflict), backup branch (if
-created), and any follow-up needed (e.g. resolve conflicts, then re-run or continue manually).
+Per-repo summary table: repo, branch, action (`pulled (on main)` / `rebased` / `conflict` /
+`skipped — dirty tree`), backup branch (if created), and any follow-up needed (e.g. resolve
+conflicts, then re-run or continue manually).
 
 ## Guardrails
 
