@@ -52,6 +52,7 @@ Three commands are not persona subagents: **`/run`** is main-loop orchestration 
 | /build-test | Standalone: pecten regen + fast/full test tiers | `build-test` | `<ticket-folder \| JIRA-KEY> [--full]` |
 | /kb-refresh | Standalone: incremental multi-repo KB refresh | — (thin command) | `[repo ...]` |
 | /kb-concentrator | Standalone: global cross-repo KB concentrator | — (thin command) | `[flow-or-topic hint]` |
+| /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --reset]` |
 
 The persona subagents are write-capable (tools: Read, Write, Edit, Bash, Grep, Glob) except **`scrum`**, which is read-only (Read, Grep, Glob, Bash). Most run on `inherit`; `do` and `summary` run on `haiku`.
 

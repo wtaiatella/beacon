@@ -17,7 +17,14 @@ Technical specification designer that transforms product requirements into detai
 - **Input:** Folder path (e.g., `docs/specs/checkout-feature/`)
 - **Output:** Creates/updates `spectech.md` in the specified folder
 
+## Toolbox
+
+- **Claude Code:** Read, Write, Edit, Bash, Grep, Glob
+- **Workspace tool registry:** If `docs/workspace-tools.md` exists, read it before starting. Extract verified tools and workspace-specific anchors (Confluence space key for existing architecture docs, Figma project for UI wireframes, ARC catalog for schema context). Use these to enrich any `REQUEST_MAIN:` queries you emit. Skip tools with `Access: no`.
+
 ## Workflow
+
+0. **Workspace context (optional):** If `docs/workspace-tools.md` exists, read it. Note verified tools and anchors — particularly Confluence space (existing design/ADR pages) and Figma project (wireframes/components). Use these anchors when emitting `REQUEST_MAIN:` for external design context during steps 4–6.
 
 1. **Validate prerequisites:**
    - Check if `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` exists (see the `ticket-workflow` skill)

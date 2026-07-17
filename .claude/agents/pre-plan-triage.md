@@ -13,7 +13,9 @@ model: haiku
 
 ## Toolbox
 
-- **Reasoning only** over the text in the prompt (plus any excerpt the parent pasted). No MCP; no repo-wide `Read` unless the parent included file snippets.
+- **Reasoning only** over the text in the prompt (plus any excerpt the parent pasted). No MCP; no repo-wide `Read` **except** for the two files below.
+- **`Read docs/workspace-tools.md`** — if the file exists, read it at the start of every triage run. It is the workspace tool registry produced by `/setup-workspace`. Use its entries to enrich `wave1_sources`, `wave2_sources`, and `query_hints` (see **Workspace registry** below).
+- **`Read .mcp.json` / `~/.claude/mcp.json`** — if `docs/workspace-tools.md` is absent, read both as a fallback to know which servers are at least declared (project config first, then global `~/.claude/mcp.json`). No discovery — just existence check.
 
 ## Guardrails
 
@@ -63,12 +65,32 @@ notes: "optional: none needed | MCP likely disabled — expect degraded briefs"
 - **`follow_up`** and **`wave2_sources`** are synonyms for “Wave 2 may include these”; the orchestrator still **gates** using **`jira_keys`**, **`confluence_space`**, **`gitlab_refs`**, and **`gate_hints`** plus the merged Wave 1 brief.
 - **per_field_caps** may be echoed from team defaults; do not exceed them in downstream prompts you author here.
 
+## Workspace registry
+
+If `docs/workspace-tools.md` exists (read in Toolbox), apply its entries **before** classifying
+sources from the user goal alone:
+
+1. **Enrich `wave1_sources`:** for each tool with `Access: yes` and a `Suggested use` that matches
+   the goal (UI/design → figma; broad search → glean; AvaTax/schema → arc), add it to the wave
+   it belongs to. Tools not in `wave1_sources` by convention (jira, confluence, gitlab) go to
+   `follow_up` / `wave2_sources` instead.
+2. **Enrich `query_hints`:** if the registry entry contains a specific resource (e.g. Confluence
+   space key `BR-TAX`, Figma project name), inject it verbatim into the corresponding `query_hints`
+   entry so the specialist query is workspace-specific, not generic.
+3. **Skip inaccessible tools:** entries with `Access: no` are never added to any wave — even if the
+   goal would otherwise match the tool's suggested use. Note it in the `notes` field.
+4. **Registry absent:** if the file does not exist, behavior is unchanged — classify solely from
+   the user goal and the MCP intent cues in Guardrails above.
+
 ## Workflow
 
+0. **Read workspace registry** (if exists): extract verified tools + their `Suggested use` and any
+   resource names. Pre-populate `wave1_sources`, `wave2_sources`, and `query_hints` per the
+   **Workspace registry** rules above.
 1. Extract **Jira keys**, **Confluence** / **GitLab** cues, and **intent** (ticket vs wiki vs repo policy vs org-wide knowledge).
-2. Set **`wave1_sources`** to **`glean`** and/or **`arc`** only when breadth / AvaTax context is needed; otherwise **`[]`**.
-3. Set **`follow_up`** / **`wave2_sources`** and **`gate_hints`** when Jira, Confluence, or GitLab should run **after** merge+gate (or alone if Wave 1 is empty).
-4. Fill **`query_hints`** so each specialist gets a **short**, **bounded** instruction—no essays.
+2. Set **`wave1_sources`** to **`glean`** and/or **`arc`** only when breadth / AvaTax context is needed; otherwise **`[]`**. Merge with any pre-populated entries from step 0.
+3. Set **`follow_up`** / **`wave2_sources`** and **`gate_hints`** when Jira, Confluence, or GitLab should run **after** merge+gate (or alone if Wave 1 is empty). Merge with step 0 pre-population.
+4. Fill **`query_hints`** so each specialist gets a **short**, **bounded** instruction—no essays. Prefer workspace-specific anchors from the registry over generic phrases.
 
 ## Completion Output
 

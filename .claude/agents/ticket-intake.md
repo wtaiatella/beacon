@@ -33,9 +33,10 @@ yourself first when you want full Jira intake, then hand the resulting folder to
 2. **Fetch the issue** via the Jira MCP, including **all comments**. If the MCP is unavailable or
    the token is missing, **stop-gate**: write `stop-intake.md` explaining the auth gap and halt.
 3. **Derive slug** — a short meaningful kebab-case description from the summary. Compute folder
-   `docs/specs/<YYYY-MM-DD>-<TICKET-KEY>-<slug>/` (intake date; `<TICKET-KEY>` is the Jira key
-   as-is, e.g. `BG-10965`; omit it entirely when no key is available). Create the folder and
-   `attachments/`.
+   `docs/specs/<YYYY-MM-DD>-<TICKET-KEY>-<slug>/` where `<YYYY-MM-DD>` is **today's date**
+   (run `date +%Y-%m-%d` — never use the ticket's creation date from Jira). `<TICKET-KEY>` is the
+   Jira key as-is, e.g. `BG-10965`; omit it entirely when no key is available. Create the folder
+   and `attachments/`.
 4. **Write `ticket.md`:** issue key + URL, type/priority/status, reporter/assignee, the full
    description, and **every comment** (author + timestamp + body), oldest→newest. Note any
    referenced tickets in a **Related tickets** section.

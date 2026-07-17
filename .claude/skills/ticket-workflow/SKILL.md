@@ -35,7 +35,8 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 
 - `<TICKET-KEY>` = Jira key as-is (e.g. `BG-10965`). Omit entirely when no ticket key is provided.
 - `<slug>` = short, meaningful kebab-case description (e.g. `iss-swagger-redbc`).
-- Use the ticket's **created/intake date** for `<YYYY-MM-DD>`.
+- Use **today's date** (the date the folder is created) for `<YYYY-MM-DD>` — run `date +%Y-%m-%d`
+  to get it. Never use the Jira ticket's creation date.
 - `prd.md`, `spectech.md`, and `tasks.md` stay three separate files — never merged into one
   `spec.md`. `spectech.md`'s Lean/Standard/Full profile is the token/generality control.
 

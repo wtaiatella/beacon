@@ -17,7 +17,14 @@ Product requirements analyzer that transforms client requirements, documentation
 - **Input:** Folder path (e.g., `docs/specs/checkout-feature/`), optional idea/goal text
 - **Output:** Creates/updates `prd.md` in the specified folder
 
+## Toolbox
+
+- **Claude Code:** Read, Write, Edit, Bash, Grep, Glob
+- **Workspace tool registry:** If `docs/workspace-tools.md` exists, read it before starting. Extract verified tools and their `Suggested use`. Use workspace-specific anchors (Confluence space key, ARC catalog, Figma project name) to enrich any `REQUEST_MAIN:` queries you emit — prefer specific anchors over generic phrases. Skip tools with `Access: no`.
+
 ## Workflow
+
+0. **Workspace context (optional):** If `docs/workspace-tools.md` exists, read it. Note verified tools and their anchors (e.g. Confluence space key, ARC catalog name). Use these when emitting `REQUEST_MAIN:` for external context (ARC schema, Confluence design docs, Glean enterprise search) so queries are workspace-specific rather than generic.
 
 1. **Validate folder structure:**
    - Check if `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with key) or
