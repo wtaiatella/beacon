@@ -1,6 +1,6 @@
 ---
 name: rebase
-description: "Multi-repo git-sync utility: for one or more repos (or every child repo in the workspace), checks out the main/default branch, pulls, checks back out to the previous/working branch, and rebases against the updated base — with a safety backup branch. Handles /rebase. Narrowed from the old bcs-mr: no MR creation, no Jira transition, no ticket-folder lookup (FR-12). Standalone piece — not wired into the required /run orchestrator (FR-10)."
+description: "Multi-repo git-sync utility: for one or more repos (or every child repo in the workspace), checks out the main/default branch, pulls, checks back out to the previous/working branch, and rebases against the updated base — with a safety backup branch that is auto-deleted after a clean rebase (kept only on conflict/failure). Handles /rebase. Narrowed from the old bcs-mr: no MR creation, no Jira transition, no ticket-folder lookup (FR-12). Standalone piece — not wired into the required /run orchestrator (FR-10)."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---
@@ -65,14 +65,20 @@ For each targeted repo:
 7. **Rebase:** `git -C <repo> rebase <main-branch>`. On conflicts, stop-gate — surface the
    conflicting files and halt; do **not** attempt to auto-resolve. Leave the backup branch in place
    so the user can abort (`git rebase --abort`) and return to the pre-rebase state.
-8. **Report:** whether the repo was already current (skipped), rebased cleanly, or stopped on
-   conflicts — and the backup branch name in every case a rebase was attempted.
+8. **Backup cleanup:** if the rebase in step 7 completed cleanly (no conflicts), delete the backup
+   branch created in step 3 (`git -C <repo> branch -D backup/<working-branch>-pre-rebase-<timestamp>`)
+   — it is no longer needed once the working branch is safely rebased, and leaving it would
+   accumulate one stale backup branch per run. On conflicts (or any stop-gate before the rebase
+   finishes), **do not** delete it — it stays until the user resolves or aborts.
+9. **Report:** whether the repo was already current (skipped), rebased cleanly, or stopped on
+   conflicts — and the backup branch name (noting it was deleted after a clean rebase, or is still
+   present pending manual resolution).
 
 ## Output
 
 Per-repo summary table: repo, branch, action (`pulled (on main)` / `rebased` / `conflict` /
-`skipped — dirty tree`), backup branch (if created), and any follow-up needed (e.g. resolve
-conflicts, then re-run or continue manually).
+`skipped — dirty tree`), backup branch (`deleted (clean rebase)` / `<branch-name> (kept — conflict)` /
+`n/a`), and any follow-up needed (e.g. resolve conflicts, then re-run or continue manually).
 
 ## Guardrails
 
@@ -80,4 +86,6 @@ conflicts, then re-run or continue manually).
 - **Never** create/update a GitLab MR or transition a Jira issue — those responsibilities are
   explicitly out of scope for this narrowed piece (FR-12).
 - **Never** resolve rebase conflicts automatically — stop-gate and let the user decide.
+- **Never** delete the backup branch unless the rebase it protects completed cleanly — on
+  conflicts or any earlier stop-gate, leave it in place for recovery.
 - Standalone piece: not invoked automatically by the required orchestrator (FR-10).
