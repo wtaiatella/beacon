@@ -185,11 +185,11 @@ All subagents live under `.claude/agents/` and are invoked via the Task tool (au
 ## Git and GitLab mutations (paramount)
 
 - **Persona subagents must never** run `git commit`, `git push`, or mutating GitLab actions.
-- **The orchestrator (main loop) must never** auto-push, auto-create/open an MR, or silently invoke mutating GitLab APIs.
+- **The orchestrator (main loop) must never** *silently* auto-push, auto-create/open an MR, or invoke mutating GitLab APIs. It **may** perform these via the GitLab MCP (`mcp__GitLab__*`) after **explicit user confirmation** at that step (see below).
 - **Exception — Finish commit:** the main loop may run `git add -A` and `git commit -m '…'` **only** when the user explicitly selects an orchestrator-offered commit message (or gives equivalent explicit intent). If the user chooses "do not commit" / "other-manual", do not commit.
-- **Exception — Finish push:** the main loop may run `git push` **only** in `run-pipeline` §9 Finish, **only** after an explicit user "Yes" to the push prompt. Never auto-push; never push outside §9 Finish.
-- Each branch creation and each mutating GitLab action (MR create/update, write API) requires explicit user confirmation at that step. MR and other mutating GitLab usage remain **user-run** — surface the `git`/`glab` commands and MR body for the user to run. See the `gitlab-mr-from-spec` skill and `scripts/tools/mr-description-from-spec.sh`. `rebase` (the standalone multi-repo git-sync tool) never creates or updates an MR and never transitions a Jira ticket — that responsibility was deliberately dropped when narrowing it from the old `bcs-mr`.
-- Optional tooling (GitLab MCP, `glab`, REST API) runs only when the user chooses to execute a command or confirm a prompt; never assume OAuth/tokens are available.
+- **Push:** the main loop may run `git push` (including `--force-with-lease` when a confirmed history rewrite requires it) after an explicit user "Yes" to a push prompt. Never auto-push silently.
+- Each branch creation and each mutating GitLab action (MR create/update, write API) requires **explicit user confirmation at that step**. Once confirmed, the main loop performs MR create/update **via the GitLab MCP** (`mcp__GitLab__*`), always presenting the MR title/body for review first. See the `gitlab-mr-from-spec` skill and `scripts/tools/mr-description-from-spec.sh` for body content. `rebase` (the standalone multi-repo git-sync tool) never creates or updates an MR and never transitions a Jira ticket — that responsibility was deliberately dropped when narrowing it from the old `bcs-mr`.
+- GitLab operations use the **GitLab MCP** (`mcp__GitLab__*`) as the primary tool, run only after the user confirms. `glab` is **not** used in this workspace (not authenticated); do not suggest it.
 
 ## Confidence Scoring
 
