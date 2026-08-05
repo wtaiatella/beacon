@@ -59,4 +59,6 @@ for d in "$ROOT"/*/; do
   echo "- $n/ (branch: $b)"
   FOUND=1
 done
-[ "$FOUND" -eq 0 ] && echo "(none)"
+if [ "$FOUND" -eq 0 ]; then
+  echo "(none)"
+fi
