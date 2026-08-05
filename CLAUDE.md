@@ -46,6 +46,7 @@ Three commands are not persona subagents: **`/run`** is main-loop orchestration 
 | /run | Pipeline Orchestrator | — (main loop + `run-pipeline` skill) | `<ticket-folder-path-or-jira-key> [idea] [flags]` |
 | /clone | Repo Cloner (utility) | — | `<git-url> [target-dir]` |
 | /ticket-intake | Standalone: Jira ticket intake | `ticket-intake` | `<JIRA-KEY \| jira-url>` |
+| /repro | Standalone: local before/after defect reproduction | `repro` | `<ticket-folder \| JIRA-KEY> [--after]` |
 | /flowchart-check | Standalone: flowchart-vs-code conformance | `flowchart-check` | `<ticket-folder \| JIRA-KEY>` |
 | /rebase | Standalone: multi-repo git-sync | `rebase` | `[repo ...]` |
 | /proof | Standalone: before/after proof (optional) | `proof` | `<ticket-folder \| JIRA-KEY>` |
@@ -67,6 +68,7 @@ docs/specs/{YYYY-MM-DD}-{slug}/                   # without ticket key
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step
 ├── ticket.md        # issue definition + comments (ticket-intake, when used)
 ├── attachments/      # downloaded attachments, incl. marked *.drawio (ticket-intake, flowchart-check)
+├── repro.md           # local before/after defect reproduction (repro, optional; feeds /prd)
 ├── prd.md            # product requirements (/prd)
 ├── spectech.md        # technical design, profile: lean|standard|full (/spectech)
 ├── tasks.md           # task list derived from prd.md + spectech.md (/tasks)
@@ -108,14 +110,20 @@ ticket-folder path (`prd.md`+`spectech.md`+`tasks.md`) instead of a single `spec
 one `spec.md`. `spectech.md`'s Lean/Standard/Full profile mechanism is the token/generality
 control, reused unchanged.
 
-**Standalone (B) — six tools, invoked independently, never wired into the required orchestrator
-above:** `ticket-intake`, `flowchart-check`, `rebase` (multi-repo git-sync only), `proof`
-(optional), `build-test`, and the `kb-refresh`/`kb-concentrator` pair. These read/write the same
-`_state.json`/`_notes.md` contract when scoped to a ticket folder (all except `rebase`, which is
-not ticket-scoped, and `kb-refresh`/`kb-concentrator`, which operate on `knowledge/` workspace-wide
-— see the `ticket-workflow` skill's Assumptions). They exist so a **future**, separate
-ticket-oriented orchestrator variant can wire ticket intake and these pieces together with
-verification checkpoints — that future orchestrator is not built here.
+**Standalone (B) — seven tools, invoked independently, never wired into the required orchestrator
+above:** `ticket-intake`, `repro` (optional, local before/after defect reproduction — the newest
+piece, native to this repo rather than ported from `aw-bcs`), `flowchart-check`, `rebase`
+(multi-repo git-sync only), `proof` (optional), `build-test`, and the `kb-refresh`/`kb-concentrator`
+pair. These read/write the same `_state.json`/`_notes.md` contract when scoped to a ticket folder
+(all except `rebase`, which is not ticket-scoped, and `kb-refresh`/`kb-concentrator`, which operate
+on `knowledge/` workspace-wide — see the `ticket-workflow` skill's Assumptions). They exist so a
+**future**, separate ticket-oriented orchestrator variant can wire ticket intake and these pieces
+together with verification checkpoints — that future orchestrator is not built here.
+
+**Typical standalone sequencing (not enforced, just the common path):**
+`/ticket-intake` → `/repro` (reproduce the reported bug locally, before any fix exists) → `/prd`
+(consumes `repro.md` as confirmed evidence) → … → `/dev` implements the fix → `/repro --after`
+(confirm the fix against the same scenario) → `/proof` (optional, final before/after) → `/summary`.
 
 ## Supporting Subagents
 
@@ -142,11 +150,12 @@ All subagents live under `.claude/agents/` and are invoked via the Task tool (au
 | spectech | Technical specification designer | inherit | Read, Write, Edit, Bash, Grep, Glob | /spectech command |
 | tasks | Task breakdown specialist | inherit | Read, Write, Edit, Bash, Grep, Glob | /tasks command |
 
-**Standalone bcs-derived pieces (write-capable, not pipeline-wired):**
+**Standalone pieces (write-capable, not pipeline-wired) — six ported from `aw-bcs`, `repro` native to this repo:**
 
 | Name | Role | Model | Tools | Used By |
 |------|------|-------|-------|---------|
 | ticket-intake | Jira ticket intake, project-agnostic | inherit | Read, Write, Edit, Bash, Grep, Glob | /ticket-intake command |
+| repro | Local before/after defect reproduction (optional; feeds /prd) | inherit | Read, Write, Edit, Bash, Grep, Glob | /repro command |
 | flowchart-check | Scoped flowchart-vs-code conformance | inherit | Read, Grep, Glob, Bash | /flowchart-check command |
 | rebase | Multi-repo git-sync (checkout main → pull → checkout back → rebase) | inherit | Read, Write, Edit, Bash, Grep, Glob | /rebase command |
 | proof | Before/after practical proof (optional) | inherit | Read, Write, Edit, Bash, Grep, Glob | /proof command |
@@ -207,7 +216,7 @@ All subagents live under `.claude/agents/` and are invoked via the Task tool (au
 
 - Path: `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — one folder per ticket
 - Control file: `_state.json` (machine-readable — schema below) + `_notes.md` (human-readable running log). **`context.json` is never created** — see the `ticket-workflow` skill's AC-1 regression guard: any step that finds both files in the same folder must stop and surface the collision.
-- `_state.json.steps` is an **open** string-keyed map: the required orchestrator's six keys (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`), or a standalone piece's own key (e.g. `ticket_intake`, `flowchart_check`, `build_test`, `proof`). Values: `pending | in_progress | done | blocked | skipped`.
+- `_state.json.steps` is an **open** string-keyed map: the required orchestrator's six keys (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`), or a standalone piece's own key (e.g. `ticket_intake`, `repro`, `flowchart_check`, `build_test`, `proof`). Values: `pending | in_progress | done | blocked | skipped`.
 - `prd.md`, `spectech.md`, `tasks.md` — three separate files (never merged); `spectech.md`'s frontmatter declares `profile: lean|standard|full`.
 - Domain tags on `tasks.md` checkboxes: `[dev]`, `[sre]`, `[data]`; multi-repo: `[dev:repo]`
 - Phases for cross-repo dependencies
@@ -258,7 +267,7 @@ Defined under `.claude/skills/`.
 
 **Claude Code sets the model per-subagent** in each agent's `model:` frontmatter:
 
-- **`inherit`** (session model) — implementers, architects, debuggers: prd, spectech, tasks, dev, sre, data, qa, fix, kb, roadmap, security-scanner, ticket-intake, flowchart-check, rebase, proof, build-test.
+- **`inherit`** (session model) — implementers, architects, debuggers: prd, spectech, tasks, dev, sre, data, qa, fix, kb, roadmap, security-scanner, ticket-intake, repro, flowchart-check, rebase, proof, build-test.
 - **`haiku`** (economy) — reviewers, validators, and mechanical/short-context agents: do, summary, scrum, codebase-explorer, spec-validator, plan-reviewer, dev-reviewer, sre-reviewer, data-reviewer, pre-plan-triage, mcp-*.
 
 There is no Claude Code equivalent of per-run model swapping; pick the session model by workflow (standard for routine `/run`, premium for a complex `/fix`). The `run-pipeline` skill's `--model-strategy` / `--budget` guidance is retained as guidance; automatic mid-run swaps are not performed under Claude Code.

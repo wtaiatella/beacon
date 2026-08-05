@@ -25,6 +25,7 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step
 ├── ticket.md         # issue definition + comments (ticket-intake, when used)
 ├── attachments/      # downloaded attachments, incl. marked *.drawio (ticket-intake)
+├── repro.md           # local before/after defect reproduction (repro, optional; feeds /prd)
 ├── prd.md            # product requirements (/prd)
 ├── spectech.md        # technical design, profile: lean|standard|full (/spectech)
 ├── tasks.md           # task list derived from prd.md + spectech.md (/tasks)
@@ -76,9 +77,9 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 - **`steps` is an open, string-keyed map — not a fixed enum.** The required orchestrator (A) uses
   the six keys shown above (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`). A
   ticket-scoped standalone piece run outside the orchestrator may add its own key (e.g.
-  `"flowchart_check": "skipped"`, `"ticket_intake": "done"`, `"build_test": "done"`, `"proof":
-  "skipped"`) independent of the orchestrator's vocabulary. Do not force either vocabulary onto a
-  step that doesn't apply — an open map lets both today's orchestrator and any future
+  `"flowchart_check": "skipped"`, `"ticket_intake": "done"`, `"repro": "done"`, `"build_test":
+  "done"`, `"proof": "skipped"`) independent of the orchestrator's vocabulary. Do not force either
+  vocabulary onto a step that doesn't apply — an open map lets both today's orchestrator and any future
   ticket-oriented orchestrator variant write their own step keys into the same file without schema
   churn.
 - Step status values: `pending | in_progress | done | blocked | skipped`.

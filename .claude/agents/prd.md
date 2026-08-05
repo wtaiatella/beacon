@@ -40,11 +40,19 @@ Product requirements analyzer that transforms client requirements, documentation
 2. **Scan for context:**
    - Look for existing `prd.md` (if amending)
    - Scan `attachments/` for documents (PDFs, images, JSONs, markdown)
+   - **If `repro.md` exists** (from the optional `/repro` standalone piece), read it first —
+     it is **confirmed local reproduction evidence** (exact request/response, seed data, observed
+     before/after behavior), not a restatement of the ticket. Prefer it over inference from
+     `ticket.md` alone when the two could be read either way, and cite it directly in the PRD's
+     Overview/Assumptions (e.g. "confirmed via `repro.md`" instead of a hedged assumption).
    - Check `_state.json` for metadata (ticket, slug, current step)
    - Read `_notes.md` for existing decisions/requirements history
 
 3. **Analyze requirements:**
    - Extract requirements from attachments if present
+   - **If `repro.md` was found:** ground the Overview and Acceptance Criteria in its confirmed
+     before/after evidence rather than the ticket's own description of the symptom — the reported
+     root cause may differ from what was actually observed locally.
    - Parse user-provided idea/goal
    - Identify key features, user stories, constraints
    - Determine acceptance criteria
