@@ -1,6 +1,6 @@
 # Manual verification — phased implementation (implementation segment)
 
-Use this checklist to validate **phased implementation**, **domain isolation**, **mutation guardrails**, and **`--resume`** behavior for **`/run`** orchestration. It maps to the phased implementation audit under **`docs/roadmaps/`** (filename contains **`audit-phase-3-phased-implementation-domain-isolation-and-execution-limits`**; *Deliverables & Test Cases*). Authoritative procedure remains **`.cursor/skills/run-pipeline/SKILL.md`** (**§ 5** — *Implementation payload construction*, **§ 6**, **Interaction with `--resume`**).
+Use this checklist to validate **phased implementation**, **domain isolation**, **mutation guardrails**, and **`--resume`** behavior for **`/run`** orchestration. Authoritative procedure remains **`.cursor/skills/run-pipeline/SKILL.md`** (**§ 5** — *Implementation payload construction*, **§ 6**, **Interaction with `--resume`**).
 
 **Scope:** Human or live-session verification only; Cursor does not expose a guaranteed raw **`Task`** API. Adapt capture methods to your environment (Cursor UI, exported chat, orchestrator notes, or **`docs/sessions/<id>/current.md`** excerpts).
 

@@ -1,8 +1,8 @@
-# ARC MCP workflow with Cursor (optional AvaTax Release Central knowledge) — ROAD-25
+# ARC MCP workflow with Cursor (optional AvaTax Release Central knowledge)
 
 This workspace treats the **AvaTax Release Central (ARC)** MCP server as an **optional**, **read-only** source of **project-scoped** curated knowledge: ALFA RAG–backed search over Release Central indexes (platform, schema, per-project and per-feature corpora). Agents **do not** mutate Release Central, GitLab pipelines in `avatax-release-central`, or Confluence from this repo’s guidance—**retrieval only**. Core personas and **`/run`** steps **never depend** on ARC; if MCP tools are absent or fail, workflows continue with local **`knowledge/{project}/`**, **`codebase-explorer`**, and repo search per **`00-workspace-router.mdc`**.
 
-**Onboarding new repos** into ARC happens in the **`avatax-release-central`** repository (`projects_config.py`, `feature_registry.py`) and related Confluence indexes—not in agentic-workspace alone. See **`docs/arc-onboarding.md`** (full split: Cursor vs server-side) and **`docs/roadmaps/`** (e.g. **`ROAD-25-arc-mcp-knowledge-base-integration.md`** under **`completed/`** when shipped).
+**Onboarding new repos** into ARC happens in the **`avatax-release-central`** repository (`projects_config.py`, `feature_registry.py`) and related Confluence indexes—not in agentic-workspace alone. See **`docs/arc-onboarding.md`** (full split: Cursor vs server-side).
 
 ## Two lanes (pre-plan vs in-session)
 

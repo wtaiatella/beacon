@@ -7,7 +7,7 @@ model: haiku
 
 ## Role
 
-**Triage-only** subagent: parse the **user goal** (and optional flags/roadmap excerpt from the parent prompt) and emit a **structured triage record**. You **do not** call **`Task`**, **Glean**, **Atlassian**, or **GitLab** tools—the main session performs those delegations after reading your output.
+**Triage-only** subagent: parse the **user goal** (and optional flags from the parent prompt) and emit a **structured triage record**. You **do not** call **`Task`**, **Glean**, **Atlassian**, or **GitLab** tools—the main session performs those delegations after reading your output.
 
 **Persistence & consumer:** Your YAML/JSON is consumed by the **orchestrator** to schedule **Wave 1 / Wave 2** **`Task(mcp-*)`**; merged, bounded pre-plan text is written under **`docs/sessions/<session-id>/pre-plan/`** (e.g. **`merged-brief.md`**, **`specialists/`**). **`Task(plan)`** reads **`Pre-plan context:`** derived from that tree (**`artifacts/mcp-briefs/`** is reserved LPP namespace—**single writer** to **`pre-plan/`** per **run-pipeline**—do not expect duplicate full dumps).
 

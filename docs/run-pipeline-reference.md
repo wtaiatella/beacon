@@ -171,7 +171,7 @@ Compare reported **token counts**, **truncated excerpts**, and **file hints** in
 2. **Volume sanity:** Totals and excerpt sizes should look like **bounded JSONL fields** from the run window, not like every source file in the repository was ingested. If numbers are orders of magnitude beyond plausible **`Task`** / orchestrator context for the spec, treat as a red flag and verify caps in **`audit-session-trace.py`**.
 3. **Path spot-check:** File paths mentioned in the log (if any) should resemble **work touched in the session** (e.g. spec paths, scripts under change) — not arbitrary bulk globs across unrelated trees.
 4. **Time window:** **`SESSION_START:`** in **`current.md`** should bound **mtime** inclusion; Finish timestamps should be after the run’s trace window start.
-5. **Plan-segment alignment:** Like plan-segment slicing, telemetry should reflect **narrow** inputs to **this** pipeline — not a dump of all prior chat or full-repo indexing. The roadmap entry for plan-segment work lives under **`docs/roadmaps/`** (search for filenames containing `audit-phase-2-plan-segment`); use it as the narrative reference alongside **Context slicing (plan segment)** earlier in this doc.
+5. **Plan-segment alignment:** Like plan-segment slicing, telemetry should reflect **narrow** inputs to **this** pipeline — not a dump of all prior chat or full-repo indexing. See **Context slicing (plan segment)** earlier in this doc.
 
 ### Manual verification (pre-plan orchestration)
 
@@ -183,9 +183,9 @@ Use this checklist when validating **orchestrator docs** and **live `/run`** beh
 
 ### Manual verification (plan segment)
 
-Use this checklist when validating the **plan segment** (between optional pre-plan and **§ 5** implementation). Maps to the plan-segment roadmap file under **`docs/roadmaps/`** or **`docs/roadmaps/completed/`** (*Deliverables & Test Cases* and workflow steps 1–7). Authoritative procedure remains **`.cursor/skills/run-pipeline/SKILL.md`** (**§ 3–4**, **Manual step gates**).
+Use this checklist when validating the **plan segment** (between optional pre-plan and **§ 5** implementation). Authoritative procedure remains **`.cursor/skills/run-pipeline/SKILL.md`** (**§ 3–4**, **Manual step gates**).
 
-| Roadmap test / theme | What to verify (manual / live `/run`) |
+| Test / theme | What to verify (manual / live `/run`) |
 |----------------------|----------------------------------------|
 | **Test Anti-Nesting** | Use a **`/run`** goal that targets an **unfamiliar or un-indexed** directory so **`Task(plan)`** cannot orient from KB/ARC alone. Expect **`REQUEST_MAIN:`** (or **`QUESTION:`**) in **`Task(plan)`** output — **not** a nested **`Task(codebase-explorer)`**. The **orchestrator** (main session) should then run **`Task(codebase-explorer)`**, write a **bounded** markdown file under **`docs/sessions/<session-id>/artifacts/explorer/`**, append a **`session-memory.sh`** trace line (e.g. **`EXPLORATION:`** path + one-line reason), and **re-invoke** **`Task(plan)`** with the **artifact path** and/or a **capped excerpt** — **not** merging an **unbounded** scout summary into the **next** **`Task(plan)`** prompt alone. |
 | **Test Context Slicing** | Force **`Task(plan-reviewer)`** below threshold on **attempt 1** (e.g. reject draft). Inspect the **attempt 2** **`Task(plan)`** prompt: it must carry **`Plan segment feedback:`** / sliced content derived from **`PLAN_REVIEW_FEEDBACK:`** (see **`current.md`**) — **without** replaying the full loop-1 **`Task(plan)`** transcript or redundant raw pre-plan dumps. |
@@ -254,7 +254,7 @@ Persona subagents do the work. The main agent coordinates, parses results, and a
 3. **Merge + gate** — Merge Wave 1 into a working brief. Decide whether to run Wave 2 from triage fields **and/or** the merged Wave 1 text (e.g. surfaced Jira keys, “see Confluence”, MR link).
 4. **Wave 2 —** In parallel when multiple apply, run **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`** **only** as needed. Write **`pre-plan/specialists/{jira,confluence,gitlab}.md`** for each that ran.
 5. **Final merge** — One **summarized** merged external brief for **`Task(plan)`** (bounded text — align with on-disk **`merged-brief.md`**). Persist **`pre-plan/merged-brief.md`** (**`session-memory.sh session-root`**).
-6. **`Task(plan)`** — Prompt includes **`Pre-plan context:`** with that **condensed** brief (plus user goal and **Roadmap context** per router rules) — **not** raw specialist JSON dumps. **Local auditing:** proof lives under **`pre-plan/`** (see **Session storage** — **Local auditing**). Manual checks: **Manual verification (pre-plan orchestration)** above.
+6. **`Task(plan)`** — Prompt includes **`Pre-plan context:`** with that **condensed** brief (plus user goal) — **not** raw specialist JSON dumps. **Local auditing:** proof lives under **`pre-plan/`** (see **Session storage** — **Local auditing**). Manual checks: **Manual verification (pre-plan orchestration)** above.
 
 **Nested vs flat:** **Orchestrator-flat** MCP gather means **only the main session** runs triage + **`Task(mcp-*)`** for this step. **`/plan` must not** nest **`Task(mcp-*)`** for gather when executing under **`/run`** — that pattern is **nested** and discouraged for reliability. Same specialists may be **re-invoked later** from the main session (e.g. after a reviewer asks for more Jira context); merge and attach to the **next** downstream **`Task`**, still **not** as chains inside **`/plan`** / **`/dev`**. See **Parallelism / Nested delegation** above and **`docs/reference/cursor-agents.md`**.
 
@@ -279,10 +279,6 @@ Optional **`/run --manual`** enables **manual step gates** (orchestration pauses
 | **See also** | **Model Plan & apply-models.sh** (above), **Dynamic Model Selection** (below) | **run-pipeline** skill **Manual step gates** |
 
 Set orchestration state **`manual_step_gates: true`** when the user passes **`--manual`** (see **Pipeline State Variables**).
-
-## Roadmap context (named items)
-
-When the user’s `/run` goal names a roadmap item by id, resolve the matching per-item markdown file under the roadmap root (**`docs/roadmaps/`** by default; **`ROADMAP_FILE`** if set to a directory — active root first, then **`completed/`**). Read the **entire** file and include it in **`Task(plan)`** as **Roadmap context** so `/plan` can align the spec and run its **implementation-status** heuristic. Do **not** preload the full roadmap tree or specs — see the **Discovery boundary** exception in **`00-workspace-router.mdc`**.
 
 ## Anti-patterns (orchestrating agent must NOT)
 

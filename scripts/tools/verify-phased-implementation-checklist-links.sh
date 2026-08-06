@@ -24,28 +24,8 @@ grep -q 'docs/sessions/ACTIVE_SESSION' "$CHECKLIST" \
   || fail "checklist must mention docs/sessions/ACTIVE_SESSION"
 grep -q 'docs/specs' "$CHECKLIST" \
   || fail "checklist must mention docs/specs"
-grep -q 'docs/roadmaps' "$CHECKLIST" \
-  || fail "checklist must mention docs/roadmaps"
-grep -q 'audit-phase-3-phased-implementation' "$CHECKLIST" \
-  || fail "checklist must reference phased implementation roadmap (audit-phase-3-phased-implementation)"
 
 # --- Tracked files the checklist must cite; must exist in clone ---
-# Roadmap may live at docs/roadmaps/ or docs/roadmaps/completed/ (ROAD-43 migration).
-shopt -s nullglob
-PHASED=(
-  docs/roadmaps/*audit-phase-3-phased-implementation-domain-isolation-and-execution-limits.md
-  docs/roadmaps/completed/*audit-phase-3-phased-implementation-domain-isolation-and-execution-limits.md
-)
-phased_count=0
-for f in "${PHASED[@]}"; do
-  if [ -f "$f" ]; then
-    phased_count=$((phased_count + 1))
-  fi
-done
-if [ "$phased_count" -ne 1 ]; then
-  fail "expected exactly one phased implementation roadmap file under docs/roadmaps/ (root or completed/)"
-fi
-
 REFS=(
   ".cursor/skills/run-pipeline/SKILL.md"
   ".cursor/rules/00-workspace-router.mdc"

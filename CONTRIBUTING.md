@@ -13,7 +13,6 @@ A shared framework for agentic development. It is **not** where your application
 - New or improved tool scripts (`scripts/tools/*.sh`)
 - New or improved hooks (`.cursor/hooks.json` + `.cursor/hooks/*.sh`)
 - Updates to the workspace router rule (`.cursor/rules/00-workspace-router.mdc`)
-- New roadmap items or status updates (`docs/roadmaps/` — see `docs/roadmaps/README.md`)
 - Documentation improvements (`docs/`, `README.md`)
 - Bug fixes in any of the above
 
@@ -84,7 +83,7 @@ Before you open an MR that changes **`.cursor/skills/run-pipeline/SKILL.md`** or
 Before you open an MR that changes **`.cursor/skills/run-pipeline/SKILL.md`**, **`.cursor/agents/qa.md`**, **`.cursor/agents/summary.md`**, or **`.cursor/rules/git-gitlab-mutations.mdc`**, run **`./scripts/tools/verify-qa-git-boundaries.sh`** from the repository root. It enforces **blocking** QA / Git boundary invariants aligned with **docs-check**: § 7.1 post-QA scrum (orchestrator does not apply QA **Proposed spec updates** until **`Task(scrum)`** **PROCEED**), no nested **`Task(spec-validator)`** / **`Task(security-scanner)`** from **`Task(qa)`**, Finish **§ 9** MR safety (no **`glab mr create`** / mutating GitLab API from the orchestrator), and the **git-gitlab-mutations** push/MR rules.
 
 **CI pipeline runs automatically on every MR** (`.gitlab-ci.yml`). It validates:
-- Full workspace **`./scripts/tools/lint-check.sh .`** (validate job `workspace-lint-check`; same command as local runs in **No Historical Tracking IDs in Prompts** below)
+- Full workspace **`./scripts/tools/lint-check.sh .`** (validate job `workspace-lint-check`; same command as local runs in **Agent/Skill Prompt Lint Guards** below)
 - All agent and skill files have valid YAML frontmatter with required fields
 - All JSON files parse correctly (`mcp.json`, `hooks.json`)
 - All shell scripts have valid syntax and are executable
@@ -97,25 +96,9 @@ No hardcoded counts — validation is relationship-based. Add a new agent, skill
 
 If the pipeline fails, fix the issue before requesting review. Documentation warnings are non-blocking but should be addressed.
 
-## Roadmap vs plan
+## Agent/Skill Prompt Lint Guards
 
-- **`/roadmap`** (`.cursor/agents/roadmap.md`) turns directories, doc paths, and vision text into **roadmap-shaped** **`ROAD-NN`** sections for the **committed** backlog tree (**`docs/roadmaps/`** by default, or **`ROADMAP_FILE`** as a **directory** root for another checkout). It does **not** create `docs/specs/*`.
-- **`/plan`** produces **architecture specs** and, when **`ROAD-XX`** is in scope, runs a **best-effort implementation-status** pass against deliverables before writing the spec.
-- **Helpers:** `scripts/tools/roadmap-next.sh` (next id), `scripts/tools/roadmap-validate.sh` (consistency checks; use before MRs that touch the roadmap).
-
-## No Historical Tracking IDs in Prompts
-
-Do **not** embed historical initiative tracking IDs matching **`ROAD-<number>`** (digits after the hyphen) in:
-
-- **`.cursor/rules/`**
-- **`.cursor/skills/`**
-- **`.cursor/agents/`**
-
-Those paths are **permanent prompts** for agents and tooling; IDs waste tokens and age poorly. Describe **current behavior** in plain language instead.
-
-**Enforcement:** From the repository root, run **`./scripts/tools/lint-check.sh .`**. The script (1) scans those three directories (when present under the lint target) for `ROAD-[0-9]+` and fails with a non-zero exit if any match is found; (2) scans **`.cursor/agents/*.md`** for disallowed MCP toolbox patterns—**`Optional MCP`**, **`call_mcp_tool`**, and **`MCP server`** / **`MCP servers`** (case-insensitive)—in every file **except** allowlisted **`mcp-*.md`**, **`plan.md`**, and **`pre-plan-triage.md`**; (3) scans **`.cursor/agents/*.md`** and **`.cursor/skills/**/*.md`** for instructional shell one-liners (**`python3 -c`**, **`git mv`**, **`git commit`**, **`awk '{`**) outside markdown fences, with exemptions for prohibition wording, first-party script references (**`pipeline-finish`**, **`git-inspect.sh`**, **`archive-roadmap.sh`**, **`query-transcript.py`**, **`audit-session-trace`**), and lines marked with **`<!-- lint:allow-subagent-shell -->`**. Details: **`scripts/tools/lint-check.sh`** header and **`scripts/tools/lint-subagent-prompt-patterns.py`**. For an automated clean-tree plus ROAD negative-case check, run **`./scripts/tools/tests/test-lint-check-road-guard.sh`**; for the subagent shell guard, **`./scripts/tools/tests/test-lint-check-subagent-shell-patterns.sh`** (see **`scripts/tools/tests/README.md`**). To confirm the MCP guard manually, temporarily add a line containing **`Optional MCP`** to a non-allowlisted agent (e.g. **`dev.md`**), run **`./scripts/tools/lint-check.sh .`**, expect failure, then revert.
-
-**Exempt:** Roadmap **content** and **workflow** documentation under **`docs/roadmaps/`** (and linked roadmap how-to docs) are the right place for `ROAD-*` filenames and references. This prompt-hygiene rule does **not** apply there.
+**Enforcement:** From the repository root, run **`./scripts/tools/lint-check.sh .`**. The script (1) scans **`.cursor/agents/*.md`** for disallowed MCP toolbox patterns—**`Optional MCP`**, **`call_mcp_tool`**, and **`MCP server`** / **`MCP servers`** (case-insensitive)—in every file **except** allowlisted **`mcp-*.md`**, **`plan.md`**, and **`pre-plan-triage.md`**; (2) scans **`.cursor/agents/*.md`** and **`.cursor/skills/**/*.md`** for instructional shell one-liners (**`python3 -c`**, **`git mv`**, **`git commit`**, **`awk '{`**) outside markdown fences, with exemptions for prohibition wording, first-party script references (**`pipeline-finish`**, **`git-inspect.sh`**, **`query-transcript.py`**, **`audit-session-trace`**), and lines marked with **`<!-- lint:allow-subagent-shell -->`**. Details: **`scripts/tools/lint-check.sh`** header and **`scripts/tools/lint-subagent-prompt-patterns.py`**. For the subagent shell guard, **`./scripts/tools/tests/test-lint-check-subagent-shell-patterns.sh`** (see **`scripts/tools/tests/README.md`**). To confirm the MCP guard manually, temporarily add a line containing **`Optional MCP`** to a non-allowlisted agent (e.g. **`dev.md`**), run **`./scripts/tools/lint-check.sh .`**, expect failure, then revert.
 
 ## Conventions
 

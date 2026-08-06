@@ -1,24 +1,18 @@
 #!/usr/bin/env bash
 # Auto-detect linter in a target directory and run checks.
 # After changing to TARGET:
-#   1) scans .cursor/agents, .cursor/skills, .cursor/rules for ROAD-<digits> (when those dirs exist).
-#   2) scans .cursor/agents/*.md for MCP toolbox leakage (see check_no_mcp_in_non_specialists).
+#   1) scans .cursor/agents/*.md for MCP toolbox leakage (see check_no_mcp_in_non_specialists).
 # Then runs language linters: eslint, ruff, flake8, golangci-lint, cargo clippy.
 #
 # Simulating failures locally (integration tests under scripts/tools/tests/):
 #   - Clean tree at repo root must pass: ./scripts/tools/tests/test-lint-check-repo-root.sh
-#   - ROAD-ID guard (isolated tmp): ./scripts/tools/tests/test-lint-check-road-guard.sh
 #   - Subagent shell patterns (isolated tmp): ./scripts/tools/tests/test-lint-check-subagent-shell-patterns.sh
-#   - Roadmap/spec sync: ./scripts/tools/tests/test-lint-check-roadmap-spec-sync.sh
 #   - Root session symlink guard (ROAD-53; only when TARGET is the git repo root):
 #       ln -sfn "$(pwd)/docs/sessions" ./_lint-symlink-violation-test
 #       ./scripts/tools/lint-check.sh .   # expect non-zero
 #       rm -f ./_lint-symlink-violation-test
 #     (Use a name not in .gitignore if you need the symlink to exist on disk for the probe;
 #      remove before commit.)
-#
-# Status-Sync (verify-roadmap-spec-sync.sh): when docs/specs and docs/roadmaps exist under
-# TARGET, verifies completed specs align with ROAD-NN roadmap files (ROAD-45).
 #
 # MCP guard (check_no_mcp_in_non_specialists):
 # Only these agent files may mention the patterns below (implementation-tier and most personas must
@@ -36,7 +30,7 @@
 #   - python3 -c, git mv, git commit, awk '{
 # Exemptions (see script docstring and CONTRIBUTING.md): fenced ``` blocks; lines with
 # <!-- lint:allow-subagent-shell -->; first-party script paths (pipeline-finish, git-inspect.sh,
-# archive-roadmap.sh, query-transcript.py, audit-session-trace); or clear prohibition/negation prose.
+# query-transcript.py, audit-session-trace); or clear prohibition/negation prose.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -97,35 +91,6 @@ check_no_root_session_symlinks() {
   return 0
 }
 
-# Historical initiative IDs (ROAD-<digits>) must not appear in permanent prompt trees.
-# Paths are relative to TARGET (e.g. ./scripts/tools/lint-check.sh . from repo root).
-check_no_road_tracking_ids() {
-  local d found=0
-  for d in .cursor/agents .cursor/skills .cursor/rules; do
-    if [[ ! -d "$d" ]]; then
-      continue
-    fi
-    set +e
-    # -I: skip binary files (portable BSD/GNU). Pattern: ROAD- then one or more digits.
-    output=$(grep -rIEn 'ROAD-[0-9]+' "$d" 2>/dev/null)
-    rc=$?
-    set -e
-    if [[ $rc -eq 2 ]]; then
-      echo "Error: scan failed for $d (grep error)." >&2
-      return 1
-    fi
-    if [[ $rc -eq 0 && -n "$output" ]]; then
-      printf '%s\n' "$output"
-      found=1
-    fi
-  done
-  if [[ $found -ne 0 ]]; then
-    echo "Error: Historical tracking IDs (ROAD-<digits>) must not appear under .cursor/agents/, .cursor/skills/, or .cursor/rules/. See CONTRIBUTING.md (No Historical Tracking IDs in Prompts)." >&2
-    return 1
-  fi
-  return 0
-}
-
 check_no_mcp_in_non_specialists() {
   local agents_dir=".cursor/agents"
   if [[ ! -d "$agents_dir" ]]; then
@@ -160,17 +125,11 @@ check_no_mcp_in_non_specialists() {
 }
 
 check_no_root_session_symlinks || exit 1
-check_no_road_tracking_ids
 check_no_mcp_in_non_specialists
 
 # ROAD-55: no instructional inline shell one-liners in permanent agent/skill prompts.
 if [[ -d ".cursor/agents" || -d ".cursor/skills" ]]; then
   python3 "$SCRIPT_DIR/lint-subagent-prompt-patterns.py" "$(pwd)" || exit 1
-fi
-
-# ROAD-45: completed specs must match archived roadmap items (no ghost backlog).
-if [[ -d "docs/specs" && -d "docs/roadmaps" ]]; then
-  "$SCRIPT_DIR/verify-roadmap-spec-sync.sh" --root "$(pwd)" || exit 1
 fi
 
 has_eslint_config() {

@@ -7,7 +7,7 @@ description: "Architecture spec template and generation instructions for the /pl
 
 ## When to Use
 
-- Drafting a new architecture spec from a user goal or roadmap item
+- Drafting a new architecture spec from a user goal
 - Amending an existing spec with new requirements or scope changes
 - Any time `/plan` needs to produce or modify a spec file
 
@@ -18,8 +18,8 @@ Output format is **normative**: follow section order and tagging rules exactly.
 - **Directory:** `docs/specs/` at the workspace root (always).
 - **Filename (default):** `{YYYY-MM-DD}-{kebab-slug}-spec.md` (use `created` date for new specs; when amending, keep filename or follow team convention).
 - **Optional timestamp affixes:** For active work, collision avoidance, or timeline clarity, you may add a **UTC-style timestamp** as **prefix or suffix** on the kebab slug (still ending in `-spec.md`). Common forms:
-  - **`YYYY-MM-DDTHHMMSSZ-`** — e.g. `2026-04-10T2057Z-road-35-session-storage-staged-preplan-spec.md` (compact time; `Z` denotes UTC).
-  - **`YYYY-MM-DD-HHMM-`** — e.g. `2026-04-10-2057-road-35-session-storage-staged-preplan-spec.md` (hour/minute block before the slug).
+  - **`YYYY-MM-DDTHHMMSSZ-`** — e.g. `2026-04-10T2057Z-session-storage-staged-preplan-spec.md` (compact time; `Z` denotes UTC).
+  - **`YYYY-MM-DD-HHMM-`** — e.g. `2026-04-10-2057-session-storage-staged-preplan-spec.md` (hour/minute block before the slug).
   Prefer one convention per team; the **default** remains **`{YYYY-MM-DD}-{slug}-spec.md`**.
 - **Linters:** Workspace spec linters match **`docs/specs/*-spec.md`** — any of the above patterns is valid as long as the filename ends with **`-spec.md`**.
 

@@ -44,10 +44,6 @@ grep -qF '**No direct Markdown edits' "$SKILL" \
 grep -qE '\*\.md|apply_patch' "$SKILL" \
   || fail "SKILL must forbid main-session *.md / apply_patch style edits for bookkeeping"
 
-# --- SKILL: committed roadmap tree (orchestrator must not patch roadmap markdown ad hoc) ---
-grep -qF 'docs/roadmaps/' "$SKILL" \
-  || fail "SKILL must mention docs/roadmaps/ (roadmap tree boundary)"
-
 # --- session-memory.sh: begin-run + cmd_begin_run / case begin-run ---
 grep -qF 'begin-run' "$SESSION_MEM" || fail "session-memory.sh must mention begin-run"
 grep -qF 'cmd_begin_run' "$SESSION_MEM" || fail "session-memory.sh must define cmd_begin_run"

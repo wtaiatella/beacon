@@ -39,7 +39,6 @@ Three ideas sit on top of each other:
 - [Cursor platform reference](#cursor-platform-reference)
 - [Rules of engagement](#rules-of-engagement)
 - [Extending the workspace](#extending-the-workspace)
-- [Roadmap](#roadmap)
 
 ---
 
@@ -55,7 +54,7 @@ Procedure: [run-pipeline skill](.cursor/skills/run-pipeline/SKILL.md) · [human-
 
 Readonly specialists run **only** from the **orchestrator** (flat delegation). They write **bounded** output under **`docs/sessions/<id>/pre-plan/`** (merged MCP) and **`docs/sessions/<id>/artifacts/`**. Implementers get **least-privilege** slices — phase, one domain, **`WORKTREE_PATHS`** — not full session dumps.
 
-**`Task(do)`** applies mechanical edits through the **allowlisted script API** (e.g. [`query-transcript.py`](scripts/tools/query-transcript.py), [`archive-roadmap.sh`](scripts/tools/archive-roadmap.sh)) after **`Task(scrum)`** authorizes spec updates. **Finish** uses [`pipeline-finish.sh`](scripts/hooks/pipeline-finish.sh) per [git / GitLab rules](.cursor/rules/git-gitlab-mutations.mdc) and skill **section 9**.
+**`Task(do)`** applies mechanical edits through the **allowlisted script API** (e.g. [`query-transcript.py`](scripts/tools/query-transcript.py)) after **`Task(scrum)`** authorizes spec updates. **Finish** uses [`pipeline-finish.sh`](scripts/hooks/pipeline-finish.sh) per [git / GitLab rules](.cursor/rules/git-gitlab-mutations.mdc) and skill **section 9**.
 
 **Law of flat orchestration:** Nested **`Task(...)`** from personas is **forbidden**; only the orchestrator delegates. Mutations outside normal product work stay on **allowlisted** script and hook paths — [nested-task audit](docs/reference/nested-task-audit.md).
 
@@ -84,7 +83,6 @@ flowchart TD
 
     subgraph ZT["Zero-trust allowlist — no ad-hoc shell"]
         QTP[query-transcript.py]
-        ARR[archive-roadmap.sh]
         PF[pipeline-finish.sh]
     end
 
@@ -96,7 +94,6 @@ flowchart TD
     CE & SV & SS --> AR
 
     MA -->|"Task(do) after scrum"| QTP
-    MA -->|"Task(do) after scrum"| ARR
     MA -->|Finish skill 9| PF
 
     style MA fill:#c0392b,color:#fff
@@ -106,7 +103,7 @@ flowchart TD
 
 ## Pipeline state machine
 
-**Workspace attach:** multi-root (`attach-target.txt`, `session.code-workspace`, [`attach-project.sh`](scripts/tools/attach-project.sh)) — [setup](docs/setup.md). **§1** branch consent, then **`pipeline-init.sh`** (**§2**) → **Pre-plan** Wave 1 / Wave 2 MCP (triage + gate, when applicable) → **§3–4** plan loop (`Task(plan)` ↔ `plan-reviewer` ↔ `Task(scrum)`) → **§5** phase execution → **§6** implementation review (Shift-Left: `*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or rework) → **§7.0** QA prep → **`Task(qa)` (§7)** → **§7.1** final `Task(scrum)` (+ roadmap–spec verify when applicable) → **`Task(summary)` (§8)** → **`pipeline-finish.sh` (§9)**.
+**Workspace attach:** multi-root (`attach-target.txt`, `session.code-workspace`, [`attach-project.sh`](scripts/tools/attach-project.sh)) — [setup](docs/setup.md). **§1** branch consent, then **`pipeline-init.sh`** (**§2**) → **Pre-plan** Wave 1 / Wave 2 MCP (triage + gate, when applicable) → **§3–4** plan loop (`Task(plan)` ↔ `plan-reviewer` ↔ `Task(scrum)`) → **§5** phase execution → **§6** implementation review (Shift-Left: `*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or rework) → **§7.0** QA prep → **`Task(qa)` (§7)** → **§7.1** final `Task(scrum)` → **`Task(summary)` (§8)** → **`pipeline-finish.sh` (§9)**.
 
 | Kind | Meaning |
 |------|---------|
@@ -185,11 +182,10 @@ stateDiagram-v2
         main session does not patch spec
     end note
 
-    FinalScrum --> Summary : §7.1 PROCEED + verify OK
+    FinalScrum --> Summary : §7.1 PROCEED
     note left of FinalScrum
         §7.1: Task(scrum) post-QA;
-        verify-roadmap-spec-sync.sh
-        when applicable; then Task(do) if authorized
+        then Task(do) if authorized
     end note
 
     Summary --> PipelineFinish : §8 Task(summary) done
@@ -209,7 +205,7 @@ stateDiagram-v2
 
 ## Phase gates and shift-left security
 
-**§6** (per phase, after **§5**) runs **`Task(*-reviewer)`** and **`Task(security-scanner)`** in **parallel** — scanner scoped to **`phase-impl-delta`**, report at **`artifacts/scanners/phase-<N>-security.md`** — then **`Task(scrum)`** aggregates scores and security into one gate ([ROAD-54](docs/roadmaps/completed/ROAD-54-shift-left-security-scrum-gate-aggregation.md), [run-pipeline skill](.cursor/skills/run-pipeline/SKILL.md) **§6**). **§7.0** runs a separate **QA prep wave** (**`Task(spec-validator)`** + **`Task(security-scanner)`** → **`artifacts/scanners/`**) before **`Task(qa)`** and **§7.1** **`Task(scrum)`** — pipeline **§7**; scrum still uses **PROCEED / REWORK / ASK_USER**. See [run-pipeline reference](docs/run-pipeline-reference.md), [router invalid-completion rules](.cursor/rules/00-workspace-router.mdc).
+**§6** (per phase, after **§5**) runs **`Task(*-reviewer)`** and **`Task(security-scanner)`** in **parallel** — scanner scoped to **`phase-impl-delta`**, report at **`artifacts/scanners/phase-<N>-security.md`** — then **`Task(scrum)`** aggregates scores and security into one gate ([run-pipeline skill](.cursor/skills/run-pipeline/SKILL.md) **§6**). **§7.0** runs a separate **QA prep wave** (**`Task(spec-validator)`** + **`Task(security-scanner)`** → **`artifacts/scanners/`**) before **`Task(qa)`** and **§7.1** **`Task(scrum)`** — pipeline **§7**; scrum still uses **PROCEED / REWORK / ASK_USER**. See [run-pipeline reference](docs/run-pipeline-reference.md), [router invalid-completion rules](.cursor/rules/00-workspace-router.mdc).
 
 ```mermaid
 sequenceDiagram
@@ -222,7 +218,7 @@ sequenceDiagram
 
     O->>Impl: phase k · §5 batch complete
 
-    par §6 parallel (skill §6 · ROAD-54)
+    par §6 parallel (skill §6)
         O->>Rev: Task(dev-reviewer|sre-reviewer|...) as needed
         Rev-->>O: scores · structured findings
     and
@@ -274,7 +270,7 @@ docs/sessions/
 ```
 
 - **no** root-level session clutter — keep **`docs/sessions/<session-id>/`** to the files and dirs above; put bounded handoffs under **`pre-plan/`** and **`artifacts/`** ([run-pipeline skill](.cursor/skills/run-pipeline/SKILL.md) Non-negotiables item 9).
-- **no** backward-compatibility **symlinks** under **`docs/sessions/<session-id>/`** (e.g. legacy alias paths pointing at renamed trees) — **hard cutover** to canonical paths only ([ROAD-53](docs/roadmaps/completed/ROAD-53-workspace-cleanliness-and-symlink-eradication.md)).
+- **no** backward-compatibility **symlinks** under **`docs/sessions/<session-id>/`** (e.g. legacy alias paths pointing at renamed trees) — **hard cutover** to canonical paths only.
 
 **`docs/sessions/`** contents (except optional tracked [`README.md`](docs/sessions/README.md)) are **gitignored** — local scratch per clone.
 
@@ -296,7 +292,7 @@ docs/sessions/
 ## 30-second setup
 
 - **Framework:** clone this repo, run setup (creates runtime dirs, validates JSON including hooks/MCP when present).
-- **Multi-root target:** put app repos under **`PROJECTS_ROOT`**, run **`attach-project.sh`** — writes **`docs/sessions/<id>/session.code-workspace`** and **`attach-target.txt`** ([ROAD-48](docs/roadmaps/completed/ROAD-48-dynamic-multi-root-project-attachment-and-workspace-generation.md), [setup](docs/setup.md#multi-root-attach-road-48)).
+- **Multi-root target:** put app repos under **`PROJECTS_ROOT`**, run **`attach-project.sh`** — writes **`docs/sessions/<id>/session.code-workspace`** and **`attach-target.txt`** ([setup](docs/setup.md#multi-root-attach-road-48)).
 - **Single-folder target:** clone the app under **`myapp/`** here if you do not use attach (pass **`myapp/`** to **`/run`** / agents).
 - **Optional MCP:** committed [`.cursor/mcp.json`](.cursor/mcp.json) is the team baseline — adjust URLs / **`${env:…}`** per [cursor-mcp](docs/reference/cursor-mcp.md); restart Cursor and confirm **Settings → MCP**.
 
@@ -327,19 +323,18 @@ git clone <your-app-repo> myapp/
 
 ## Zero-Trust script API
 
-Orchestration and **`Task(do)`** call **allowlisted** scripts only—**not** raw arbitrary shell or **`python3 -c`** / inline one-liners for transcript parsing, roadmap moves, or other mechanical work ([ROAD-55](docs/roadmaps/completed/ROAD-55-absolute-shell-depreation-and-taskdo-execution-api.md), **Zero Trust Shell**).
+Orchestration and **`Task(do)`** call **allowlisted** scripts only—**not** raw arbitrary shell or **`python3 -c`** / inline one-liners for transcript parsing or other mechanical work (**Zero Trust Shell**).
 
 | Safe entry | Path | Role |
 |------------|------|------|
 | Pipeline init | [`scripts/hooks/pipeline-init.sh`](scripts/hooks/pipeline-init.sh) | Session wiring at **`/run`** init (run-pipeline **§2**). |
 | Pipeline finish | [`scripts/hooks/pipeline-finish.sh`](scripts/hooks/pipeline-finish.sh) | Finish flow, prompts, session trace audit (skill **§9**). |
 | Transcript query | [`scripts/tools/query-transcript.py`](scripts/tools/query-transcript.py) | Read-only transcript slices for **`Task(do)`**—no hand-rolled JSONL parsing in chat. |
-| Roadmap archive | [`scripts/tools/archive-roadmap.sh`](scripts/tools/archive-roadmap.sh) | Vetted **`git mv` / staging** for moving completed roadmaps—not ad-hoc git in agent text. |
 
 **Why raw arbitrary shell and inline Python are banned for agents**
 
-- **Bounded, reviewable surface:** Only these paths (and the repo’s other vetted **`scripts/`** helpers) are maintained, testable, and lintable; one-off **`sh -c`**, **`rg | …`**, **`awk`/`sed`** pipelines are not—so they bypass [ROAD-52](docs/roadmaps/completed/ROAD-52-comprehensive-shell-encapsulation-and-orchestrator-abstraction.md) shell encapsulation and are easy for models to get wrong.
-- **Inline Python** (`python3 -c`, pasted snippets) sidesteps **`query-transcript.py`**, hides behavior from **`lint-check.sh`** sweeps of agent/skills text, and recreates the “rogue parser” problem ROAD-55 removed from **`Task(do)`**.
+- **Bounded, reviewable surface:** Only these paths (and the repo’s other vetted **`scripts/`** helpers) are maintained, testable, and lintable; one-off **`sh -c`**, **`rg | …`**, **`awk`/`sed`** pipelines are not—so they bypass shell encapsulation and are easy for models to get wrong.
+- **Inline Python** (`python3 -c`, pasted snippets) sidesteps **`query-transcript.py`**, hides behavior from **`lint-check.sh`** sweeps of agent/skills text, and recreates the “rogue parser” problem removed from **`Task(do)`**.
 - **If no script fits:** escalate (**`QUESTION:`** / extend tooling)—do **not** invent inline code to bridge the gap.
 
 ---
@@ -356,7 +351,7 @@ Orchestration and **`Task(do)`** call **allowlisted** scripts only—**not** raw
 | **`/fix`** | **Escape hatch** — debugger for a target directory and symptom outside the full pipeline. |
 | **`/do`** | **Escape hatch** — ad-hoc operator; mechanical work uses the [Zero-Trust script API](#zero-trust-script-api) and authorized **`Task(do)`** paths. |
 | **`/sre`**, **`/data`** | Platform / data engineer — **`[sre]`** / **`[data]`** tasks; same slice rules as **`/dev`**. |
-| **`/summary`**, **`/kb`**, **`/roadmap`** | Summary handoff, local KB build, roadmap drafts — see skills and [Extending the workspace](#extending-the-workspace). |
+| **`/summary`**, **`/kb`** | Summary handoff, local KB build — see skills and [Extending the workspace](#extending-the-workspace). |
 | *Readonly specialists* | **Dual-mode:** user **`/name`** (**`/codebase-explorer`**, **`/spec-validator`**, **`/security-scanner`**, **`/pre-plan-triage`**, **`/mcp-*`**, **`*-reviewer`**) **or** the **`/run`** main session schedules **`Task(...)`** — **personas do not** nest **`Task`** on these ([nested-task audit](docs/reference/nested-task-audit.md)). |
 
 ---
@@ -479,12 +474,6 @@ Specs and session memory carry context; economy-tier models for mechanical agent
 ## Extending the workspace
 
 Add agents under **`.cursor/agents/`**, skills under **`.cursor/skills/`**, hooks + **`hooks.json`**, rules under **`.cursor/rules/`**. [CONTRIBUTING](CONTRIBUTING.md), [upgrade](scripts/upgrade.sh).
-
----
-
-## Roadmap
-
-Backlog and completed work: **`docs/roadmaps/`**, **`docs/roadmaps/completed/`** — [roadmaps README](docs/roadmaps/README.md). **`/roadmap`** drafts backlog files; **`/plan`** owns specs. No historical id laundry list here.
 
 ---
 

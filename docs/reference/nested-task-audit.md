@@ -43,7 +43,6 @@
 | `plan.md` | "**Delegate to** `codebase-explorer` in **parallel**" | nested-risk | write-capable | Same. |
 | `kb.md` | "**Sub-delegates:** `codebase-explorer` …" / "**Delegate to** `codebase-explorer`" | nested-risk | write-capable | **Phase 2** remediation candidate. |
 | `fix.md` | "**Sub-delegates:** `codebase-explorer` … **delegate** to **codebase-explorer**" | nested-risk | write-capable | **Phase 2** remediation candidate. |
-| `roadmap.md` | "**Task:** `codebase-explorer` — one parallel Task per target directory …" | nested-risk | write-capable | Toolbox line uses **Task** + explorer; reads as roadmap persona invoking explorer when KB index missing—**Phase 2** alignment with plan/kb. |
 | `qa.md` | "**do not** invoke **`Task(...)`** on other agents yourself" | orchestrator-doc | write-capable | Explicit **anti-nested-Task** guardrail for QA. |
 | `qa.md` | "**Sub-delegates:** `spec-validator` (parallel), `security-scanner` (parallel)" | nested-risk | write-capable | Contrasts with line 15: implies QA **launches** validators—**Phase 2** to reconcile with "orchestrator delegates validators" vs subagent tools. |
 | `qa.md` | "**Parallel sub-delegation:** Launch **`spec-validator`** and **`security-scanner`** concurrently" | nested-risk | write-capable | Same. |
@@ -102,8 +101,8 @@ Both files use **`Task(mcp-*)`** / **`Task(plan)`** language as **documentation 
 
 - **Files in `.cursor/agents`:** 24 `.md` files scanned.
 - **Files with `Task(` in body:** `data.md`, `dev.md`, `mcp-arc.md`, `plan.md`, `pre-plan-triage.md`, `qa.md`, `scrum.md`, `sre.md` (mostly orchestrator-doc or anti-nested guidance).
-- **Files with Sub-delegate / Delegate-to / parallel specialist chains:** `fix.md`, `kb.md`, `plan.md`, `qa.md`, `roadmap.md` (primary **nested-risk** set for Phase 2).
-- **Highest-signal nested-risk:** `plan.md`, `kb.md`, `fix.md` (codebase-explorer); `qa.md` (spec-validator + security-scanner); `roadmap.md` (Task + codebase-explorer).
+- **Files with Sub-delegate / Delegate-to / parallel specialist chains:** `fix.md`, `kb.md`, `plan.md`, `qa.md` (primary **nested-risk** set for Phase 2).
+- **Highest-signal nested-risk:** `plan.md`, `kb.md`, `fix.md` (codebase-explorer); `qa.md` (spec-validator + security-scanner).
 
 ---
 
@@ -122,8 +121,6 @@ This section records **recommended replacement text themes** per agent file. It 
 
 **Rationale:** Preserves a **single orchestration layer** for literal **`Task(...)`** scheduling; avoids “persona delegates to explorer in parallel” language that implies nested orchestration. Aligns with spec **Open Question 1** toward **main-session-owned** explorer scheduling with **`REQUEST_MAIN:`** when the persona cannot proceed without it; inline tools are the default when explorer is not scheduled.
 
-**Also align:** `roadmap.md` **roadmap** agent — any **Task + codebase-explorer** toolbox line should use the same framing (orchestrator schedules explorer; persona uses inline tools or **`REQUEST_MAIN:`** / user prompt).
-
 ---
 
 ### Per-file recommended wording (Phase 3 targets)
@@ -141,11 +138,6 @@ This section records **recommended replacement text themes** per agent file. It 
 #### `fix.md`
 
 - **Replace** **“Sub-delegates:** `codebase-explorer`”** and **“delegate to codebase-explorer”** in **Orient** with: unfamiliar codebase → **Read / Grep / SemanticSearch** first; **or** ask the user to run **`/codebase-explorer`** for layout; under orchestrated **`/fix`**, **`REQUEST_MAIN:`** if the main session must schedule explorer — same pattern as **plan**.
-
-#### `roadmap.md` (roadmap builder agent)
-
-- **Replace** toolbox **`- **Task:** `codebase-explorer` …`** style lines with the same **Decision** table framing: parallel **`Task(codebase-explorer)`** is **main-session** scheduling; the **roadmap** persona uses **inline** tools for target-dir scouting or **`REQUEST_MAIN:`** / user **`/codebase-explorer`** when a dedicated explorer pass is still needed — **no** persona-owned parallel **`Task(codebase-explorer)`** wording.
-- **Align** any “one parallel Task per target directory” phrasing with **plan/kb/fix** (orchestrator schedules explorer; persona does not spawn it).
 
 #### `qa.md` — reconcile validators with “do not invoke `Task(...)`”
 

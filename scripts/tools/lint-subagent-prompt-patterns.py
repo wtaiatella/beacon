@@ -9,7 +9,7 @@ Exemptions:
   - Lines inside markdown fenced blocks (``` ... ```).
   - Lines containing HTML: <!-- lint:allow-subagent-shell -->
   - Lines that only document first-party scripts (pipeline-finish, git-inspect,
-    archive-roadmap, query-transcript, audit-session-trace).
+    query-transcript, audit-session-trace).
   - Lines that are clearly prohibition / negation prose (do not, never, etc.).
 """
 from __future__ import annotations
@@ -32,7 +32,6 @@ ALLOW_LINE = re.compile(r"lint:allow-subagent-shell")
 PATH_EXEMPT = (
     "pipeline-finish",
     "git-inspect.sh",
-    "archive-roadmap.sh",
     "query-transcript.py",
     "audit-session-trace",
 )

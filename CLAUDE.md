@@ -42,7 +42,6 @@ Three commands are not persona subagents: **`/run`** is main-loop orchestration 
 | /summary | Summary Writer | `summary` | `<ticket-folder-path>` |
 | /scrum | PO / SM / PM | `scrum` | `<ticket-folder-path>` or reviewer report |
 | /kb | Knowledge Base Builder | `kb` | `<target-dirs>` |
-| /roadmap | Roadmap Builder | `roadmap` | `<target-dirs or doc-path> [vision]` or `--validate` |
 | /run | Pipeline Orchestrator | — (main loop + `run-pipeline` skill) | `<ticket-folder-path-or-jira-key> [idea] [flags]` |
 | /clone | Repo Cloner (utility) | — | `<git-url> [target-dir]` |
 | /ticket-intake | Standalone: Jira ticket intake | `ticket-intake` | `<JIRA-KEY \| jira-url>` |
@@ -270,7 +269,7 @@ Defined under `.claude/skills/`.
 
 **Claude Code sets the model per-subagent** in each agent's `model:` frontmatter:
 
-- **`inherit`** (session model) — implementers, architects, debuggers: prd, spectech, tasks, dev, sre, data, qa, fix, kb, roadmap, security-scanner, ticket-intake, repro, flowchart-check, rebase, proof, build-test.
+- **`inherit`** (session model) — implementers, architects, debuggers: prd, spectech, tasks, dev, sre, data, qa, fix, kb, security-scanner, ticket-intake, repro, flowchart-check, rebase, proof, build-test.
 - **`haiku`** (economy) — reviewers, validators, and mechanical/short-context agents: do, summary, scrum, codebase-explorer, spec-validator, plan-reviewer, dev-reviewer, sre-reviewer, data-reviewer, pre-plan-triage, mcp-*.
 
 There is no Claude Code equivalent of per-run model swapping; pick the session model by workflow (standard for routine `/run`, premium for a complex `/fix`). The `run-pipeline` skill's `--model-strategy` / `--budget` guidance is retained as guidance; automatic mid-run swaps are not performed under Claude Code.

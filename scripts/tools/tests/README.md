@@ -12,18 +12,6 @@ From the repository root:
 
 This runs `./scripts/tools/lint-workspace-content.sh` and is suitable before an MR when you changed specs or agents.
 
-## lint-check.sh ROAD guard (permanent prompts)
-
-`scripts/tools/lint-check.sh` rejects `ROAD-<digits>` under `.cursor/agents/`, `.cursor/skills/`, and `.cursor/rules/` (see **CONTRIBUTING.md** — *No Historical Tracking IDs in Prompts*).
-
-**Self-check** (clean tree must pass; negative case uses a temporary directory):
-
-```bash
-./scripts/tools/tests/test-lint-check-road-guard.sh
-```
-
-**Manual:** From the repo root after edits to rules, skills, or agents, run `./scripts/tools/lint-check.sh .` and confirm exit code 0.
-
 ## lint-check.sh subagent shell patterns (ROAD-55)
 
 `scripts/tools/lint-check.sh` rejects forbidden instructional substrings in **`.cursor/agents/*.md`** and **`.cursor/skills/**/*.md`** (see **CONTRIBUTING.md** — *No Historical Tracking IDs* section for full `lint-check.sh` behavior).
@@ -33,24 +21,6 @@ This runs `./scripts/tools/lint-workspace-content.sh` and is suitable before an 
 ```bash
 ./scripts/tools/tests/test-lint-check-subagent-shell-patterns.sh
 ```
-
-## Roadmap tools self-test
-
-```bash
-./scripts/tools/tests/roadmap-tools-selftest.sh
-```
-
-Covers `roadmap-next.sh` and `roadmap-validate.sh` against fixtures under `scripts/tools/tests/fixtures/`.
-
-## sync-roadmap-status (ROAD-45)
-
-```bash
-./scripts/tools/tests/test-sync-roadmap-status.sh
-```
-
-Uses a temporary git repo with `docs/specs/` and `docs/roadmaps/` to exercise `--dry-run` and a real sync (status line + `git mv` into `completed/`).
-
-**lint-check status-sync (ROAD-45):** `./scripts/tools/tests/test-lint-check-roadmap-spec-sync.sh`
 
 ## apply-models self-test
 
