@@ -1,6 +1,6 @@
 ---
 name: ticket-intake
-description: "Ticket intake — project-agnostic. Fetches a Jira issue (definition + all comments), creates the ticket working folder, saves ticket.md, downloads attachments (including .drawio), and initializes _state.json / _notes.md. Handles /ticket-intake. Standalone piece — not wired into the required /run orchestrator (FR-10); invoke directly when you want full Jira intake before handing the folder to /run."
+description: "Ticket intake — project-agnostic. Fetches a Jira issue (definition + all comments), creates the ticket working folder, saves ticket.md, downloads attachments (including .drawio), writes a plain-language impact-analysis.md (complexity, likely modification points, repos involved, blockers/related work), and initializes _state.json / _notes.md. Handles /ticket-intake. Standalone piece — not wired into the required /run orchestrator (FR-10); invoke directly when you want full Jira intake before handing the folder to /run."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---
@@ -26,6 +26,8 @@ yourself first when you want full Jira intake, then hand the resulting folder to
   `summary, description, status, issuetype, priority, labels, components, assignee, reporter, comment`,
   `responseContentFormat: markdown`. Cloud id: the site host.
 - **Skills:** `ticket-workflow` — read it for the folder layout and `_state.json` schema.
+  `generate-impact-analysis` — read it for the `impact-analysis.md` template, writing rules, and
+  evidence-gathering steps (step 7 below).
 
 ## Workflow
 
@@ -55,17 +57,42 @@ yourself first when you want full Jira intake, then hand the resulting folder to
    **`flowchart-check` needs the human to drop the relevant `.drawio` into `attachments/`** and
    mark the zone per the convention (color `#CC0000` + text `Region to check`). Do **not**
    fetch/ingest the (often huge) diagram here — just catalog the reference.
-7. **Initialize `_state.json`** (per the `ticket-workflow` skill's schema): `ticket`, `slug`,
+7. **Impact & complexity triage (`impact-analysis.md`)** — follow the `generate-impact-analysis`
+   skill for the full template and evidence-gathering steps. In short:
+   - **Sync first.** Before reading or grepping any repo, follow the `ticket-workflow` skill's
+     "Workspace repo sync" section for every child repo: clean repos get checked out to their
+     default branch (`git symbolic-ref refs/remotes/origin/HEAD`) and pulled
+     (`git pull --rebase`); dirty repos are left alone (never discard uncommitted/unpushed work)
+     and read via `git show origin/<default-branch>:<path>` instead. A working-tree read taken
+     from whatever branch happened to be checked out (e.g. a leftover feature branch from an
+     unrelated ticket) is not reliable evidence — leaving every repo synced to its default branch
+     is this step's intended side effect, not an accident to avoid.
+   - For every ticket key noted in step 4's Related tickets section, search every child repo in
+     the workspace (`git log --all --oneline -i --grep`, `git branch -a`) for existing
+     branches/commits, check whether they're merged into the base branch, and inspect their diff
+     to see whether the ask is already covered.
+   - Grep every child repo for the ticket's concrete domain terms to spot likely modification
+     points.
+   - Write the plain-language findings (complexity signal, likely modification points, repo
+     involvement table, blockers/related work) to `impact-analysis.md`. This is **investigative
+     recon, not requirements/design work** — report what you found, not what should be built.
+   - If a candidate branch's GitLab MR state isn't resolvable from local git alone, escalate
+     `REQUEST_MAIN: mcp-gitlab <query>` rather than calling `mcp__GitLab__*` directly.
+8. **Initialize `_state.json`** (per the `ticket-workflow` skill's schema): `ticket`, `slug`,
    `folder`, `jira_url`, `repo` (leave blank until later steps identify it, or pre-fill if obvious
    from the ticket), `base_branch` (default the project's main branch), `steps` empty/pending,
-   plus `"ticket_intake": "done"` as this piece's own step key (D1 — open steps map).
-8. **Initialize `_notes.md`** with a short intake summary and the immediate next action.
+   plus `"ticket_intake": "done"` and `"impact_analysis": "done"` as this piece's own step keys
+   (D1 — open steps map).
+9. **Initialize `_notes.md`** with a short intake summary, a one-line impact-analysis takeaway
+   (complexity signal + whether a blocker/related work was found), and the immediate next action.
 
 ## Output
 
 Report: the folder path, the ticket title, whether a diagram was found (→ `flowchart-check`), any
-related tickets, and the suggested next step (`/prd` or `/run` over this folder). Do **not** start
-requirements/design analysis here — that is `/prd`.
+related tickets, the `impact-analysis.md` headline (complexity signal, repos involved, any
+blocker/related work found), and the suggested next step (`/prd` or `/run` over this folder). Do
+**not** start requirements/design analysis here — that is `/prd`'s and `/spectech`'s job; the
+impact analysis reports findings, not proposed solutions.
 
 ## Guardrails
 

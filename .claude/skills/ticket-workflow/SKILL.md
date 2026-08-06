@@ -25,6 +25,7 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step
 ├── ticket.md         # issue definition + comments (ticket-intake, when used)
 ├── attachments/      # downloaded attachments, incl. marked *.drawio (ticket-intake)
+├── impact-analysis.md # plain-language complexity/repo/blocker triage (ticket-intake, when used — see generate-impact-analysis skill)
 ├── repro.md           # local before/after defect reproduction (repro, optional; feeds /prd)
 ├── prd.md            # product requirements (/prd)
 ├── spectech.md        # technical design, profile: lean|standard|full (/spectech)
@@ -77,9 +78,10 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 - **`steps` is an open, string-keyed map — not a fixed enum.** The required orchestrator (A) uses
   the six keys shown above (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`). A
   ticket-scoped standalone piece run outside the orchestrator may add its own key (e.g.
-  `"flowchart_check": "skipped"`, `"ticket_intake": "done"`, `"repro": "done"`, `"build_test":
-  "done"`, `"proof": "skipped"`) independent of the orchestrator's vocabulary. Do not force either
-  vocabulary onto a step that doesn't apply — an open map lets both today's orchestrator and any future
+  `"flowchart_check": "skipped"`, `"ticket_intake": "done"`, `"impact_analysis": "done"`,
+  `"repro": "done"`, `"build_test": "done"`, `"proof": "skipped"`) independent of the
+  orchestrator's vocabulary. Do not force either vocabulary onto a step that doesn't apply — an
+  open map lets both today's orchestrator and any future
   ticket-oriented orchestrator variant write their own step keys into the same file without schema
   churn.
 - Step status values: `pending | in_progress | done | blocked | skipped`.
@@ -136,6 +138,32 @@ never start implementation on a stale local base or an unrelated in-progress bra
 
 Applies per involved repo (multirepo). `/dev`/`/sre`/`/data` implement on the prepared branch; they
 do not fetch, pull, or branch themselves, so the orchestrator/main thread must do this first.
+
+## Workspace repo sync (precondition of any repo-wide read/scan)
+
+Any step that **reads file content or greps across child repos for evidence** (today:
+`ticket-intake`'s impact-analysis step; potentially other future scans) must sync the workspace
+**first** — otherwise a read reflects whatever branch happened to be checked out (e.g. leftover
+from an unrelated in-progress ticket), not the repo's actual current state. A working-tree read is
+only as good as the branch it was taken from.
+
+For every child repo in the workspace inventory (see the session-init hook's list):
+
+1. `git -C <repo> status --porcelain` — if **dirty** (uncommitted changes), do **not** switch
+   branches on that repo: treat it as another in-progress piece of work and leave it alone. Fall
+   back to reading via `git show origin/<default-branch>:<path>` for that repo instead of the
+   working tree, and record in `_notes.md` that this repo was skipped (dirty) and why.
+2. Determine the default/base branch: `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`
+   (strip the `refs/remotes/origin/` prefix), or reuse `_state.json.base_branch` if already known
+   for the ticket's own repo.
+3. If clean: `git -C <repo> checkout <default-branch>` then `git -C <repo> pull --rebase`. Do not
+   restore the previous branch afterward — leaving every repo on its up-to-date default branch is
+   the intended end state, a clean baseline for whatever step runs next.
+4. Record which repos were synced vs. skipped (and why) in `_notes.md` for traceability.
+
+Never force a checkout/pull that would touch uncommitted or unpushed-but-diverging local work —
+this is a shared, actively-used multirepo workspace; another branch's local state is presumptively
+someone else's (or your own prior) in-progress work, never something to discard silently.
 
 ## Flowchart marking convention (`flowchart-check`, when invoked)
 

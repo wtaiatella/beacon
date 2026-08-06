@@ -55,8 +55,10 @@
 !knowledge/**
 
 # Specs are developer working artifacts, NOT tracked
-# (created at runtime by setup.sh, used locally per developer)
-docs/specs/
+# (created at runtime by setup.sh, used locally per developer; in this workspace docs/specs is a
+# symlink into the sibling `bcs` workspace, so it's shared across both — no trailing slash here:
+# a trailing-slash pattern only matches real directories and silently lets a symlink through)
+docs/specs
 
 # Pipeline summaries are local developer artifacts, NOT tracked
 docs/summaries/
