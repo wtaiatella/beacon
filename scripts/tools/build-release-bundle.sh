@@ -15,7 +15,7 @@
 #       *.pyc
 # - docs/             excluding internal-only / local artifacts:
 #       docs/sessions/* except docs/sessions/README.md
-#       docs/audit.log, docs/summaries/, docs/usage-events.tsv (if present)
+#       docs/audit.log, docs/usage-events.tsv (if present)
 #
 # Not included (by design — not part of this bundle contract)
 # -----------------------------------------------------------
@@ -188,7 +188,6 @@ if [[ -d "$ROOT/docs" ]]; then
     --include 'sessions/README.md' \
     --exclude 'sessions/*' \
     --exclude 'audit.log' \
-    --exclude 'summaries/' \
     --exclude 'usage-events.tsv' \
     --exclude '.env' \
     --exclude '.env.*' \

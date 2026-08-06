@@ -35,8 +35,8 @@ else warn "Cursor CLI or IDE not detected — install from https://cursor.com"; 
 
 # --- 2. Executable bits & runtime dirs ---
 chmod +x scripts/tools/*.sh .cursor/hooks/*.sh scripts/setup.sh scripts/upgrade.sh 2>/dev/null || true
-mkdir -p docs/specs docs/summaries docs/sessions
-pass "Runtime dirs: docs/specs, docs/summaries, docs/sessions"
+mkdir -p docs/specs docs/sessions
+pass "Runtime dirs: docs/specs, docs/sessions"
 
 # --- 3. Workspace integrity (relationship-based, no hardcoded counts) ---
 echo ""

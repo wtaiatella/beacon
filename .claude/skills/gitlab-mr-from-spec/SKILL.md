@@ -20,7 +20,7 @@ Use this skill when the user wants a **GitLab merge request** whose body aligns 
 2. Run or describe:  
    `scripts/tools/mr-description-from-spec.sh <spec.md>`  
    Optionally:  
-   `SUMMARY_PATH=docs/summaries/YYYY-MM-DD-slug-summary.md scripts/tools/mr-description-from-spec.sh <spec.md>`
+   `SUMMARY_PATH=docs/specs/{ticket-folder}/summary.md scripts/tools/mr-description-from-spec.sh <spec.md>`
 3. List **suggested GitLab labels** from spec domain tags (`dev` / `sre` / `data`) as printed by the script.
 4. Once the user confirms the **target branch**, create/update the MR **via the GitLab MCP** (`mcp__GitLab__*`), presenting the title/body for review first; also remind the user to confirm **push** per **`run-pipeline`** Finish.
 

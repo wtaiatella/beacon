@@ -19,8 +19,7 @@ A shared framework for agentic development. It is **not** where your application
 
 ## What You Should NOT Commit
 
-- Your local specs (`docs/specs/` is gitignored)
-- Your pipeline summaries (`docs/summaries/` is gitignored)
+- Your local specs, including each ticket folder's `summary.md` (`docs/specs/` is gitignored)
 - Session memory files (`docs/sessions/` is gitignored)
 - Audit logs (`docs/audit.log` is gitignored)
 - Usage event logs (`docs/usage-events.tsv` is gitignored — optional ROAD-18 granular cost rows; example schema in `docs/usage-events.example.tsv`)

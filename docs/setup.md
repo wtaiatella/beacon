@@ -43,7 +43,7 @@ git clone <repo-url> && cd agentic-workspace
 The setup script will:
 - Check prerequisites (Node.js >= 18, git, Cursor)
 - Make all hook and tool scripts executable
-- Create runtime directories (`docs/specs/`, `docs/summaries/`, `docs/sessions/`)
+- Create runtime directories (`docs/specs/`, `docs/sessions/`)
 - Validate workspace integrity (agents, skills, hooks, tool scripts, JSON validity — all relationship-based, no hardcoded counts)
 - Print next steps
 

@@ -60,9 +60,6 @@
 # a trailing-slash pattern only matches real directories and silently lets a symlink through)
 docs/specs
 
-# Pipeline summaries are local developer artifacts, NOT tracked
-docs/summaries/
-
 # Session memory (ephemeral, per-developer); README for conventions is tracked
 docs/sessions/*
 !docs/sessions/README.md

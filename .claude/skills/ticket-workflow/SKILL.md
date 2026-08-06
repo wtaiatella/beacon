@@ -33,6 +33,7 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 ├── spec-review.md      # plan-segment (folder-mode) review outcome (plan-reviewer)
 ├── qa-report.md        # QA findings written by /qa (both standalone and orchestrated)
 ├── proof.md            # before/after practical proof (proof, optional)
+├── summary.md           # post-pipeline handoff narrative (/summary)
 └── stop-*.md            # any stop-gate halt, with evidence
 ```
 

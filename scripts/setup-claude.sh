@@ -36,8 +36,8 @@ else warn "Claude Code CLI not detected — install from https://claude.com/clau
 
 # --- 2. Executable bits & runtime dirs ---
 chmod +x scripts/tools/*.sh .claude/hooks/*.sh scripts/setup.sh scripts/setup-claude.sh scripts/upgrade.sh 2>/dev/null || true
-mkdir -p docs/specs docs/summaries docs/sessions
-pass "Runtime dirs: docs/specs, docs/summaries, docs/sessions"
+mkdir -p docs/specs docs/sessions
+pass "Runtime dirs: docs/specs, docs/sessions"
 
 # --- 3. Workspace integrity (relationship-based, no hardcoded counts) ---
 echo ""
