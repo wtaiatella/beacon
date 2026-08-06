@@ -1,6 +1,6 @@
 ---
 name: sandbox
-description: "Local multi-service environment lifecycle for the br-tax-engine + br-tax-ui repo pair: start/stop/inspect each datastore and app process individually (mongo, redis, engine, mock, swagger/pecten, ui-proxy, ui) via scripts/tools/sandbox.sh, so /repro and manual Postman/Swagger/UI testing always run against an already-standing environment instead of re-deriving the local-dev recipe each time. Standalone — not wired into the required /run orchestrator."
+description: "Local multi-service environment lifecycle for the br-tax-engine + br-tax-ui repo pair: start/stop/inspect each datastore and app process individually (mongo, redis, engine, mock, swagger/pecten, ui-proxy, ui) via scripts/tools/sandbox.sh, so /repro and manual Postman/Swagger/UI testing always run against an already-standing environment instead of re-deriving the local-dev recipe each time. Auto-detects the workspace folder (e.g. bcs, bcs1, bcs2...) to give each simultaneous ticket its own engine/swagger/ui-proxy/ui port range and Mongo DB name, with zero edits to any file inside br-tax-engine/br-tax-ui. Standalone — not wired into the required /run orchestrator."
 ---
 
 # Sandbox
@@ -11,10 +11,27 @@ needs — engine + Swagger, engine + Postman, engine + UI, or UI alone — witho
 that's already running and without re-discovering docker-compose/npm-script details from scratch
 every session.
 
-**Division of responsibility:** this skill only manages raw infra (containers + long-running
-processes). It does **not** seed data or simulate a ticket's scenario — that is `/repro`'s job,
-which assumes the environment this skill stands up is already up and just feeds it the specific
-data/requests a ticket describes.
+**Division of responsibility:** this skill manages raw infra (containers + long-running processes)
+plus one generic, mechanical exception — `--seed` (below), which loads the standard citation/
+company fixture set with the right per-workspace `DB_NAME` injected. It does **not** decide *what*
+ticket-specific data to seed or simulate a ticket's scenario — that is `/repro`'s job, which
+assumes the environment this skill stands up (and `--seed` populates with the generic fixture set)
+is already up and just feeds it the specific data/requests a ticket describes. This line moved on
+2026-08-06: `--seed` was originally going to live entirely in `/repro`, but only `/sandbox` knows
+the per-workspace `DB_NAME` mapping (see Multi-workspace below), so duplicating that derivation in
+`/repro` would just be two sources of truth for the same fact.
+
+**`--seed` deliberately does not call `br-tax-engine`'s `seed:local-db` npm script or
+`test/_tools/seed-local-db.js`** (revised 2026-08-06, same day it was first built) — that script is
+the user's own personal addition, unused by the rest of the team, and expected to be deleted or
+rewritten in a future ticket; coupling to it would mean `--seed` breaks whenever that happens.
+`scripts/tools/sandbox-seed.js` (new, committed here) is a small, self-contained CLI that this repo
+owns instead — it calls `test/_database/index.js` **directly**. That module (not
+`seed-local-db.js`) holds the real fixture-loading logic and is genuine, stable, team-owned test
+infrastructure (it mirrors what the integration tests' own `before` hooks do) — not something
+slated for removal, and not something worth reimplementing independently (it's 600+ lines of
+citation/company/tax-rule loading that's already correct). So `--seed` is independent of the one
+volatile file, while still relying on the one piece that is not going away.
 
 ## Services
 
@@ -66,7 +83,14 @@ scripts/tools/sandbox.sh --start <service ... | all>
 scripts/tools/sandbox.sh --stop  <service ... | all>
 scripts/tools/sandbox.sh --status [service ...]      # no args = all
 scripts/tools/sandbox.sh --logs  <service> [-f]
+scripts/tools/sandbox.sh --seed  [--version <2|3|all>] [--goods|--no-goods] [--services|--no-services] [--invoice]
 ```
+
+`--seed` runs `scripts/tools/sandbox-seed.js` (owned by this repo, not `br-tax-engine`'s
+`test/_tools/seed-local-db.js` — see Division of responsibility above for why), resolving and
+injecting `DB_NAME` for this workspace's `engine` first (see Multi-workspace below for why a plain
+env var isn't enough here). Doesn't require `engine` itself to be running — it connects to Mongo
+directly — only `mongo` needs to be up.
 
 Composing a scenario is just naming the top-level service it needs — the cascade brings in
 everything under it:
@@ -84,6 +108,84 @@ service-by-service control.
 
 `--start` on a service already listening on its port is a no-op (reports "already up"). Missing
 `node_modules` is installed automatically (`npm ci`) the first time a process-kind service starts.
+
+## Multi-workspace (simultaneous tickets, one workspace folder each)
+
+Added 2026-08-06 after the workspace's actual usage pattern: several sibling folders (e.g. `bcs`,
+`bcs1`, `bcs2`, `bcs3`), each its own full clone of `aw1` + `br-tax-engine` + `br-tax-ui`, one
+ticket in progress per folder, each needing its own `engine`/`swagger`/`ui-proxy`/`ui` — because
+those hold the actual ticket branch code, unlike `mongo`/`redis`/`mock`/`postgres` which stay
+shared (see the Services table's Origin column).
+
+**Fully automatic — no new flag.** `WORKSPACE_NAME` is `basename "$ROOT"` (the workspace folder
+itself); `WORKSPACE_ID` parses a trailing number (`bcs`→0, `bcs1`→1, `bcs2`→2, `bcs3`→3; any other
+folder name hashes to a stable 0–49 via `cksum`). `PORT_OFFSET = WORKSPACE_ID * 100`, added to
+`engine`(3000)/`swagger`(8000)/`ui-proxy`(4000)/`ui`(4200) only. Every `--start`/`--stop`/`--status`
+prints `Workspace: <name> (... port offset: +N)` up front so it's always visible which range is
+active. Validated 2026-08-06 in `bcs3` (offset +300): `engine:3300`, `swagger:8300`,
+`ui-proxy:4300`, `ui:4500`, full request chain confirmed with real HTTP calls through all of them.
+
+**Mongo stays one shared server, but each workspace gets its own DB name** — `svc_db_name`:
+`engine` → `brTest_<workspace>`, `ui-proxy` → `AvaTaxBrazil_<workspace>` (each keeps its own
+pre-existing bare default as the prefix; that mismatch between the two predates this feature).
+Confirmed via `docker exec <mongo-container> mongosh --eval "db.adminCommand('listDatabases')"`
+that `brTest_bcs3` gets created alongside the original bare `brTest`, so simultaneous tickets don't
+overwrite each other's seeded data even though they share one Mongo process. **Postgres is not
+included in this isolation** — it stays one shared native database across every workspace (v1
+scope; creating per-workspace Postgres databases would mean this tool creating databases against
+the user's own native install, a bigger and more invasive step than an env var — revisit only if
+a real collision between simultaneous tickets' Postgres data actually happens).
+
+**The hard part: `engine`'s and `ui-proxy`'s own `server/env-setup.js` /
+`proxy/utils/env-setup.js` unconditionally overwrite `process.env` from `pm2.config.js` on every
+boot** — `Object.assign($env, pm2Cfg, pm2Env, {...})`, and `Object.assign`'s later arguments always
+win. So plain `SRV_PORT=3300 npm start` gets silently clobbered right back to `pm2.config.js`'s
+hardcoded `3000` — confirmed this by reading both `env-setup.js` files before assuming env vars
+alone would work. `scripts/tools/sandbox-pm2-override.js` (new, committed, generic — parameterized
+entirely via `SANDBOX_PM2_CONFIG`/`SANDBOX_ENV_OVERRIDES` env vars, not hardcoded to one repo)
+fixes this the right way round: loaded via `NODE_OPTIONS="--require <script>"` before the app's own
+entry point runs, it `require()`s the target's `pm2.config.js` (populating Node's module cache) and
+mutates that *same* exported object's `apps[0].env` in place. `env-setup.js`'s own later
+`require('../pm2.config')` returns that identical cached, already-patched object — so its
+`Object.assign` merges in the override as if it always belonged there, instead of fighting the
+clobber from outside. This means `PM2_HOME`-based bypass (which would've *also* skipped every
+other default `pm2.config.js` provides — SQS flags, secrets, queue names, dozens of keys) was
+never necessary and would have been strictly worse.
+
+**The same clobber reaches `test/_database/index.js` too, non-obviously — confirmed the hard way.**
+It doesn't require `env-setup.js` directly, but its require chain does:
+`test/_database` → `require('../_helpers/storage-helper')` → `storage-helper.js`'s own
+`require('../../config')` → `config.js:54`'s `require('./server/env-setup')` — same clobber, and
+`storage-helper.js` connects to Mongo at **module-require time** (a top-level `connectDB()` call),
+so the override has to be in place *before* that require chain even starts. A real `--seed` run on
+2026-08-06 landed 302 documents in the shared bare `brTest` instead of `brTest_bcs3` before this
+was caught — this was first found while still wrapping `br-tax-engine`'s own (since-replaced)
+`seed:local-db` npm script, where plain `DB_NAME=brTest_bcs3 npm run seed:local-db` looked like it
+should work and silently didn't; the same clobber applies identically now that `--seed` calls
+`test/_database` directly via `sandbox-seed.js`, since the vulnerable require chain is inside
+`test/_database` itself, not in the script that used to sit in front of it. Fixed the same way as
+`engine`: `--seed` sets `SANDBOX_PM2_CONFIG`/`SANDBOX_ENV_OVERRIDES` and `NODE_OPTIONS` before
+invoking `sandbox-seed.js`. **Lesson for next time a new override target shows up:** grep isn't
+enough to rule this out — a target file not directly requiring `env-setup.js` doesn't mean its
+require chain doesn't reach it transitively; prefer a real document-count check over any single log
+line when in doubt (one log line here is a hardcoded literal unrelated to the real DB; a different
+one dynamically reflects the real target and was the actual evidence used to catch this).
+
+**`swagger` and `ui` don't have this problem** — they're plain `ng serve` (Angular CLI directly
+reads a `--port` flag, no custom env-merge wrapper), appended via `npm start -- --port N` (npm
+forwards trailing args to the script it runs). `ui` additionally needs its proxy target rewritten
+to this workspace's own `ui-proxy` port — `br-tax-ui/proxy.conf.json` hardcodes that target inline
+(not env-driven), so `process_start` generates a workspace-scoped copy
+(`.sandbox/proxy.<workspace>.json`) instead of touching the tracked file, and passes it via
+`--proxy-config`. Confirmed via `git status`/`git diff` after a real run: `br-tax-ui/proxy.conf.json`
+shows zero diff.
+
+**Net result: zero files inside `br-tax-engine`/`br-tax-ui` are ever modified, tracked or not** —
+every override goes through either an environment variable, a `NODE_OPTIONS`-loaded script that
+mutates an in-memory `require()` cache entry, or a generated file that lives entirely under this
+workspace's own `.sandbox/`. Only two files change, ever, and both live in `aw1` (this repo) —
+`scripts/tools/sandbox.sh` and `scripts/tools/sandbox-pm2-override.js` — committed once and shared
+to every sibling workspace folder by an ordinary `git pull`.
 
 ## State
 
