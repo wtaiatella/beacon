@@ -6,34 +6,7 @@
 - **git >= 2.x** — For cloning this workspace and target application repos.
 - **Cursor IDE or CLI** — This workspace is designed for Cursor (IDE or CLI). Download from [https://cursor.com](https://cursor.com).
 
-## Fetch and install from a GitLab Release (tarball)
-
-If you prefer **not** to `git clone` the full history, you can install the packaged workspace from a **GitLab Release** asset named **`agentic-workspace-*.tar.gz`** (for example **`agentic-workspace-26.4.1.tar.gz`**, matching the release tag). That archive contains the same tree you would use after a clone—without a **`.git`** directory—so it is a good fit for adopters who only need the workspace files.
-
-A tarball install stays a plain directory tree with **no** **`.git`** metadata, so **`scripts/upgrade.sh`** (which pulls from **git** remotes) does not apply there. To refresh, download and extract a **newer** release tarball, or **`git clone`** the repository if you want ongoing upgrades via **`upgrade.sh`**.
-
-**Find a release:** Open the project’s **Releases** page in the browser, for example [https://scm.platform.avalara.io/avatax-platform/agentic-workspace/-/releases](https://scm.platform.avalara.io/avatax-platform/agentic-workspace/-/releases). The latest release is listed at the top; open any release to download its assets. Pick the tarball whose version in the filename matches the tag you want.
-
-**Download and extract:** Prefer a **new, empty directory** as the destination so you do not overwrite unrelated files. Extracting on top of an **existing** checkout or another project’s root can replace files in place—only do that if you intend to refresh that tree with the release contents.
-
-On the release you chose, use **Download** on the **`agentic-workspace-*.tar.gz`** asset, or copy that asset’s **direct link** and fetch it from a shell. GitLab generates the download URL per asset; using the link from the UI avoids guessing paths.
-
-```bash
-mkdir -p ~/work && cd ~/work
-curl -fL -O "<paste-the-direct-download-URL-for-the-tarball-from-the-Release-page>"
-tar -xzf agentic-workspace-*.tar.gz
-cd agentic-workspace-*/
-```
-
-The published archive has a **single top-level directory** named **`agentic-workspace-<VERSION>/`** (see the bundle layout in **`scripts/tools/build-release-bundle.sh`**). **`cd`** into that folder so **`scripts/setup.sh`** is at the repository root.
-
-Alternatively, download the **`.tar.gz`** in the browser, move it to an empty parent directory, and run **`tar -xzf`** on the file, then **`cd`** into **`agentic-workspace-*/`** as above.
-
-**After extract:** From that workspace root (the directory that contains **`scripts/setup.sh`**), run **`./scripts/setup.sh`** as in [Step 1: Clone and Setup](#step-1-clone-and-setup) below. The script performs the same validation and setup whether you arrived via clone or tarball.
-
 ## Step 1: Clone and Setup
-
-If you already unpacked a **release tarball**, skip **`git clone`** and start at **`./scripts/setup.sh`** (see [Fetch and install from a GitLab Release (tarball)](#fetch-and-install-from-a-gitlab-release-tarball)).
 
 ```bash
 git clone <repo-url> && cd agentic-workspace
