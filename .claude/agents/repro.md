@@ -226,6 +226,13 @@ command (`/prd` after a first Before run; `/qa` or `/summary` after a confirmed 
 
 - **Local only.** Never point this at Sandbox/Production or any shared/remote environment — purely
   local `/sandbox`-managed infra on the developer's own machine.
+- **Never scan ports/processes machine-wide to figure out what's already running.** With several
+  sibling workspaces (`bcs`, `bcs1`, `bcs2`, `bcs3`, ...) each potentially running their own
+  `engine`/`swagger`/`ui-proxy`/`ui` at once on different offset ports, a raw `lsof`/`ps aux`/
+  `docker ps` scan shows every workspace's services mixed together with no indication of which one
+  is this ticket's — that's a real, reported source of confused analysis, not a hypothetical one.
+  Always use `scripts/tools/sandbox.sh --status` instead — it's already scoped to and labels the
+  current workspace (`Workspace: <name> (... port offset: +N)`).
 - **Never stand up infra by hand.** If a scenario needs something `/sandbox` doesn't yet support,
   say so and stop — don't fall back to raw `docker compose`/`npm start`, which is exactly the
   duplicated-logic problem this piece moved away from on 2026-08-06.

@@ -125,6 +125,14 @@ prints `Workspace: <name> (... port offset: +N)` up front so it's always visible
 active. Validated 2026-08-06 in `bcs3` (offset +300): `engine:3300`, `swagger:8300`,
 `ui-proxy:4300`, `ui:4500`, full request chain confirmed with real HTTP calls through all of them.
 
+**Don't scan ports/processes machine-wide to check what's running — user-reported real
+confusion, not hypothetical.** Several sibling workspaces can have their own `engine`/`swagger`/
+`ui-proxy`/`ui` up at once, each on a different offset. A raw `lsof -i`/`ps aux`/`docker ps` scan
+shows all of them mixed together with no indication of which belongs to which workspace, and has
+already led an assistant to misread the environment. `--status` is the one command that's already
+scoped and labeled correctly for the current workspace — prefer it over ad hoc process/port
+inspection whenever inspecting this environment, from any tool or session.
+
 **Mongo stays one shared server, but each workspace gets its own DB name** — `svc_db_name`:
 `engine` → `brTest_<workspace>`, `ui-proxy` → `AvaTaxBrazil_<workspace>` (each keeps its own
 pre-existing bare default as the prefix; that mismatch between the two predates this feature).
