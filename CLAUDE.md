@@ -68,6 +68,7 @@ docs/specs/{YYYY-MM-DD}-{slug}/                   # without ticket key
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step
 ├── ticket.md        # issue definition + comments (ticket-intake, when used)
 ├── attachments/      # downloaded attachments, incl. marked *.drawio (ticket-intake, flowchart-check)
+├── impact-analysis.md # plain-language complexity/blast-radius/blocker triage (ticket-intake, when used)
 ├── repro.md           # local before/after defect reproduction (repro, optional; feeds /prd)
 ├── prd.md            # product requirements (/prd)
 ├── spectech.md        # technical design, profile: lean|standard|full (/spectech)
@@ -216,7 +217,7 @@ All subagents live under `.claude/agents/` and are invoked via the Task tool (au
 
 - Path: `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — one folder per ticket
 - Control file: `_state.json` (machine-readable — schema below) + `_notes.md` (human-readable running log). **`context.json` is never created** — see the `ticket-workflow` skill's AC-1 regression guard: any step that finds both files in the same folder must stop and surface the collision.
-- `_state.json.steps` is an **open** string-keyed map: the required orchestrator's six keys (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`), or a standalone piece's own key (e.g. `ticket_intake`, `repro`, `flowchart_check`, `build_test`, `proof`). Values: `pending | in_progress | done | blocked | skipped`.
+- `_state.json.steps` is an **open** string-keyed map: the required orchestrator's six keys (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`), or a standalone piece's own key (e.g. `ticket_intake`, `impact_analysis`, `repro`, `flowchart_check`, `build_test`, `proof`). Values: `pending | in_progress | done | blocked | skipped`.
 - `prd.md`, `spectech.md`, `tasks.md` — three separate files (never merged); `spectech.md`'s frontmatter declares `profile: lean|standard|full`.
 - Domain tags on `tasks.md` checkboxes: `[dev]`, `[sre]`, `[data]`; multi-repo: `[dev:repo]`
 - Phases for cross-repo dependencies
@@ -254,6 +255,7 @@ Defined under `.claude/skills/`.
 - **ticket-workflow** — single source of truth for the `_state.json` schema, `_notes.md` convention, and stop-gate/HITL rules; every piece that touches a ticket folder reads this instead of re-describing the schema
 - **run-pipeline** — /run (the authoritative end-to-end orchestration workflow the main loop follows — PRD/Spectech/Tasks segment → implement → review → QA → summary)
 - **generate-prd** / **generate-spectech** / **generate-tasks** — the `/prd`/`/spectech`/`/tasks` personas' normative document templates, adapted to read/write `_state.json`+`_notes.md`
+- **generate-impact-analysis** — `/ticket-intake`'s normative template for `impact-analysis.md`, a plain-language (no jargon) triage doc covering complexity, likely modification points, involved repos, and blockers/related work — investigative recon, not requirements/design (that stays `/prd`'s and `/spectech`'s job)
 - **prd-validator** / **prd-discovery** — supporting skills for `/prd` (implicit-requirements/scope validation; brainstorm phase), adapted to the same control-file contract
 - **generate-spec** — retained only as a reference for `plan-reviewer.md`'s single-file-mode completeness check (unchanged persona, FR-7); nothing in this repo produces single-file specs anymore
 - **review-report** — /qa (structured QA + security narrative)
