@@ -156,7 +156,7 @@ All subagents live under `.claude/agents/` and are invoked via the Task tool (au
 | Name | Role | Model | Tools | Used By |
 |------|------|-------|-------|---------|
 | ticket-intake | Jira ticket intake, project-agnostic | inherit | Read, Write, Edit, Bash, Grep, Glob | /ticket-intake command |
-| repro | Local before/after defect reproduction (optional; feeds /prd) | inherit | Read, Write, Edit, Bash, Grep, Glob | /repro command |
+| repro | Local before/after defect reproduction — delegates all infra to `/sandbox`, drives the UI scenario via Chrome DevTools MCP (optional; feeds /prd) | inherit | Read, Write, Edit, Bash, Grep, Glob, scoped Chrome DevTools MCP | /repro command |
 | flowchart-check | Scoped flowchart-vs-code conformance | inherit | Read, Grep, Glob, Bash | /flowchart-check command |
 | rebase | Multi-repo git-sync (checkout main → pull → checkout back → rebase) | inherit | Read, Write, Edit, Bash, Grep, Glob | /rebase command |
 | proof | Before/after practical proof (optional) | inherit | Read, Write, Edit, Bash, Grep, Glob | /proof command |
