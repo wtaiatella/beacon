@@ -119,11 +119,25 @@ shared (see the Services table's Origin column).
 
 **Fully automatic — no new flag.** `WORKSPACE_NAME` is `basename "$ROOT"` (the workspace folder
 itself); `WORKSPACE_ID` parses a trailing number (`bcs`→0, `bcs1`→1, `bcs2`→2, `bcs3`→3; any other
-folder name hashes to a stable 0–49 via `cksum`). `PORT_OFFSET = WORKSPACE_ID * 100`, added to
+folder name hashes to a stable 0–49 via `cksum`). `PORT_OFFSET = WORKSPACE_ID * 10000`, added to
 `engine`(3000)/`swagger`(8000)/`ui-proxy`(4000)/`ui`(4200) only. Every `--start`/`--stop`/`--status`
 prints `Workspace: <name> (... port offset: +N)` up front so it's always visible which range is
-active. Validated 2026-08-06 in `bcs3` (offset +300): `engine:3300`, `swagger:8300`,
-`ui-proxy:4300`, `ui:4500`, full request chain confirmed with real HTTP calls through all of them.
+active. Validated 2026-08-06 in `bcs3` (offset +300, the *old* `*100` step): `engine:3300`,
+`swagger:8300`, `ui-proxy:4300`, `ui:4500`, full request chain confirmed with real HTTP calls
+through all of them.
+
+**Step revised same day to `*10000` — the `*100` step had a real, confirmed cross-workspace
+collision, not a hypothetical one.** All four service base ports are multiples of 100, and `ui`
+(4200) minus `ui-proxy` (4000) is exactly 200 — two `*100` steps. That means workspace N's `ui` and
+workspace N+2's `ui-proxy` always land on the *identical* absolute port. This actually happened in
+production use on 2026-08-06: a `/repro` run in `bcs1` (offset would've been +100 under the old
+step) trusted `--status`'s "already up" label for port 4300, which turned out to be **`bcs3`'s own
+`ui-proxy`** (offset +300 under the old step), not `bcs1`'s `ui` at all — caught only because that
+session independently re-verified port ownership via `lsof`+`ps`+`cwd` walking. `*10000` (bigger
+than the full 5000-wide spread from `engine`'s 3000 to `swagger`'s 8000) makes every workspace's
+entire 4-service range a self-contained block that cannot overlap any other workspace's range, for
+any service, at any workspace-ID distance — this class of collision is now structurally impossible,
+not just less likely.
 
 **Don't scan ports/processes machine-wide to check what's running — user-reported real
 confusion, not hypothetical.** Several sibling workspaces can have their own `engine`/`swagger`/

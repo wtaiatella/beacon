@@ -27,7 +27,14 @@ if [[ "$WORKSPACE_NAME" =~ ^bcs([0-9]*)$ ]]; then
 else
   WORKSPACE_ID=$(( $(printf '%s' "$WORKSPACE_NAME" | cksum | cut -d' ' -f1) % 50 ))
 fi
-PORT_OFFSET=$(( WORKSPACE_ID * 100 ))
+# Step must exceed the full spread between the lowest and highest service base port (engine 3000
+# to swagger 8000 = 5000), otherwise two workspaces N apart can land the SAME absolute port for
+# two DIFFERENT services -- confirmed for real on 2026-08-06 with the old *100 step: workspace N's
+# ui (base 4200) landed on the identical port as workspace N+2's ui-proxy (base 4000), since both
+# base ports are multiples of 100 and differ by exactly 200 (2 steps). *10000 makes every
+# workspace's whole 4-service range a self-contained block that can never overlap another
+# workspace's, for any service, at any workspace-ID distance.
+PORT_OFFSET=$(( WORKSPACE_ID * 10000 ))
 
 # Canonical boot order for --start's dependency cascade (see svc_deps below). mock comes before
 # engine on purpose — starting engine first races a scheduled job against mock not being up yet
