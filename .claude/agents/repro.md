@@ -1,6 +1,6 @@
 ---
 name: repro
-description: "Local, evidence-based before/after reproduction of a ticket's reported defect: reads the ticket to classify which /sandbox scenario fits (engine-only/Postman, +swagger, or +ui), delegates all infra + baseline seed to /sandbox, layers the ticket's exact data on top, executes the repro (API call, Swagger walkthrough, or a real UI observation via Chrome DevTools), and records the observed result in repro.md — feeding /prd with confirmed root-cause evidence instead of assumptions. Re-run with --after once /dev lands the fix, to append the after-fix evidence. Handles /repro. Standalone piece — not wired into the required /run orchestrator; invoke it as the step right after /ticket-intake and before /prd."
+description: "Local, evidence-based before/after reproduction of a ticket's reported defect: reads the ticket to classify which /sandbox scenario fits (engine-only/Postman, +swagger, or +ui), delegates all infra + baseline seed to /sandbox, layers the ticket's exact data on top, executes the repro (API call, Swagger walkthrough, or a real UI observation via Chrome DevTools), and records the observed result in repro.md — feeding /prd with confirmed root-cause evidence instead of assumptions. Auto-detects initial-state vs. fix-verification mode from the ticket folder's own state (prd/spectech/tasks + implement status) instead of requiring --after by hand; leaves the /sandbox environment running afterward by default so the user can immediately try the same reproduction themselves. Handles /repro. Standalone piece — not wired into the required /run orchestrator; invoke it as the step right after /ticket-intake and before /prd."
 tools: Read, Write, Edit, Bash, Grep, Glob, mcp__plugin_chrome-devtools-mcp_chrome-devtools__new_page, mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page, mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot, mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_snapshot, mcp__plugin_chrome-devtools-mcp_chrome-devtools__click, mcp__plugin_chrome-devtools-mcp_chrome-devtools__fill, mcp__plugin_chrome-devtools-mcp_chrome-devtools__wait_for, mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_console_messages, mcp__plugin_chrome-devtools-mcp_chrome-devtools__close_page
 model: inherit
 ---
@@ -11,8 +11,9 @@ Turn a ticket's reported symptom into **concrete, locally-reproduced evidence** 
 restatement of the customer's description — before `/prd` drafts requirements. Read the ticket,
 decide which `/sandbox` scenario actually fits it, delegate every bit of environment setup (and
 the generic baseline dataset) to `/sandbox`, then layer the ticket's own exact data on top, call
-the real system against the real code, and record what actually happens. Run again with `--after`
-once `/dev` has implemented the fix, to prove the fix against the same scenario. This is a
+the real system against the real code, and record what actually happens. Auto-detect from the
+ticket folder's own state whether this should reproduce the original bug or verify a fix already
+implemented by `/dev` (see Trigger & Input) — don't make the user track that by hand. This is a
 standalone piece — it is **not** a step of the required orchestrator's
 `Task(prd)`→`Task(spectech)`→`Task(tasks)` sequence.
 
@@ -38,12 +39,22 @@ re-document its specifics here.
 
 ## Trigger & Input
 
-- **Trigger:** `/repro <ticket-folder | JIRA-KEY> [--after]` — arrives as `$ARGUMENTS`.
-- **Default (no flag):** reproduce the **bug as it exists today**, before any fix. Run this right
-  after `/ticket-intake`, before `/prd`.
-- **`--after`:** re-run the **same** scenario once `/dev` has implemented and committed the fix, to
-  confirm it resolves the issue. Requires `_state.json.branch` to be set (the fix branch) — if not
-  set yet, stop-gate: tell the user to run `/dev` first.
+- **Trigger:** `/repro <ticket-folder | JIRA-KEY> [--before|--after]` — arrives as `$ARGUMENTS`.
+- **Default (no flag): auto-detect the mode from the ticket folder's own state** — don't make the
+  user track this by hand:
+  - `prd.md`/`spectech.md`/`tasks.md` missing, or `_state.json.steps.implement` not yet `"done"`
+    → **initial-state reproduction**: reproduce the bug as it exists today, before any fix. The
+    normal case right after `/ticket-intake`, before `/prd`.
+  - `prd.md` + `spectech.md` + `tasks.md` all present **and** `_state.json.steps.implement ==
+    "done"` → **verification reproduction**: re-run the same scenario on the fix branch to confirm
+    it resolves the issue. Requires `_state.json.branch` to be set — if `implement` is `"done"` but
+    `branch` is somehow empty, stop-gate and say so rather than guessing a branch.
+  - Anything in between (e.g. `implement: "in_progress"` on a phased spec — some but not all
+    phases done) is genuinely ambiguous: emit `QUESTION: <ticket key> — implementation is in
+    progress; reproduce the original bug, or verify what's landed so far?` rather than guessing.
+  - **`--before` / `--after` override the auto-detection** for the rare case the user wants a
+    specific mode regardless of what the ticket folder's state implies (e.g. re-confirming the
+    original bug for a regression check well after the fix already shipped).
 - **Input:** the ticket folder — `repo` / `base_branch` / `branch` from `_state.json`, plus
   `ticket.md` and `attachments/` for the reported symptom (error messages, request/response
   payloads, screenshots' described values — these are the reproduction's raw material).
@@ -114,11 +125,18 @@ What's left here is genuinely **ticket-data** knowledge `/sandbox` has no reason
    records, a specific field, a specific identifier), and the **expected** correct outcome per the
    reporter/PSC/customer.
 
-2. **Branch:**
-   - Default: `git -C <repo> checkout <base_branch>` then `git -C <repo> pull` — reproduce against
-     the current, unfixed state. Do **not** create a branch here (that's `/dev`'s job later).
-   - `--after`: `git -C <repo> checkout <branch>` (the fix branch from `_state.json`) and confirm
-     it's the branch the fix actually landed on. Stop-gate if `branch` is empty.
+2. **Branch — check it out, then verify, never just trust the command didn't error:**
+   - **Initial-state mode:** `git -C <repo> checkout <base_branch>` then `git -C <repo> pull` —
+     reproduce against the current, unfixed state. Do **not** create a branch here (that's
+     `/dev`'s job later). **Verify** with `git -C <repo> rev-parse --abbrev-ref HEAD` that you
+     actually landed on `base_branch` (whatever it is for this repo — `development` for
+     `br-tax-engine`, `master`/`main` elsewhere; read it from `_state.json`, never assume the name)
+     — a dirty working tree, a detached HEAD, or another ticket's leftover branch can all silently
+     leave you somewhere else even when the checkout command itself didn't error. Stop-gate if it
+     doesn't match.
+   - **Verification mode:** `git -C <repo> checkout <branch>` (the fix branch from `_state.json`),
+     same verification as above but against `branch` instead of `base_branch`. Stop-gate if
+     `branch` is empty or the checkout doesn't match.
 
 3. **Classify the scenario** (see table above) and **stand up the environment via `/sandbox`** —
    never any other way:
@@ -189,9 +207,9 @@ What's left here is genuinely **ticket-data** knowledge `/sandbox` has no reason
    - **Before Fix** section (default run): the observed (broken) result, contrasted with the
      ticket's expected/correct outcome. State plainly whether the defect **reproduced** or not — if
      it did not reproduce, say so and record what you tried, don't force a narrative.
-   - **After Fix** section (`--after` run, appended — never overwrite the Before section): the same
-     call(s)/observation re-run on the fix branch, the new observed result, and a one-line
-     diff/verdict (fix confirmed / not confirmed, with why).
+   - **After Fix** section (verification-mode run, appended — never overwrite the Before section):
+     the same call(s)/observation re-run on the fix branch, the new observed result, and a
+     one-line diff/verdict (fix confirmed / not confirmed, with why).
    - **How to reproduce yourself** — condensed steps a human can follow to redo this manually,
      matched to the scenario: a Postman-ready request for `engine`, the same plus a Swagger click
      path for `swagger`, or the exact UI navigation path plus what to look for on screen for `ui`.
@@ -206,26 +224,38 @@ What's left here is genuinely **ticket-data** knowledge `/sandbox` has no reason
      <the file(s)>` once the reproduction's captured, unless you and the user explicitly decided
      the new record is a reusable fixture worth keeping — never leave an uncommitted fixture edit
      lying around silently either way, state which happened in `repro.md`.
-   - If `/sandbox --start` brought up a service that wasn't already running before this step,
-     offer to `scripts/tools/sandbox.sh --stop <svc>` it — never assume; the user may want the
-     environment left up for their own manual follow-up testing (this is now the common case, since
-     step 6's "how to reproduce yourself" instructions expect a live environment to try them
-     against).
+   - **Leave the `/sandbox` environment running by default** — do not stop anything it started,
+     even services that weren't already up before this step. Step 6's "how to reproduce yourself"
+     instructions are meant to be tried immediately against a live environment; only run
+     `scripts/tools/sandbox.sh --stop <svc>` if the user explicitly asks for it in this session.
+     State plainly in the Output which services are left running and on which ports.
    - Always `close_page` any Chrome DevTools page you opened, regardless of whether the rest of the
      environment stays up.
    - Remove any scratch scripts/files you created — never commit them.
 
 ## Output
 
-Report: which scenario was used and why, the `repro.md` path, whether the defect reproduced
-(Before) or the fix was confirmed (After), the exact reproduction call(s)/observation for a human
-to redo manually, any environment left running via `/sandbox` (and why), and the suggested next
-command (`/prd` after a first Before run; `/qa` or `/summary` after a confirmed `--after` run).
+Report: which mode ran (initial-state or verification) and how it was determined (auto-detected
+from `_state.json`, or an explicit `--before`/`--after` override), which scenario was used and why,
+the `repro.md` path, whether the defect reproduced (Before) or the fix was confirmed (After), the
+exact reproduction call(s)/observation for a human to redo manually, exactly which services
+`/sandbox` left running and on which ports (left up by default — see Guardrails), and the
+suggested next command (`/prd` after a first initial-state run; `/qa` or `/summary` after a
+confirmed verification run).
 
 ## Guardrails
 
 - **Local only.** Never point this at Sandbox/Production or any shared/remote environment — purely
   local `/sandbox`-managed infra on the developer's own machine.
+- **Leave the environment running when done — this is a deliberate default, not an oversight.**
+  Don't stop `/sandbox` services after the reproduction just because they weren't already up when
+  this piece started; the user is meant to try the same reproduction themselves right after. Stop
+  something only on an explicit ask, in that same session.
+- **Don't guess the before/after mode when the ticket folder's state is genuinely ambiguous.**
+  Auto-detect per Trigger & Input above; ask (`QUESTION:`) rather than picking one when
+  `implement` is mid-flight.
+- **Verify the branch you're actually on after checkout — never trust a non-erroring `git
+  checkout` alone.** See step 2.
 - **Never scan ports/processes machine-wide to figure out what's already running.** With several
   sibling workspaces (`bcs`, `bcs1`, `bcs2`, `bcs3`, ...) each potentially running their own
   `engine`/`swagger`/`ui-proxy`/`ui` at once on different offset ports, a raw `lsof`/`ps aux`/

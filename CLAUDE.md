@@ -46,7 +46,7 @@ Three commands are not persona subagents: **`/run`** is main-loop orchestration 
 | /run | Pipeline Orchestrator | — (main loop + `run-pipeline` skill) | `<ticket-folder-path-or-jira-key> [idea] [flags]` |
 | /clone | Repo Cloner (utility) | — | `<git-url> [target-dir]` |
 | /ticket-intake | Standalone: Jira ticket intake | `ticket-intake` | `<JIRA-KEY \| jira-url>` |
-| /repro | Standalone: local before/after defect reproduction | `repro` | `<ticket-folder \| JIRA-KEY> [--after]` |
+| /repro | Standalone: local before/after defect reproduction | `repro` | `<ticket-folder \| JIRA-KEY> [--before\|--after]` |
 | /flowchart-check | Standalone: flowchart-vs-code conformance | `flowchart-check` | `<ticket-folder \| JIRA-KEY>` |
 | /rebase | Standalone: multi-repo git-sync | `rebase` | `[repo ...]` |
 | /proof | Standalone: before/after proof (optional) | `proof` | `<ticket-folder \| JIRA-KEY>` |
