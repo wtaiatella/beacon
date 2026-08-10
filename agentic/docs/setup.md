@@ -40,6 +40,22 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 
 **Cursor:** Settings → Rules (always-apply workspace rules); confirm agents under `.cursor/agents/` and skills under `.agents/skills/`; Hooks from `.cursor/hooks.json`.
 
+## Local tool audit (Claude vs Cursor studies)
+
+The adapters install a post-tool hook that appends a local TSV at:
+
+```text
+docs/local/tool-audit.tsv
+```
+
+This file is outside `docs/specs/` (safe when specs are symlinked between workspaces) and is gitignored. Use it to compare tool-call sequence, counts, and durations between a Claude workspace (for example BCS) and a Cursor workspace (for example BCS1):
+
+```bash
+scripts/tools/tool-audit-summary.sh docs/local/tool-audit.tsv
+```
+
+After running the same ticket in both workspaces, copy each TSV into one analysis workspace under different names, then summarize or diff them.
+
 ## Dual-IDE note
 
 Default `cursor` install **deactivates** the managed Claude framework mirror under `.claude/` (overlays `bcs-*` remain) so `/` is not duplicated. Use `--keep-claude` or `all` if you need both mirrors populated.

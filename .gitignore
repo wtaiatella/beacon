@@ -61,4 +61,7 @@ docs/sessions/*
 
 # Local audit log (created by sessionEnd hook)
 docs/audit.log
+
+# Local per-tool audit logs (A/B Claude vs Cursor studies)
+docs/local/
 scripts/tools/__pycache__
