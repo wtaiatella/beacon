@@ -156,12 +156,88 @@ function tokensFromTranscript(transcriptPath) {
   }
 }
 
-function tokenInfo(j) {
+function cursorProjectHash(workspaceRoot) {
+  return String(workspaceRoot || '')
+    .replace(/^\/+/, '')
+    .replace(/[/.]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function findTranscriptBySession(session) {
+  if (!session || session === 'unknown') return '';
+  const home = process.env.HOME || '';
+  if (!home) return '';
+  const roots = [
+    path.join(home, '.cursor', 'projects', cursorProjectHash(root), 'agent-transcripts'),
+  ];
+
+  for (const base of roots) {
+    try {
+      const stack = [base];
+      let seen = 0;
+      while (stack.length && seen < 500) {
+        const dir = stack.pop();
+        seen += 1;
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const p = path.join(dir, entry.name);
+          if (entry.isDirectory()) stack.push(p);
+          else if (entry.isFile() && entry.name === session + '.jsonl') return p;
+        }
+      }
+    } catch (_) {}
+  }
+  return '';
+}
+
+function collectTextChars(obj) {
+  if (typeof obj === 'string') return obj.trim() ? obj.length : 0;
+  if (!obj || typeof obj !== 'object') return 0;
+  if (Array.isArray(obj)) return obj.reduce((sum, item) => sum + collectTextChars(item), 0);
+  let total = 0;
+  for (const [k, v] of Object.entries(obj)) {
+    const lk = String(k).toLowerCase();
+    if (lk.includes('id') || lk === 'timestamp') continue;
+    total += collectTextChars(v);
+  }
+  return total;
+}
+
+function estimatedTokensFromTranscript(transcriptPath) {
+  if (!transcriptPath) return null;
+  try {
+    const st = fs.statSync(transcriptPath);
+    const max = 4 * 1024 * 1024;
+    const start = Math.max(0, st.size - max);
+    const fd = fs.openSync(transcriptPath, 'r');
+    const buf = Buffer.alloc(st.size - start);
+    fs.readSync(fd, buf, 0, buf.length, start);
+    fs.closeSync(fd);
+    let chars = 0;
+    for (const line of buf.toString('utf8').split(/\r?\n/)) {
+      const parsed = parseMaybeJson(line);
+      if (parsed) chars += collectTextChars(parsed);
+    }
+    if (!chars) return null;
+    return { total: Math.max(1, Math.round(chars / 4)), source: 'transcript_estimate' };
+  } catch (_) {
+    return null;
+  }
+}
+
+function tokenInfo(j, session) {
   const payload = {};
   collectTokens(j, payload);
   if (payload.total || payload.in || payload.out) return { ...payload, source: 'payload' };
-  const transcript = tokensFromTranscript(j.transcript_path || j.transcriptPath);
+  const transcriptPath =
+    j.transcript_path || j.transcriptPath || findTranscriptBySession(session);
+  const isSubagentTranscript = String(transcriptPath || '').includes(path.sep + 'subagents' + path.sep);
+  const transcript = isSubagentTranscript ? tokensFromTranscript(transcriptPath) : null;
   if (transcript) return { ...transcript, source: 'transcript' };
+  const estimate = isSubagentTranscript ? estimatedTokensFromTranscript(transcriptPath) : null;
+  if (estimate) return estimate;
+  if (transcriptPath && !isSubagentTranscript) {
+    return { total: '', in: '', out: '', source: 'none', clearEstimate: true };
+  }
   return { total: '', in: '', out: '', source: 'none' };
 }
 
@@ -294,10 +370,24 @@ function updateActionState(stateDir, fields) {
       0,
       Date.parse(fields.ts) - Date.parse(prev.start_ts || fields.ts)
     ),
-    tokens_total: tokens.total || prev.tokens_total || '',
-    tokens_in: tokens.in || prev.tokens_in || '',
-    tokens_out: tokens.out || prev.tokens_out || '',
-    token_source: tokens.source && tokens.source !== 'none' ? tokens.source : prev.token_source || 'none',
+    tokens_total:
+      tokens.clearEstimate && prev.token_source === 'transcript_estimate'
+        ? ''
+        : tokens.total || prev.tokens_total || '',
+    tokens_in:
+      tokens.clearEstimate && prev.token_source === 'transcript_estimate'
+        ? ''
+        : tokens.in || prev.tokens_in || '',
+    tokens_out:
+      tokens.clearEstimate && prev.token_source === 'transcript_estimate'
+        ? ''
+        : tokens.out || prev.tokens_out || '',
+    token_source:
+      tokens.clearEstimate && prev.token_source === 'transcript_estimate'
+        ? 'none'
+        : tokens.source && tokens.source !== 'none'
+          ? tokens.source
+          : prev.token_source || 'none',
     tool_events: (prev.tool_events || 0) + 1,
     last_event: fields.event,
     last_tool: fields.tool,
@@ -382,7 +472,7 @@ try {
   }
 
   const completed = isActionCompletion(input, tool, event, explicitAction);
-  const tokens = tokenInfo(input);
+  const tokens = tokenInfo(input, session);
 
   if (action !== 'unknown') {
     updateActionState(stateDir, {

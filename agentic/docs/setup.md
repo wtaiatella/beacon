@@ -48,7 +48,7 @@ The adapters install a post-tool hook that maintains high-level action rows at:
 docs/local/action-audit.tsv
 ```
 
-This file is outside `docs/specs/` (safe when specs are symlinked between workspaces) and is gitignored. It is materialized from `docs/local/tool-audit-state/`, with one row per inferred action, so it does not depend on a final subagent event. Use it to compare action duration, status, tool-event count, and best-effort token totals between a Claude workspace (for example BCS) and a Cursor workspace (for example BCS1):
+This file is outside `docs/specs/` (safe when specs are symlinked between workspaces) and is gitignored. It is materialized from `docs/local/tool-audit-state/`, with one row per inferred action, so it does not depend on a final subagent event. Use it to compare action duration, status, tool-event count, and best-effort token totals between a Claude workspace (for example BCS) and a Cursor workspace (for example BCS1). Check `token_source`: `payload`/`transcript` are exact fields when available; `transcript_estimate` is an approximate fallback from subagent transcript text; `none` means the runtime exposed no token data.
 
 ```bash
 scripts/tools/tool-audit-summary.sh docs/local/action-audit.tsv
