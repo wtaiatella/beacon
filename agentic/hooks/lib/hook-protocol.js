@@ -52,10 +52,14 @@ function readInput() {
 
 function isCursor(input) {
    if (!input || typeof input !== 'object') return false;
+   const event = String(input.hook_event_name || input.hookEventName || '');
    return Boolean(
-      input.hook_event_name ||
       input.cursor_version ||
-      (Array.isArray(input.workspace_roots) && input.workspace_roots.length)
+      (Array.isArray(input.workspace_roots) && input.workspace_roots.length) ||
+      // Cursor event names are lower camel-case (postToolUse, beforeReadFile).
+      // Claude Code may also send hook_event_name, but values are PascalCase
+      // (PostToolUse, SessionEnd), so do not treat mere presence as Cursor.
+      /^[a-z]/.test(event)
    );
 }
 
@@ -107,7 +111,8 @@ function sessionIdOf(input) {
    );
 }
 
-function ideOf(input) {
+function ideOf(input, runtimeHint = '') {
+   if (runtimeHint === 'claude' || runtimeHint === 'cursor') return runtimeHint;
    return isCursor(input) ? 'cursor' : 'claude';
 }
 

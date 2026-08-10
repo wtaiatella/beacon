@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Summarize docs/local/tool-audit.tsv for Claude vs Cursor tool-call comparisons.
+# Summarize docs/local/action-audit.tsv or docs/local/tool-audit.tsv for
+# Claude vs Cursor comparisons.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-FILE="${1:-$ROOT/docs/local/tool-audit.tsv}"
+FILE="${1:-$ROOT/docs/local/action-audit.tsv}"
 
 usage() {
   cat <<'EOF'
-Usage: scripts/tools/tool-audit-summary.sh [tool-audit.tsv]
+Usage: scripts/tools/tool-audit-summary.sh [action-audit.tsv|tool-audit.tsv]
 
-Prints total events, counts by tool/status, duration totals, and ordered sequence.
+Prints action/tool counts, status counts, duration totals, and ordered sequence.
 Use copied files such as docs/local/tool-audit-bcs-claude.tsv and
 docs/local/tool-audit-bcs1-cursor.tsv for A/B comparison.
 EOF
@@ -27,6 +28,7 @@ fi
 awk -F '\t' '
 NR == 1 {
   for (i = 1; i <= NF; i++) idx[$i] = i
+  mode = ("tool_events" in idx || "tokens_total" in idx) ? "action" : "tool"
   next
 }
 NF < 8 { next }
@@ -34,20 +36,24 @@ NF < 8 { next }
   total++
   ide = $(idx["ide"])
   session = $(idx["session_id"])
-  tool = $(idx["tool"])
+  action = ("action" in idx) ? $(idx["action"]) : "(unknown)"
+  tool = ("tool" in idx) ? $(idx["tool"]) : "(action)"
   status = $(idx["status"])
   dur = $(idx["duration_ms"]) + 0
   summary = $(idx["summary"])
+  tokens = ("tokens_total" in idx) ? $(idx["tokens_total"]) + 0 : 0
 
   if (tool == "Bash") tool = "Shell"
   if (tool == "ReadFile") tool = "Read"
 
+  by_action[action]++
   by_tool[tool]++
   by_status[status]++
   if (dur > 0) {
     duration_total += dur
     duration_count++
   }
+  if (tokens > 0) token_total += tokens
   if (!(ide in seen_ide)) {
     seen_ide[ide] = 1
     ides = ides (ides ? "," : "") ide
@@ -56,16 +62,23 @@ NF < 8 { next }
     seen_session[session] = 1
     sessions = sessions (sessions ? "," : "") session
   }
-  sequence = sequence sprintf("%04d %s %s %s\n", total, tool, status, summary)
+  if (mode == "action") sequence = sequence sprintf("%04d %s %s %s tokens=%s %s\n", total, action, status, dur ? dur "ms" : "duration=na", tokens ? tokens : "na", summary)
+  else sequence = sequence sprintf("%04d %s %s %s %s\n", total, action, tool, status, summary)
 }
 END {
   print "file: " FILENAME
+  print "mode: " mode
   print "ides: " (ides ? ides : "(none)")
   print "sessions: " (sessions ? sessions : "(none)")
   print "total_events: " total + 0
   print "duration_ms_total: " duration_total + 0
   if (duration_count > 0) printf("duration_ms_avg: %.0f\n", duration_total / duration_count)
   else print "duration_ms_avg: 0"
+  print "tokens_total_max_or_sum: " token_total + 0
+
+  print ""
+  print "counts_by_action:"
+  for (a in by_action) print "  " a "\t" by_action[a]
 
   print ""
   print "counts_by_tool:"

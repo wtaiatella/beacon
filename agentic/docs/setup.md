@@ -40,19 +40,35 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 
 **Cursor:** Settings → Rules (always-apply workspace rules); confirm agents under `.cursor/agents/` and skills under `.agents/skills/`; Hooks from `.cursor/hooks.json`.
 
-## Local tool audit (Claude vs Cursor studies)
+## Local action/tool audit (Claude vs Cursor studies)
 
-The adapters install a post-tool hook that appends a local TSV at:
+The adapters install a post-tool hook that appends high-level action rows at:
 
 ```text
-docs/local/tool-audit.tsv
+docs/local/action-audit.tsv
 ```
 
-This file is outside `docs/specs/` (safe when specs are symlinked between workspaces) and is gitignored. Use it to compare tool-call sequence, counts, and durations between a Claude workspace (for example BCS) and a Cursor workspace (for example BCS1):
+This file is outside `docs/specs/` (safe when specs are symlinked between workspaces) and is gitignored. Use it to compare action duration, status, and best-effort token totals between a Claude workspace (for example BCS) and a Cursor workspace (for example BCS1):
 
 ```bash
-scripts/tools/tool-audit-summary.sh docs/local/tool-audit.tsv
+scripts/tools/tool-audit-summary.sh docs/local/action-audit.tsv
 ```
+
+For per-tool detail, enable detail mode before running the IDE/CLI:
+
+```bash
+TOOL_AUDIT_DETAIL=1 claude
+# or
+export TOOL_AUDIT_DETAIL=1
+```
+
+For Cursor launched from the GUI, create the local marker instead:
+
+```bash
+mkdir -p docs/local && touch docs/local/TOOL_AUDIT_DETAIL
+```
+
+Detail mode writes `docs/local/tool-audit.tsv` with an `action` column so each row can be grouped back to the invoking task/subagent/command when it can be inferred.
 
 After running the same ticket in both workspaces, copy each TSV into one analysis workspace under different names, then summarize or diff them.
 
