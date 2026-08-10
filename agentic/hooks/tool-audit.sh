@@ -168,37 +168,68 @@ function tokenInfo(j) {
 function explicitActionOf(j) {
   const ti = proto.toolInput(j);
   const subagent = ti.subagent_type || ti.subagentType || j.subagent_type || j.subagentType;
-  if (subagent) return String(subagent);
+  if (subagent) return { action: String(subagent), strength: 'strong' };
 
   const candidates = [proto.filePathOf(j), proto.commandOf(j), summaryOf(j)].filter(Boolean);
   for (const text of candidates) {
     const s = String(text);
-    const m =
+    const strong =
       s.match(/(?:^|\/)\.(?:claude|cursor)\/agents\/([^/\s]+)\.md\b/) ||
-      s.match(/(?:^|\/)\.(?:claude|cursor)\/commands\/([^/\s]+)\.md\b/) ||
+      s.match(/(?:^|\/)\.(?:claude|cursor)\/commands\/([^/\s]+)\.md\b/);
+    if (strong && strong[1]) return { action: strong[1], strength: 'strong' };
+
+    const weak =
       s.match(/(?:^|\/)\.agents\/skills\/([^/\s]+)\/SKILL\.md\b/) ||
-      s.match(/(?:^|\/)\.claude\/skills\/([^/\s]+)\/SKILL\.md\b/) ||
-      s.match(/\/(bcs-[a-z0-9-]+|prd|spectech|tasks|dev|sre|data|qa|run|summary|scrum|fix|do)\b/);
-    if (m && m[1]) return m[1];
+      s.match(/(?:^|\/)\.claude\/skills\/([^/\s]+)\/SKILL\.md\b/);
+    if (weak && weak[1]) return { action: weak[1], strength: 'weak' };
+
+    const slash = s.match(/(?:^|[\s"'`])\/(bcs-[a-z0-9-]+|prd|spectech|tasks|dev|sre|data|qa|run|summary|scrum|fix|do)\b/);
+    if (slash && slash[1]) return { action: slash[1], strength: 'strong' };
   }
-  return '';
+  return { action: '', strength: 'none' };
 }
 
 function readCurrentAction(stateDir, ide, session) {
-  try {
-    return fs.readFileSync(path.join(stateDir, safeSegment(ide + '-' + session) + '.action'), 'utf8').trim();
-  } catch (_) {
-    return '';
+  const candidates = [
+    path.join(stateDir, safeSegment(ide + '-' + session) + '.action'),
+    path.join(stateDir, safeSegment(ide + '-global') + '.action'),
+  ];
+  for (const file of candidates) {
+    try {
+      const raw = fs.readFileSync(file, 'utf8').trim();
+      const parts = raw.split(/\t+/);
+      if (file.includes(safeSegment(ide + '-global') + '.action')) {
+        const writtenAt = Number(parts[2] || 0);
+        if (!writtenAt || Date.now() - writtenAt > 30 * 60 * 1000) continue;
+      }
+      return {
+        strength: parts.length >= 2 ? parts[0] : 'weak',
+        action: parts.length >= 2 ? parts[1] : raw,
+      };
+    } catch (_) {}
+  }
+  return { action: '', strength: 'none' };
+}
+
+function writeCurrentAction(stateDir, ide, session, action, strength) {
+  if (!action) return;
+  const value = (strength || 'weak') + '\t' + action + '\t' + Date.now() + '\n';
+  fs.writeFileSync(path.join(stateDir, safeSegment(ide + '-' + session) + '.action'), value);
+  if (strength === 'strong') {
+    fs.writeFileSync(path.join(stateDir, safeSegment(ide + '-global') + '.action'), value);
   }
 }
 
-function writeCurrentAction(stateDir, ide, session, action) {
-  if (!action) return;
-  fs.writeFileSync(path.join(stateDir, safeSegment(ide + '-' + session) + '.action'), action + '\n');
+function clearGlobalAction(stateDir, ide, action) {
+  try {
+    const file = path.join(stateDir, safeSegment(ide + '-global') + '.action');
+    const current = readCurrentAction(stateDir, ide, 'global');
+    if (current.action === action) fs.unlinkSync(file);
+  } catch (_) {}
 }
 
 function isActionCompletion(j, tool, event, explicitAction) {
-  if (!explicitAction) return false;
+  if (!explicitAction.action) return false;
   if (tool === 'Task' || tool === 'Subagent') return true;
   return /subagentStop|TaskStop|taskStop/i.test(String(event));
 }
@@ -233,6 +264,86 @@ function nextSeq(seqDir, key) {
   return seq;
 }
 
+function statePath(stateDir, ide, session, action) {
+  return path.join(stateDir, safeSegment(ide + '-' + session + '-' + action) + '.json');
+}
+
+function readJson(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+function updateActionState(stateDir, fields) {
+  if (!fields.action || fields.action === 'unknown') return null;
+  const file = statePath(stateDir, fields.ide, fields.session, fields.action);
+  const prev = readJson(file) || {};
+  const tokens = fields.tokens || {};
+  const status =
+    fields.completed ? fields.status : fields.status === 'ok' ? prev.status || 'running' : fields.status;
+  const state = {
+    start_ts: prev.start_ts || fields.ts,
+    end_ts: fields.ts,
+    ide: fields.ide,
+    session_id: fields.session,
+    action: fields.action,
+    status,
+    duration_ms: Math.max(
+      0,
+      Date.parse(fields.ts) - Date.parse(prev.start_ts || fields.ts)
+    ),
+    tokens_total: tokens.total || prev.tokens_total || '',
+    tokens_in: tokens.in || prev.tokens_in || '',
+    tokens_out: tokens.out || prev.tokens_out || '',
+    token_source: tokens.source && tokens.source !== 'none' ? tokens.source : prev.token_source || 'none',
+    tool_events: (prev.tool_events || 0) + 1,
+    last_event: fields.event,
+    last_tool: fields.tool,
+    summary: fields.summary || prev.summary || '',
+    completed: Boolean(prev.completed || fields.completed),
+  };
+  fs.writeFileSync(file, JSON.stringify(state, null, 2) + '\n');
+  return state;
+}
+
+function rebuildActionAudit(stateDir, outFile) {
+  const header =
+    'ts\tstart_ts\tend_ts\tide\tsession_id\taction\tstatus\tduration_ms\ttokens_total\ttokens_in\ttokens_out\ttoken_source\ttool_events\tlast_event\tsummary\n';
+  let rows = [];
+  try {
+    rows = fs
+      .readdirSync(stateDir)
+      .filter((name) => name.endsWith('.json'))
+      .map((name) => readJson(path.join(stateDir, name)))
+      .filter(Boolean)
+      .sort((a, b) => String(a.start_ts).localeCompare(String(b.start_ts)))
+      .map((s) =>
+        [
+          s.end_ts,
+          s.start_ts,
+          s.end_ts,
+          s.ide,
+          s.session_id,
+          s.action,
+          s.status,
+          s.duration_ms,
+          s.tokens_total,
+          s.tokens_in,
+          s.tokens_out,
+          s.token_source,
+          s.tool_events,
+          s.last_event,
+          s.summary,
+        ]
+          .map(tsv)
+          .join('\t')
+      );
+  } catch (_) {}
+  fs.writeFileSync(outFile, header + rows.join('\n') + (rows.length ? '\n' : ''));
+}
+
 try {
   const ts = new Date().toISOString().replace(/\.\d{3}Z/, 'Z');
   const ide = proto.ideOf(input, runtimeHint);
@@ -250,8 +361,45 @@ try {
   fs.mkdirSync(stateDir, { recursive: true });
 
   const explicitAction = explicitActionOf(input);
-  if (explicitAction) writeCurrentAction(stateDir, ide, session, explicitAction);
-  const action = explicitAction || readCurrentAction(stateDir, ide, session) || 'unknown';
+  const currentAction = readCurrentAction(stateDir, ide, session);
+  let action = 'unknown';
+  let actionStrength = 'none';
+
+  if (explicitAction.strength === 'strong') {
+    action = explicitAction.action;
+    actionStrength = explicitAction.strength;
+    writeCurrentAction(stateDir, ide, session, action, actionStrength);
+  } else if (currentAction.action && currentAction.strength === 'strong') {
+    action = currentAction.action;
+    actionStrength = currentAction.strength;
+  } else if (explicitAction.action) {
+    action = explicitAction.action;
+    actionStrength = explicitAction.strength;
+    writeCurrentAction(stateDir, ide, session, action, actionStrength);
+  } else if (currentAction.action) {
+    action = currentAction.action;
+    actionStrength = currentAction.strength;
+  }
+
+  const completed = isActionCompletion(input, tool, event, explicitAction);
+  const tokens = tokenInfo(input);
+
+  if (action !== 'unknown') {
+    updateActionState(stateDir, {
+      ts,
+      ide,
+      session,
+      action,
+      event,
+      tool,
+      status,
+      summary,
+      tokens,
+      completed,
+    });
+    rebuildActionAudit(stateDir, path.join(dir, 'action-audit.tsv'));
+    if (completed && actionStrength === 'strong') clearGlobalAction(stateDir, ide, action);
+  }
 
   if (detailEnabled(dir)) {
     const seq = nextSeq(seqDir, ide + '-' + session + '-detail');
@@ -259,28 +407,6 @@ try {
       path.join(dir, 'tool-audit.tsv'),
       'ts\tseq\tide\tsession_id\taction\tevent\ttool\tstatus\tduration_ms\tsummary\n',
       [ts, seq, ide, session, action, event, tool, status, duration, summary]
-    );
-  }
-
-  if (isActionCompletion(input, tool, event, explicitAction)) {
-    const tokens = tokenInfo(input);
-    appendTsv(
-      path.join(dir, 'action-audit.tsv'),
-      'ts\tide\tsession_id\taction\tevent\tstatus\tduration_ms\ttokens_total\ttokens_in\ttokens_out\ttoken_source\tsummary\n',
-      [
-        ts,
-        ide,
-        session,
-        explicitAction,
-        event,
-        status,
-        duration,
-        tokens.total || '',
-        tokens.in || '',
-        tokens.out || '',
-        tokens.source || 'none',
-        summary || 'subagent=' + explicitAction,
-      ]
     );
   }
 } catch (_) {

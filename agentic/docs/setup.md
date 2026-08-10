@@ -42,13 +42,13 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 
 ## Local action/tool audit (Claude vs Cursor studies)
 
-The adapters install a post-tool hook that appends high-level action rows at:
+The adapters install a post-tool hook that maintains high-level action rows at:
 
 ```text
 docs/local/action-audit.tsv
 ```
 
-This file is outside `docs/specs/` (safe when specs are symlinked between workspaces) and is gitignored. Use it to compare action duration, status, and best-effort token totals between a Claude workspace (for example BCS) and a Cursor workspace (for example BCS1):
+This file is outside `docs/specs/` (safe when specs are symlinked between workspaces) and is gitignored. It is materialized from `docs/local/tool-audit-state/`, with one row per inferred action, so it does not depend on a final subagent event. Use it to compare action duration, status, tool-event count, and best-effort token totals between a Claude workspace (for example BCS) and a Cursor workspace (for example BCS1):
 
 ```bash
 scripts/tools/tool-audit-summary.sh docs/local/action-audit.tsv
