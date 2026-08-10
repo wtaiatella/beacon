@@ -1,0 +1,28 @@
+---
+description: "Paramount Git and GitLab mutation guardrails — no silent commit, push, or MR; personas never mutate git/GitLab."
+alwaysApply: true
+---
+
+# Git and GitLab mutations (paramount)
+
+These rules override convenience. When in doubt, ask the user.
+
+## Personas / subagents
+
+- **Must never** run `git commit`, `git push`, or any mutating GitLab action.
+- Implement and propose; leave Finish shipping to the main orchestrator + user consent.
+
+## Main orchestrator (this chat when running `/run` or Finish)
+
+- **Never** silently auto-push, auto-create/open an MR, or call mutating GitLab APIs.
+- **Commit:** may `git add` / `git commit` **only** when the user explicitly selects an orchestrator-offered commit message (or equivalent explicit intent). If they choose "do not commit" / "other-manual", do not commit.
+- **Push:** may `git push` (including `--force-with-lease` when a confirmed rewrite requires it) only after an explicit user **Yes** to a push prompt.
+- **Branch create/switch** and every mutating GitLab action (MR create/update, write API) require **explicit confirmation at that step**.
+- After MR confirmation: create/update via **GitLab MCP** (`mcp__GitLab__*` / project GitLab tools), always presenting title/body for review first. Body: project skill `bcs-gitlab-mr-from-spec` + `scripts/tools/mr-description-from-spec.sh`.
+- **`glab` is not used** in this workspace (not authenticated) — do not suggest it.
+- **`rebase`** never creates/updates an MR and never transitions a Jira ticket.
+
+## Hooks (defense in depth)
+
+- `before-shell` blocks catastrophic deletes, destructive SQL, force-push to protected branches.
+- `subagent-gate` (`preToolUse` Write) blocks writes into child repos on `main` / `master` / `develop` / `release/*`.

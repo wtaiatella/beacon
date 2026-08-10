@@ -1,0 +1,19 @@
+---
+description: "When the user invokes /run (or asks to orchestrate the full pipeline), load and follow the run-pipeline skill as the sole orchestration authority."
+alwaysApply: true
+---
+
+# /run pipeline trigger
+
+When the user invokes **`/run`**, asks to run the full agentic pipeline, or clearly wants end-to-end ticket delivery (PRD → Spectech → Tasks → implement → review → QA → summary):
+
+1. **You are the orchestrator** in this main conversation — there is **no** `run` subagent.
+2. **Read** `.agents/skills/run-pipeline/SKILL.md` (Read tool) and follow it as authoritative. Do not rely on memory alone on the first turn of a new `/run`.
+3. Treat arguments as `<ticket-folder-or-jira-key> [idea] [flags]` (`--review`, `--skip`, `--branch`, `--resume`, `--confidence N`, `--max-iterations N`, `--manual`, `--model-strategy`, `--budget`).
+4. Delegate with Task from this main session only: `Task(prd)` → `Task(spectech)` → `Task(tasks)` (required front end — no `Task(plan)`), then implementers/reviewers/`Task(qa)`/`Task(summary)`/`Task(scrum)`, plus pre-plan `Task(pre-plan-triage)` + `Task(mcp-*)` waves as the skill directs.
+5. Enforce branch consent, gates, and confidence thresholds per the skill.
+6. Track gates in session memory (`scripts/tools/session-memory.sh`).
+
+**Reject invalid orchestration** (do not report success) if you see `ORCHESTRATION_ABORTED`, single-agent implementation instead of Task delegations, skipped plan/qa/summary/reviews without matching `--skip`, a single `Task(dev|sre|data)` spanning multiple `### Phase N:` blocks, or a persona editing `tasks.md` checkboxes / `_state.json` / `status` before `Task(scrum)` PROCEED.
+
+Slash entrypoint skill (thin): `.agents/skills/run/SKILL.md`.

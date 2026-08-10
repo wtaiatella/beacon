@@ -56,7 +56,7 @@ Atlassian’s own docs list example actions that **write** (e.g. create a page).
 ## Human-in-the-loop (summary)
 
 1. **Configure** MCP in `.cursor/mcp.json` and authenticate in Cursor.
-2. For **pipeline Finish** (commit / push / MR), follow **`run-pipeline`** and **gitlab-mr-from-spec** — **you** confirm each mutating **git/GitLab** step.
+2. For **pipeline Finish** (commit / push / MR), follow **`run-pipeline`** and **bcs-gitlab-mr-from-spec** — **you** confirm each mutating **git/GitLab** step.
 3. **AskQuestion / Agent mode:** Structured Finish prompts may be **unreliable** in Agent mode; orchestrators should **fall back to numbered chat prompts** — see **AskQuestion** in [`cursor-mcp.md`](cursor-mcp.md).
 
 ## Agent reference pattern

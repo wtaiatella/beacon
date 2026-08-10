@@ -1,0 +1,77 @@
+---
+description: "Always-on workspace identity, ticket-folder workflow, personas, flat orchestration, and multi-repo boundaries for this agentic workspace."
+alwaysApply: true
+---
+
+# Agentic Workspace — Cursor (Unified, Ticket-Folder Workflow)
+
+> Cursor always-on project context (equivalent role to root `CLAUDE.md` for Claude Code).
+> Canonical SDD source lives under `agentic/`; install with `scripts/setup-agentic.sh cursor`.
+> Project overlays (`bcs-*`) stay in IDE runtime dirs and are **outside** the required orchestrator.
+
+## Workspace Identity
+
+Company-wide Agentic Workspace for BMAD+SDD+GSD with self-healing review loops.
+
+**Core principle:** Agents write code and configuration. Agents never deploy. Deployments are CI/CD only. Code ships through GitLab MRs.
+
+**One control-file convention:** every ticket folder has exactly `_state.json` + `_notes.md` — never `context.json`. Required orchestrator `/run` starts at `/prd` → `/spectech` → `/tasks` (no `/plan`, no single-`spec.md` mode). Folder/schema contract: project skill `bcs-ticket-workflow` (`.claude/skills/bcs-ticket-workflow/`).
+
+## Where things live (Cursor)
+
+| Kind | Path |
+|------|------|
+| Subagents / personas | `.cursor/agents/` |
+| Framework skills | `.agents/skills/` |
+| Project overlays | `.claude/agents|skills|commands/bcs-*` (kept by setup) |
+| Hooks | `.cursor/hooks.json` + `.cursor/hooks/` |
+| Canonical source | `agentic/` (edit here, then re-run setup) |
+
+## Personas
+
+Invoke via Task / agent defs under `.cursor/agents/`, or slash skills where present (e.g. `/run` → `.agents/skills/run`).
+
+| Trigger | Role | Agent |
+|---------|------|-------|
+| /prd | Product Requirements | `prd` |
+| /spectech | Technical Designer | `spectech` |
+| /tasks | Task Specialist | `tasks` |
+| /dev /sre /data | Implementers | `dev` / `sre` / `data` |
+| /qa | QA & Security | `qa` |
+| /fix /do | Debugger / Ad-hoc | `fix` / `do` |
+| /summary /scrum /kb | Summary / PO-SM-PM / KB | `summary` / `scrum` / `kb` |
+| /run | Pipeline orchestrator | *(no agent — main loop + `run-pipeline` skill)* |
+| /clone /rebase /kb-refresh /kb-concentrator /setup-workspace | Utilities | skill or `rebase` agent |
+
+`scrum` is read-only. Personas escalate helpers/MCP with `REQUEST_MAIN:` / `QUESTION:` / `APPROVAL_NEEDED:` — only the **main loop** schedules `Task(...)`.
+
+## Ticket folder
+
+```
+docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/   # or without ticket key
+├── _state.json   # ONLY machine control file
+├── _notes.md
+├── prd.md / spectech.md / tasks.md
+├── qa-report.md / summary.md / …
+```
+
+**Orchestrated `/run`:**  
+`Task(prd)` → `Task(spectech)` → `Task(tasks)` → plan-reviewer → scrum → implement phases → reviewers + security-scanner + scrum → qa → scrum → summary → Finish.
+
+Never merge `prd`/`spectech`/`tasks` into one `spec.md`.
+
+## Flat orchestration
+
+Subagents must not nest Task. Main session only. `/run` follows `.agents/skills/run-pipeline/SKILL.md`.
+
+## Multi-repo
+
+Child repos are subdirs of the workspace root (gitignored). Add with `/clone`. Inventory is injected by `session-init`. Use `[domain:repo]` tags and phases for cross-repo work. `subagent-gate` blocks writes when a child repo is on `main`/`master`/`develop`/`release/*`.
+
+## Knowledge / MCP
+
+Prefer ARC MCP when configured; else `knowledge/{project}/`. Enterprise MCP only via main-loop `Task(mcp-*)` after `REQUEST_MAIN:` — personas never call enterprise MCP directly.
+
+## Error highlights
+
+Missing ticket folder → search `docs/specs/`. Two control files (`context.json` + `_state.json`) → stop (AC-1). Hook failures fail-open except protected-branch writes (always refused).
