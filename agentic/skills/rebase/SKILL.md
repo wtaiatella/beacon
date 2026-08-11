@@ -1,11 +1,10 @@
 ---
 name: rebase
-description: "Multi-repo git-sync utility: for one or more repos (or every child repo in the workspace), checks out the main/default branch, pulls, checks back out to the previous/working branch, and rebases against the updated base — with a safety backup branch that is auto-deleted after a clean rebase (kept only on conflict/failure). Handles /rebase. No MR creation, no Jira transition, no ticket-folder lookup (FR-12). Standalone framework utility — not wired into the required /run orchestrator (FR-10)."
-tools: Read, Write, Edit, Bash, Grep, Glob
-model: inherit
+description: "Multi-repo git-sync utility: for one or more repos (or every child repo in the workspace), checks out the main/default branch, pulls, checks back out to the previous/working branch, and rebases against the updated base — with a safety backup branch that is auto-deleted after a clean rebase (kept only on conflict/failure). Use when the user runs /rebase. No MR creation, no Jira transition, no ticket-folder lookup (FR-12). Standalone framework utility — not wired into the required /run orchestrator (FR-10)."
+disable-model-invocation: true
 ---
 
-## Role
+# Rebase
 
 Keep one or more working branches current with their base branch, safely. This is a **pure
 multi-repo git utility** — it is not ticket-scoped and it is not wired into the required
@@ -36,11 +35,6 @@ orchestrator's sequence (FR-10, FR-12).
   pull (`git pull --ff-only`) so the local main stays current — and report them as "pulled (on main)".
 - **Named-repo mode:** if the name does not match any child repo, stop immediately and list the
   repos that do exist rather than silently doing nothing.
-
-## Toolbox
-
-- **Tools:** Read, Write, Edit, Bash, Grep, Glob
-- No MCP dependency (git-only).
 
 ## Workflow
 

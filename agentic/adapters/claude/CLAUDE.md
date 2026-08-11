@@ -30,7 +30,7 @@ unless they appear on that runtime’s `.agentic-managed` manifest.
 
 Personas are invoked as slash commands (`.claude/commands/*.md`). Each command file is a **thin delegator**: typing `/prd …` hands the invocation to the matching persona **subagent** (`.claude/agents/prd.md`) via the Task tool. The subagent does the work and returns a structured result; when it needs a read-only helper or a human decision it escalates back to the main loop (see **Flat Orchestration** below).
 
-Three commands are not persona subagents: **`/run`** is main-loop orchestration driven by the `run-pipeline` skill (there is no `run` subagent); **`/clone`** is a workspace utility command; **`/kb-refresh`** and **`/kb-concentrator`** are thin utility commands that follow their matching `SKILL.md` directly (same shape as `/clone` — no dedicated subagent).
+Three commands are not persona subagents: **`/run`** is main-loop orchestration driven by the `run-pipeline` skill (there is no `run` subagent); **`/clone`**, **`/rebase`**, **`/kb-refresh`**, and **`/kb-concentrator`** are thin utility commands that follow their matching `SKILL.md` directly (no dedicated subagent).
 
 | Trigger | Role | Subagent | Input |
 |---------|------|----------|-------|
@@ -48,7 +48,7 @@ Three commands are not persona subagents: **`/run`** is main-loop orchestration 
 | /kb | Knowledge Base Builder | `kb` | `<target-dirs>` |
 | /run | Pipeline Orchestrator | — (main loop + `run-pipeline` skill) | `<ticket-folder-path-or-jira-key> [idea] [flags]` |
 | /clone | Repo Cloner (utility) | — | `<git-url> [target-dir]` |
-| /rebase | Multi-repo git-sync (utility) | `rebase` | `[repo ...]` |
+| /rebase | Multi-repo git-sync (utility) | — (thin command) | `[repo ...]` |
 | /kb-refresh | Standalone: incremental multi-repo KB refresh | — (thin command) | `[repo ...]` |
 | /kb-concentrator | Standalone: global cross-repo KB concentrator | — (thin command) | `[flow-or-topic hint]` |
 | /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --reset]` |
@@ -143,12 +143,6 @@ All subagents live under `.claude/agents/` and are invoked via the Task tool (au
 | spectech | Technical specification designer | inherit | Read, Write, Edit, Bash, Grep, Glob | /spectech command |
 | tasks | Task breakdown specialist | inherit | Read, Write, Edit, Bash, Grep, Glob | /tasks command |
 
-**Framework utilities (write-capable, not pipeline-wired):**
-
-| Name | Role | Model | Tools | Used By |
-|------|------|-------|-------|---------|
-| rebase | Multi-repo git-sync (checkout main → pull → checkout back → rebase) | inherit | Read, Write, Edit, Bash, Grep, Glob | /rebase command |
-
 **Enterprise MCP specialists (read-only, `haiku`):** `mcp-arc`, `mcp-confluence`, `mcp-gitlab`, `mcp-jira`, `mcp-glean`. Persona subagents must **not** call enterprise MCP tools directly; they emit a `REQUEST_MAIN:` escalation with a specialist label and query, and the main loop runs the matching `mcp-*` subagent via Task and feeds the bounded result back.
 
 > **Flat orchestration (Claude Code execution model):** subagents cannot spawn further
@@ -222,7 +216,7 @@ See the `bcs-ticket-workflow` skill for the full `_state.json` schema, `_notes.m
 - Phases order dependencies
 - Within phases: parallel. Between phases: sequential.
 - Single-repo work: omit `:repo` tags; scope table may list one repo only
-- `rebase` (standalone) and `kb-refresh` (standalone) both iterate every child repo directly, independent of any ticket folder
+- `/rebase` (standalone skill) and `/kb-refresh` (standalone skill) both iterate every child repo directly, independent of any ticket folder
 
 ## Knowledge Base
 
@@ -250,13 +244,13 @@ Defined under `.claude/skills/` (framework via setup from `agentic/skills/`) and
 - **knowledge-base** — /kb (output structure; DEPRECATED for new projects in favor of ARC MCP — fallback only)
 - **bcs-gitlab-mr-from-spec** — *(project overlay)* /summary + finish (spec-driven MR body text for user-run GitLab actions; no autonomous commit/push/MR)
 - **kb-refresh** / **kb-concentrator** — standalone, incremental multi-repo KB tooling (see Knowledge Base above); thin utility commands, same shape as `/clone`
-- **clone** / **setup-workspace** — workspace utilities (child-repo clone; MCP tool registry)
+- **clone** / **rebase** / **setup-workspace** — workspace utilities (child-repo clone; multi-repo git-sync; MCP tool registry)
 
 ## Model Selection
 
 **Claude Code sets the model per-subagent** in each agent's `model:` frontmatter:
 
-- **`inherit`** (session model) — implementers, architects, debuggers: prd, spectech, tasks, dev, sre, data, qa, fix, kb, security-scanner, rebase.
+- **`inherit`** (session model) — implementers, architects, debuggers: prd, spectech, tasks, dev, sre, data, qa, fix, kb, security-scanner.
 - **`haiku`** (economy) — reviewers, validators, and mechanical/short-context agents: do, summary, scrum, codebase-explorer, spec-validator, plan-reviewer, dev-reviewer, sre-reviewer, data-reviewer, pre-plan-triage, mcp-*.
 
 There is no Claude Code equivalent of per-run model swapping; pick the session model by workflow (standard for routine `/run`, premium for a complex `/fix`). The `run-pipeline` skill's `--model-strategy` / `--budget` guidance is retained as guidance; automatic mid-run swaps are not performed under Claude Code.

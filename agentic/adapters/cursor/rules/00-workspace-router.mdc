@@ -41,7 +41,7 @@ Invoke via Task / agent defs under `.cursor/agents/`, or slash skills where pres
 | /fix /do | Debugger / Ad-hoc | `fix` / `do` |
 | /summary /scrum /kb | Summary / PO-SM-PM / KB | `summary` / `scrum` / `kb` |
 | /run | Pipeline orchestrator | *(no agent — main loop + `run-pipeline` skill)* |
-| /clone /rebase /kb-refresh /kb-concentrator /setup-workspace | Utilities | skill or `rebase` agent |
+| /clone /rebase /kb-refresh /kb-concentrator /setup-workspace | Utilities | skill |
 
 `scrum` is read-only. Personas escalate helpers/MCP with `REQUEST_MAIN:` / `QUESTION:` / `APPROVAL_NEEDED:` — only the **main loop** schedules `Task(...)`.
 
