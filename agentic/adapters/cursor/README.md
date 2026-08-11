@@ -7,7 +7,8 @@
 | `agentic/agents/` | `.cursor/agents/` | Cursor subagent discovery (persona / Task entrypoints) |
 | `agentic/skills/` | `.agents/skills/` | Cursor native skills path (`/`) |
 | `agentic/commands/` | *(not installed)* | Avoid duplicate `/` next to agents; Claude-only thin proxies |
-| `agentic/hooks/` | `.cursor/hooks/` | Dual-protocol scripts (+ `lib/hook-protocol.js`) |
+| `agentic/hooks/` | `.cursor/hooks/` | Shared dual-protocol scripts (+ `lib/hook-protocol.js`) |
+| `adapters/cursor/hooks/*` | `.cursor/hooks/` (overlay) | Cursor-only hooks (e.g. `tool-audit.sh`) |
 | `adapters/cursor/hooks.json` | `.cursor/hooks.json` | Cursor hook events |
 | `adapters/cursor/rules/*.mdc` | `.cursor/rules/` | Always-on context (**CLAUDE.md equivalent**) |
 | `adapters/cursor/docs/` | `docs/adapters/cursor/` | Cursor platform reference (generated) |
@@ -43,6 +44,9 @@ Scripts under `agentic/hooks/` are **shared**. They detect the runtime from stdi
 | Format | `PostToolUse` Write/Edit | `afterFileEdit` → `.file_path` |
 | Session start | `{hookSpecificOutput.additionalContext}` | `{additional_context}` |
 | Session end | fire-and-forget audit + verify | same scripts; field aliases (`conversation_id`, …) |
+| Action audit | *(not installed — TBD under `adapters/claude/hooks/`)* | `adapters/cursor/hooks/tool-audit.sh` → `docs/local/audit-cursor/<session>/` |
+
+Action/tool audit is **per-IDE** (separate scripts and TSV files). Do not put audit logic back into shared `agentic/hooks/`.
 
 ## Claude mirror deactivation (anti-duplicate `/`)
 

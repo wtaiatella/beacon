@@ -56,6 +56,7 @@ Cursor adapter specifics:
   - commands stay in agentic/ for Claude only — Cursor does not mirror them as skills
     (avoids duplicate / entries alongside .cursor/agents/)
   - hooks   → .cursor/hooks/ + hooks.json
+               (shared agentic/hooks/* + overlay agentic/adapters/cursor/hooks/*)
   - rules   → .cursor/rules/*.mdc  (always-on context; Cursor equivalent of CLAUDE.md)
   - docs    → docs/adapters/cursor/  (from agentic/adapters/cursor/docs/)
   - by default, prune .claude/ paths listed in .claude/.agentic-managed
@@ -64,6 +65,7 @@ Cursor adapter specifics:
 Claude adapter also installs:
   - agentic/adapters/claude/CLAUDE.md → ./CLAUDE.md  (generated; edit the agentic source)
   - agentic/adapters/claude/docs/ → docs/adapters/claude/
+  - optional overlay agentic/adapters/claude/hooks/* (action audit TBD — not installed yet)
 EOF
 }
 
@@ -215,6 +217,42 @@ sync_dir_managed() {
   done
 }
 
+# Overlay IDE-specific hooks onto the shared hooks dir without pruning siblings.
+# Skips README* so documentation in adapters/<ide>/hooks/ is not installed as hooks.
+overlay_adapter_hooks() {
+  local ide="$1"
+  local dest_dir="$2"
+  local rel_prefix="${3:-hooks}"
+  local src_dir="$SRC/adapters/$ide/hooks"
+
+  if [[ ! -d "$src_dir" ]]; then
+    return 0
+  fi
+
+  run mkdir -p "$dest_dir"
+
+  local path name
+  local count=0
+  for path in "$src_dir"/*; do
+    [[ -e "$path" ]] || continue
+    name="$(basename "$path")"
+    case "$name" in
+      README|README.md|README.txt) continue ;;
+    esac
+    if [[ -d "$path" ]]; then
+      run rm -rf "$dest_dir/$name"
+      run cp -R "$path" "$dest_dir/$name"
+    else
+      run cp "$path" "$dest_dir/$name"
+    fi
+    managed_add "${rel_prefix}/${name}"
+    count=$((count + 1))
+  done
+  if [[ "$count" -gt 0 ]]; then
+    echo "    overlay adapters/$ide/hooks → $dest_dir ($count file(s))"
+  fi
+}
+
 # Rewrite Claude-oriented paths to Cursor-native locations in a tree.
 # Project overlays under .claude/skills/bcs-* (and other unmanaged paths) must keep
 # their .claude/ prefix — only rewrite skills that exist in agentic/skills/.
@@ -299,6 +337,7 @@ install_claude() {
   sync_dir_managed "$SRC/skills" "$ROOT/.claude/skills" "skills"
   sync_dir_managed "$SRC/commands" "$ROOT/.claude/commands" "commands"
   sync_dir_managed "$SRC/hooks" "$ROOT/.claude/hooks" "hooks"
+  overlay_adapter_hooks "claude" "$ROOT/.claude/hooks" "hooks"
   if [[ "$DRY_RUN" -eq 0 ]]; then
     chmod +x "$ROOT/.claude/hooks/"*.sh 2>/dev/null || true
   fi
@@ -329,6 +368,7 @@ install_cursor() {
   managed_begin "$ROOT/.cursor"
   sync_dir_managed "$SRC/agents" "$ROOT/.cursor/agents" "agents"
   sync_dir_managed "$SRC/hooks" "$ROOT/.cursor/hooks" "hooks"
+  overlay_adapter_hooks "cursor" "$ROOT/.cursor/hooks" "hooks"
   sync_dir_managed "$rules_src" "$ROOT/.cursor/rules" "rules"
   adapt_cursor_paths "$ROOT/.cursor/agents"
   adapt_cursor_paths "$ROOT/.cursor/hooks"
@@ -346,6 +386,25 @@ install_cursor() {
   managed_finish
 
   install_adapter_docs "cursor"
+
+  # Action audit is Cursor-adapter-only now. Drop any legacy shared copy under
+  # .claude/ so a stale PostToolUse entry cannot call a removed strategy.
+  if [[ -f "$ROOT/.claude/hooks/tool-audit.sh" ]]; then
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      echo "DRY: rm $ROOT/.claude/hooks/tool-audit.sh (legacy shared audit)"
+    else
+      rm -f "$ROOT/.claude/hooks/tool-audit.sh"
+      echo "    removed legacy .claude/hooks/tool-audit.sh"
+    fi
+  fi
+  if [[ "$KEEP_CLAUDE" -eq 1 && -f "$SRC/adapters/claude/settings.json" ]]; then
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      echo "DRY: refresh .claude/settings.json (no tool-audit)"
+    else
+      cp "$SRC/adapters/claude/settings.json" "$ROOT/.claude/settings.json"
+      echo "    refreshed .claude/settings.json (audit not wired for Claude yet)"
+    fi
+  fi
 
   # Cursor also discovers .claude/{agents,skills,commands}. Deactivate the
   # managed Claude mirror so / is not duplicated — unless dual-IDE requested.

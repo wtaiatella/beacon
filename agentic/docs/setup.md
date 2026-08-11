@@ -40,37 +40,53 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 
 **Cursor:** Settings → Rules (always-apply workspace rules); confirm agents under `.cursor/agents/` and skills under `.agents/skills/`; Hooks from `.cursor/hooks.json`.
 
-## Local action/tool audit (Claude vs Cursor studies)
+## Local action audit (per IDE)
 
-The adapters install a post-tool hook that maintains high-level action rows at:
+Action/tool audit is **IDE-specific** — scripts and outputs are not shared.
 
-```text
-docs/local/action-audit.tsv
-```
+| IDE | Hook source | Output |
+|---|---|---|
+| **Cursor** | `agentic/adapters/cursor/hooks/tool-audit.sh` | `docs/local/audit-cursor/<session>/` (chat → turns → actions) |
+| **Claude** | not installed yet (`adapters/claude/hooks/README.md`) | `docs/local/audit-claude/` (future) |
 
-This file is outside `docs/specs/` (safe when specs are symlinked between workspaces) and is gitignored. It is materialized from `docs/local/tool-audit-state/`, with one row per inferred action, so it does not depend on a final subagent event. Use it to compare action duration, status, tool-event count, and best-effort token totals between a Claude workspace (for example BCS) and a Cursor workspace (for example BCS1). Check `token_source`: `payload`/`transcript` are exact fields when available; `transcript_estimate` is an approximate fallback from subagent transcript text; `none` means the runtime exposed no token data.
+Shared hooks under `agentic/hooks/` (shell gate, session-init, …) install for every IDE; audit overlays only from `agentic/adapters/<ide>/hooks/`.
+
+### Cursor
+
+Chat-centric layout under `docs/local/audit-cursor/<session_id>/`:
+
+| File | Meaning |
+|---|---|
+| `summary.json` | Chat totals (`tokens_api_*` after sync; `tokens_est_*` fallback) |
+| `turns.jsonl` | One record per user question |
+| `actions.jsonl` | Task/subagent work nested under a turn |
+| `billing.json` | Cursor Usage API events for this chat (+ child subagents) |
+
+`tokens_est_*` = transcript `chars/4` (fallback). Real spend/tokens: run usage sync.
+
+| Event | Role |
+|---|---|
+| `beforeSubmitPrompt` | Open a turn for the user question |
+| `postToolUse` / `postToolUseFailure` | Turn tool counters + action progress |
+| `subagentStop` | Finish an action (re-estimate from full subagent transcript) |
+| `stop` | Close the current turn; refresh chat totals from parent transcript |
 
 ```bash
-scripts/tools/tool-audit-summary.sh docs/local/action-audit.tsv
+scripts/tools/tool-audit-summary.sh --ide cursor
+scripts/tools/tool-audit-summary.sh --ide cursor <session-id>
+scripts/tools/tool-audit-backfill.sh --ide cursor
+scripts/tools/cursor-usage-sync.sh [--days 31] [session-id]
 ```
 
-For per-tool detail, enable detail mode before running the IDE/CLI:
+**Billing sync auth:** `cursor-usage-sync.sh` reads the Cursor session JWT from the local
+`state.vscdb` **once per run into memory only** (same approach as the Cursor Usage extension).
+It never writes the token under `docs/local/`. Cached artifacts are events only
+(`docs/local/cursor-usage-cache/`).
 
-```bash
-TOOL_AUDIT_DETAIL=1 claude
-# or
-export TOOL_AUDIT_DETAIL=1
-```
+Legacy `docs/local/action-audit-cursor.tsv` is no longer written; summary still reads it if no `audit-cursor/` chats exist.
+### Claude
 
-For Cursor launched from the GUI, create the local marker instead:
-
-```bash
-mkdir -p docs/local && touch docs/local/TOOL_AUDIT_DETAIL
-```
-
-Detail mode writes `docs/local/tool-audit.tsv` with an `action` column so each row can be grouped back to the invoking task/subagent/command when it can be inferred.
-
-After running the same ticket in both workspaces, copy each TSV into one analysis workspace under different names, then summarize or diff them.
+No audit hook until a Claude-specific strategy is added under `agentic/adapters/claude/hooks/` and wired in `settings.json`.
 
 ## Dual-IDE note
 

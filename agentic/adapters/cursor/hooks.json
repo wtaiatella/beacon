@@ -22,12 +22,27 @@
         "command": ".cursor/hooks/format-on-edit.sh"
       }
     ],
+    "beforeSubmitPrompt": [
+      {
+        "command": ".cursor/hooks/tool-audit.sh"
+      }
+    ],
     "postToolUse": [
       {
         "command": ".cursor/hooks/tool-audit.sh"
       }
     ],
     "postToolUseFailure": [
+      {
+        "command": ".cursor/hooks/tool-audit.sh"
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": ".cursor/hooks/tool-audit.sh"
+      }
+    ],
+    "stop": [
       {
         "command": ".cursor/hooks/tool-audit.sh"
       }
