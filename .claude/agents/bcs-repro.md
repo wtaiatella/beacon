@@ -100,9 +100,24 @@ unsafe — see below), named with the ticket key:
 | **Dedicated fixture under `test/` loaded only by this ticket's tests** (e.g. `hoplias/test/fixtures/BG-XXXX-*.json`) | Need isolation; shared seed would break counts or mask the bug (BG-11339-style orphans vs `setRangeDates`) |
 | **`docs/specs/<ticket-folder>/repro-fixtures/`** | Temporary parking **only** until `/dev` copies/wires into `test/`; must still be referenced in `repro.md` and PRD contract. Prefer promoting into `test/` in the same ticket's implementation tasks |
 
-**Isolation conventions:** ticket-key prefix in ids/text (`BG-XXXX …`), synthetic states/codes when
-real ones collide with baseline fixtures, distinct human-readable labels so dedup logic cannot
-silently drop rows.
+**Realistic client-like data (required when creating new fixtures):**
+New durable fixtures must **simulate real customer/content data**, not toy placeholders.
+Prefer shapes already used in the repo and in production-like seeds:
+
+- Real Brazilian UFs (`SP`, `RJ`, …), real-looking CNPJ/IE when those fields matter, plausible
+  citation/legal text, NCMs/NBS/CFOPs that exist in baseline fixtures, dates in normal business
+  ranges, company/subscription ids from the seeded auth helpers when possible.
+- Clone an existing valid fixture and change **only** the fields needed to express the defect
+  (plus a ticket-key marker in a non-colliding label/`__uuid`/external id for traceability).
+- **Avoid** generic sentinel codes like `XX` / `YY` / `ZZ`, `foo`/`bar`, or empty stub text as the
+  primary business keys users would search or navigate by.
+
+**Isolation (only when realism would break the baseline):**
+If a real UF/code would collide with shared seed counts or mask the bug, isolate with the
+**smallest** synthetic deviation necessary (e.g. a dedicated `citation` text prefixed `BG-XXXX — …`,
+or a rarely used but still valid-looking attribute) — **not** by defaulting the whole record to
+toy states. Document in `repro.md` § Fixture resolution: what was made synthetic and **why**.
+Distinct human-readable labels so dedup logic cannot silently drop rows.
 
 **Do not** rely on undocumented `mongosh` one-off inserts as the only copy of the data. A live
 overlay for the sandbox run is fine **if and only if** the same documents are also saved as durable
@@ -179,8 +194,8 @@ Infra details live in `bcs-sandbox` — do not duplicate. Ticket-data notes:
 ### Fixture resolution (must include)
 
 - **Reuse?** path of existing fixture(s) + overrides, **or**
-- **Created:** paths of new durable files, isolation markers (ticket key / synthetic state), and
-  why shared baseline was insufficient.
+- **Created:** paths of new durable files; confirm values are **realistic / client-like** (UFs,
+  texts, codes); list any synthetic fields and **why** isolation required; ticket-key markers used.
 
 ### Required integration tests (must include — consumed by `/prd`)
 
@@ -227,7 +242,10 @@ command (`/prd` after initial-state; `/qa` or `/summary` after verified after-fi
 - **Use `sandbox.sh --status`**, never machine-wide port scans across sibling workspaces.
 - **Never stand up infra by hand.**
 - **Durable fixtures by default**; no Mongo-only secret seeds.
-- **Do not pollute shared baseline** when isolation is required — dedicated fixture files + ticket
-  prefix / synthetic keys.
+- **New fixtures must be realistic / client-like** (real UFs, plausible legal/citation text, codes
+  consistent with existing seeds). Toy sentinels (`XX`/`YY`/`ZZ`, `foo`) are not acceptable as the
+  default business keys; synthetic values only with a documented isolation need.
+- **Do not pollute shared baseline** when isolation is required — dedicated fixture files + minimal
+  synthetic deviation, not wholesale toy records.
 - **Chrome only for `ui`.** Always `close_page`.
 - Standalone — not auto-invoked by `/run`.

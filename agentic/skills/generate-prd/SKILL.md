@@ -209,6 +209,8 @@ Template:
 
 Rules:
 - Prefer **paths to versioned fixtures** over describing documents only in prose.
+- New fixtures described here must be **realistic / client-like** (not toy `XX`/`YY`/`ZZ` keys);
+  note any synthetic isolation field and why.
 - Each IT item must be independently implementable as an automated test that loads those fixtures
   and asserts the after-fix behavior.
 - Do **not** invent alternate seed data here — stay faithful to `repro.md`. Technical suite wiring
