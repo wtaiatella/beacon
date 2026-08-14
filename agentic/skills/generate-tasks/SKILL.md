@@ -162,9 +162,14 @@ every user story maps to ≥1 task; every task maps back to a requirement (no or
 | AC.2, AC.3 View status | T006 | |
 | FR-1 trials persistence | T002 | |
 | Security: rate limiting | T007 | |
+| PRD § Reproduction Evidence IT-1 | T00N | Load durable fixtures + assert after-fix |
 
 - Coverage gaps (AC/story with no task): {list or "none"}
 - Orphan tasks (no mapped requirement): {list or "none"}
+- **When PRD has § Reproduction Evidence & Required Integration Tests:** every **IT-*** item
+  must map to ≥1 `[dev]` (or appropriate domain) task that (a) places/wires fixtures under the
+  product `test/` tree if still only in `repro-fixtures/`, and (b) adds an automated integration
+  test loading those fixtures and asserting the after-fix behavior from `repro.md` / PRD.
 
 ### 9. ## Implementation Notes
 
@@ -184,6 +189,7 @@ every user story maps to ≥1 task; every task maps back to a requirement (no or
 - [ ] Story-phase tasks carry a `[US]` tag; Setup/Foundational/Polish do not
 - [ ] Structure is user-story-driven (or dependency-phased with a stated reason)
 - [ ] Every PRD acceptance criterion and user story maps to ≥1 task (Coverage Map)
+- [ ] If PRD includes Reproduction Evidence IT-* items: each has a mapped integration-test task
 - [ ] No orphan tasks; no `[NEEDS CLARIFICATION]` / TBD / TODO; no undefined-file references
 - [ ] Effort/complexity estimated; dependencies stated by task ID
 - [ ] Testing specified per task; `[P]` used only for truly parallel tasks
