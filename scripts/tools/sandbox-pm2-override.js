@@ -19,6 +19,10 @@ if (!configPath || !overridesRaw) return;
 const overrides = JSON.parse(overridesRaw);
 const resolved = require.resolve(configPath);
 const cfg = require(resolved);
-const app = (cfg.apps && cfg.apps[0]) || cfg;
-app.env = app.env || {};
-Object.assign(app.env, overrides);
+// br-tax-engine app.config.js selects apps[workerId-1] in env-setup.js, so every
+// cluster worker needs the same SRV_PORT/DB_NAME override — not only apps[0].
+const targets = Array.isArray(cfg.apps) && cfg.apps.length ? cfg.apps : [cfg];
+for (const app of targets) {
+   app.env = app.env || {};
+   Object.assign(app.env, overrides);
+}

@@ -77,8 +77,9 @@ svc_db_name() { case "$1" in
   ui-proxy) echo "AvaTaxBrazil_${WORKSPACE_NAME}" ;;
 esac; }
 
+# br-tax-engine migrated off PM2 to app.config.js (AVT-71070); ui-proxy still uses pm2.config.js.
 svc_pm2_config() { case "$1" in
-  engine) echo "$ENGINE_DIR/pm2.config.js" ;;
+  engine) echo "$ENGINE_DIR/app.config.js" ;;
   ui-proxy) echo "$UI_DIR/pm2.config.js" ;;
 esac; }
 
