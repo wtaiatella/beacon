@@ -25,7 +25,7 @@ This adapter ships three always-apply rules (source under `adapters/cursor/rules
 |------|------|
 | `00-workspace-router.mdc` | Identity, ticket folder, personas, flat orchestration, multi-repo |
 | `run-pipeline-trigger.mdc` | `/run` → read/follow `run-pipeline` skill |
-| `git-gitlab-mutations.mdc` | No silent commit/push/MR |
+| `git-gitlab-mutations.mdc` | No silent commit/push/MR; `/rebase` may `--force-with-lease` after a clean rebase |
 
 Edit the sources under `agentic/adapters/cursor/rules/`, then re-run `scripts/setup-agentic.sh cursor`.
 Keep `CLAUDE.md` in sync for Claude Code users (same policies, Claude paths).
