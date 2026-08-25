@@ -31,7 +31,8 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 ├── spec-review.md      # plan-segment (folder-mode) review outcome (plan-reviewer)
 ├── qa-report.md        # QA findings written by /qa (both standalone and orchestrated)
 ├── summary.md           # post-pipeline handoff narrative (/summary)
-└── stop-*.md            # any stop-gate halt, with evidence
+├── stop-*.md            # any stop-gate halt, with evidence
+└── test-fixtures/      # payloads/XML/cjson/helpers created or used in repro and tests (not mixed with base docs; see bcs-repro skill)
 ```
 
 - `<TICKET-KEY>` = Jira key as-is (e.g. `BG-10965`). Omit entirely when no ticket key is provided.
@@ -40,6 +41,8 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
   to get it. Never use the Jira ticket's creation date.
 - `prd.md`, `spectech.md`, and `tasks.md` stay three separate files — never merged into one
   `spec.md`. `spectech.md`'s Lean/Standard/Full profile is the token/generality control.
+- **`test-fixtures/`** holds JSON/XML/cjson/helpers created or used during repro and tests. Do not
+  leave those files at the ticket root next to the base documents. See `bcs-repro` skill.
 
 ## `_state.json` schema
 

@@ -41,7 +41,7 @@ re-run later on the fix branch.
 ## Toolbox
 
 - **Tools:** Read, Write, Edit, Bash, Grep, Glob, plus scoped Chrome DevTools MCP (ui scenario only).
-- **Skills:** `bcs-ticket-workflow`; `bcs-sandbox` (authoritative for infra).
+- **Skills:** `bcs-ticket-workflow`; `bcs-sandbox` (authoritative for infra); **`bcs-repro`** (`.claude/skills/bcs-repro/SKILL.md` — **authoritative for fixture placement**). Read the fixture skill **before** creating any file under `*/test/`.
 
 ## Scenario classification (sandbox target)
 
@@ -77,28 +77,34 @@ State the chosen kind(s) and **why** in `repro.md` § Input kind.
 **Goal:** the same artifacts drive (1) live sandbox repro, (2) after-fix verification, (3) CI
 integration tests required by `/prd`/`/tasks`. Prefer permanence over ephemeral Mongo overlays.
 
+**Placement is not free-form.** Follow **`.claude/skills/bcs-repro/SKILL.md`**. Do **not** invent a
+new `*/test/fixtures/<TICKET>/` tree (BG-11356's `mugil/test/fixtures/BG-11356/` is the anti-pattern).
+
 ### 1. Search existing local test data first
 
 In the target `repo` (and UI repo if scenario is `ui`), search before inventing:
 
-- `test/_database/**/*.cjson` and `test/_database/index.js` load list
-- `test/**` request/response / XML / NF fixtures (e.g. `mugil/test/_output`, `*_inv.xml`)
+- `test/_database/<kind>.cjson` **canonical arrays** (`citations.cjson`, `ncms.cjson`, `rule-set.cjson`, `subscriptions-citations.cjson`, …) — **append** here; do not add `*-bg-XXXX.cjson`
+- Calc payloads: `mugil/test/_input/v3-goods/` (or `v3-services` / `v2-goods` / `v2-services` by API version + message type) — subfolders `feat`, `prod`, `difa`, `qa`. **Not** `_input/bg-XXXX/`
+- Template / XML / calc-response oracles: `eucinostomus/test/_input/v3-goods/` (same version/type split)
+- Isolated hoplias overlays: `hoplias/test/fixtures/` **flat** files if that is how siblings look
+- Versioned NF goldens: `mugil/test/_output/v3-goods-nf/` only if that suite already owns the case
 - Existing mocha helpers that already `import2DB` / seed similar shapes
-- Prior ticket `docs/specs/**/repro-fixtures/` or `repro-evidence/` only as *hints* — prefer promoting
-  into the **product repo** test tree when the fixture must ship with CI
+- Prior ticket `docs/specs/**/test-fixtures/` as the **ticket archive** (always write new files there too); promote into the product trees above for CI
 
-If a suitable fixture exists: **reuse it** (path + any field overrides). Document source in `repro.md`.
+If a suitable **row or file** exists: **reuse it** (path + field overrides). Document source in `repro.md`.
 
-### 2. If nothing fits — create durable fixtures (default)
+### 2. If nothing fits — increment the container (default)
 
-Create versioned files **in the product repo** (or ticket folder when product-repo placement is
-unsafe — see below), named with the ticket key:
+Follow **`.claude/skills/bcs-repro/SKILL.md`** decision procedure. Increment the container you found (append to the shared array, or add a sibling file/folder that already uses a ticket-keyed scheme). Ticket-named product files are **last resort**.
 
-| Placement | When to use |
+| Placement | When that **is** the container |
 |---|---|
-| **`test/_database/` (or sibling loaded by index)** | Record is safe for shared baseline seed **and** does not get mutated by seed helpers into a false-positive (e.g. unconditional date defaults) |
-| **Dedicated fixture under `test/` loaded only by this ticket's tests** (e.g. `hoplias/test/fixtures/BG-XXXX-*.json`) | Need isolation; shared seed would break counts or mask the bug (BG-11339-style orphans vs `setRangeDates`) |
-| **`docs/specs/<ticket-folder>/repro-fixtures/`** | Temporary parking **only** until `/dev` copies/wires into `test/`; must still be referenced in `repro.md` and PRD contract. Prefer promoting into `test/` in the same ticket's implementation tasks |
+| **`test/_database/<kind>.cjson`** | Catalog / subscription seed of that kind — append records |
+| **`mugil/test/_input/v{2,3}-goods|services/<subfolder>/`** | Calc HTTP request — match API version + goods/services; `nfe-<cnpj>-BG-<NNNN>-…-req.json` in `feat`/`difa`/`prod` |
+| **`eucinostomus/test/_input/v3-goods/<subfolder>/`** | Invoice payloads only (`POST /v3/invoices/goods`). Not calc-response oracles. |
+| **`hoplias/test/fixtures/BG-XXXX-*.json` (flat)** | Only if existing overlays are flat ticket-prefixed files (BG-11339) |
+| **`docs/specs/<ticket-folder>/test-fixtures/`** | **Required archive** of every file created or used. Keep out of the ticket root. |
 
 **Realistic client-like data (required when creating new fixtures):**
 New durable fixtures must **simulate real customer/content data**, not toy placeholders.
@@ -206,9 +212,10 @@ Normative checklist for downstream agents. Example shape:
 
 - **IT-1:** Load fixtures `<path(s)>`; call `<method URL>`; assert `<after-fix expectation>`.
 - **IT-2:** …
-- **Owning suite hint:** e.g. `hoplias/test/configurations/…` or `mugil/test/…`
-- **Must not:** rely on ephemeral Mongo-only overlay; fixtures must live in-repo under `test/…`
-  (or be promoted there by a `[dev]` task before merge).
+- **Owning suite hint:** e.g. `mugil/test/calculations/bg-XXXX-…-test.js` loading
+  `mugil/test/_input/bg-XXXX/…-req.json` — **not** `mugil/test/fixtures/`.
+- **Must not:** rely on ephemeral Mongo-only overlay; do not invent `*/test/fixtures/<TICKET>/`.
+  Place files per `.claude/skills/bcs-repro/SKILL.md`.
 ```
 
 Map each IT item to the observed before/after behavior so `/prd` can promote them into Acceptance
@@ -242,6 +249,8 @@ command (`/prd` after initial-state; `/qa` or `/summary` after verified after-fi
 - **Use `sandbox.sh --status`**, never machine-wide port scans across sibling workspaces.
 - **Never stand up infra by hand.**
 - **Durable fixtures by default**; no Mongo-only secret seeds.
+- **Place fixtures in existing module trees** (`.claude/skills/bcs-repro/SKILL.md`). Never create
+  `mugil/test/fixtures/<TICKET>/` or a new `*/test/fixtures/` directory that no sibling ticket uses.
 - **New fixtures must be realistic / client-like** (real UFs, plausible legal/citation text, codes
   consistent with existing seeds). Toy sentinels (`XX`/`YY`/`ZZ`, `foo`) are not acceptable as the
   default business keys; synthetic values only with a documented isolation need.
