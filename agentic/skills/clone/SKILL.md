@@ -22,8 +22,9 @@ repos are gitignored by the workspace **by design**.
 1. If `$ARGUMENTS` is empty, ask the user for the repo URL and show the usage:
    `/clone <git-ssh-or-https-url> [target-dir]`.
 2. Run the clone helper (clones into the workspace root, derives the folder name unless a target
-   dir is given, refuses to overwrite an existing folder, records the clone in session memory, and
-   prints the updated inventory):
+   dir is given, refuses to overwrite an existing folder, registers the folder in
+   `.vscode/settings.json` → `git.scanRepositories` for Cursor/VS Code Source Control, records the
+   clone in session memory, and prints the updated inventory):
 
    ```bash
    scripts/tools/clone-repo.sh $ARGUMENTS
@@ -34,8 +35,9 @@ repos are gitignored by the workspace **by design**.
      the HTTPS URL.
    - **target already exists:** re-run with an explicit different target dir.
    - **bad URL:** confirm the repo path.
-4. On success, confirm the repo name and branch, and remind the user it will now appear
-   automatically in the session-start repo inventory.
+4. On success, confirm the repo name and branch, remind the user it will appear in the session-start
+   repo inventory, and that Source Control may need **Developer: Reload Window** once if the new
+   repo does not show up immediately.
 
 ## Guardrails
 

@@ -24,6 +24,12 @@ if [ -z "$REPOS_OUT" ]; then
   REPOS_OUT="(none detected yet — clone target repos as subdirectories of the workspace root, e.g. git clone <url> myapp/)"
 fi
 
+# Keep Cursor/VS Code SCM discovery in sync (fail-open). Nested child repos are
+# otherwise flaky to detect because the workspace root .gitignore uses "*".
+if [ -f "$ROOT/scripts/tools/sync-vscode-git-repos.sh" ]; then
+  bash "$ROOT/scripts/tools/sync-vscode-git-repos.sh" >/dev/null 2>&1 || true
+fi
+
 SESSION_META=""
 if [ -f "$ROOT/scripts/tools/session-memory.sh" ]; then
   bash "$ROOT/scripts/tools/session-memory.sh" prune 2>/dev/null || true

@@ -43,6 +43,13 @@ echo ""
 echo "✓ Cloned '$DIR/' (branch: $BRANCH)"
 echo "It is now part of the workspace's target-repo inventory (auto-detected on session start; gitignored by the workspace)."
 
+# Register in Cursor/VS Code Source Control (git.scanRepositories). Nested repos are
+# otherwise easy to miss because the workspace root .gitignore uses "*".
+if [ -f "$ROOT/scripts/tools/sync-vscode-git-repos.sh" ]; then
+  bash "$ROOT/scripts/tools/sync-vscode-git-repos.sh" || true
+  echo "Registered '$DIR/' in .vscode/settings.json → git.scanRepositories (Reload Window if SCM does not list it yet)."
+fi
+
 # Record in session memory so the repo is known within the current session too,
 # before the next session-start inventory injection.
 if [ -f "$ROOT/scripts/tools/session-memory.sh" ]; then
