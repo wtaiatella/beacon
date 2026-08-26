@@ -1,13 +1,13 @@
 ---
 name: rebase
-description: "Multi-repo git-sync utility: for one or more repos (or every child repo in the workspace), checks out the main/default branch, pulls, checks back out to the previous/working branch, rebases against the updated base, and after a clean rebase pushes with --force-with-lease (or -u when there is no upstream). Safety backup branch is auto-deleted after a clean rebase (kept only on conflict/failure). Use when the user runs /rebase. No MR creation, no Jira transition, no ticket-folder lookup (FR-12). Standalone framework utility — not wired into the required /run orchestrator (FR-10)."
+description: "Multi-repo git-sync utility: for one or more repos (or every child repo in the workspace), optionally checks out/creates the ticket branch from origin, pulls the main/default branch, rebases the working branch onto it, and after a clean rebase pushes with --force-with-lease (or -u when there is no upstream). Safety backup branch is auto-deleted after a clean rebase (kept only on conflict/failure). Use when the user runs /rebase. No MR creation, no Jira transition, no ticket-folder lookup (FR-12). Standalone framework utility — not wired into the required /run orchestrator (FR-10)."
 disable-model-invocation: true
 ---
 
 # Rebase
 
 Keep one or more working branches current with their base branch, safely. This is a **pure
-multi-repo git utility** — it is not ticket-scoped and it is not wired into the required
+multi-repo git utility** — it is not ticket-folder-scoped and it is not wired into the required
 orchestrator's sequence (FR-10, FR-12).
 
 **Scope (FR-12):** git-sync only. Deliberately out of scope here:
@@ -16,76 +16,126 @@ orchestrator's sequence (FR-10, FR-12).
   skill (generates MR body text only) plus user-confirmed GitLab MCP actions. A git push that
   updates an already-open MR's source branch is git-sync, not an MR API mutation.
 - **No Jira status transitions.**
-- **No ticket-folder-by-repo lookup** — `rebase` operates on repo working directories directly,
-  the same "for each child repo" iteration shape `kb-refresh` uses; it does not need to know which
-  ticket a repo's current work belongs to.
+- **No ticket-folder lookup** — `rebase` does not read `docs/specs/`. A Jira key in `$ARGUMENTS`
+  is used only to **resolve a git branch** in the targeted child repo(s) (see **Ticket branch**).
 
-Invoking `/rebase` **is** consent to push the rebased working branch (see step 9). Do not ask
-again for push confirmation after a clean rebase.
+Invoking `/rebase` **is** consent to (1) checkout/create a local tracking branch from an existing
+`origin` branch when a ticket key is given, and (2) push the rebased working branch (see step 10).
+Do not ask again for those confirmations after a clean run.
 
 ## Trigger & Input
 
-- **Trigger:** `/rebase [repo-name]` — arrives as `$ARGUMENTS`.
-- **Two modes — determined solely by whether `$ARGUMENTS` is blank:**
+- **Trigger:** `/rebase [repo ...] [ticket-key]` — arrives as `$ARGUMENTS`.
+- Split `$ARGUMENTS` on whitespace. Classify each token independently (order does not matter):
+  - **Ticket key:** matches `^[A-Za-z][A-Za-z0-9]+-[0-9]+$` (e.g. `BG-11320`, `AVT-102897`).
+    At most **one**. More than one → stop-gate.
+  - **Explicit branch:** contains `/` and is not a child-repo name (e.g. `feat/BG-11320`). Treat
+    as the exact branch name; skip ticket-key globbing. At most **one** of {ticket key, explicit
+    branch}.
+  - **Repo name:** anything else — exact child-folder name or unambiguous prefix (`engine` →
+    `br-tax-engine`). If it does not match any child repo, **stop immediately** and list the
+    repos that do exist rather than silently doing nothing.
 
-  | Invocation | Scope |
-  |---|---|
-  | `/rebase` (no args) | **All** child repos detected in the workspace root |
-  | `/rebase <repo-name>` | **Only** that repo (exact folder name or unambiguous prefix) |
+| Invocation | Scope | Working branch |
+|---|---|---|
+| `/rebase` (no args) | **All** child repos | whatever is checked out (unchanged) |
+| `/rebase <repo>` | **Only** that repo | whatever is checked out (unchanged) |
+| `/rebase <repo> <ticket>` | **Only** that repo | ticket branch (checkout/create, then rebase) |
+| `/rebase <ticket>` | **All** child repos that have a matching branch | that ticket branch in each; skip repos with no match |
 
-- **No-arg mode:** discover child repos by listing first-level directories under the workspace root
-  that contain a `.git/` folder (same detection the `session-init` hook uses). Iterate every one.
+- **No-arg / repo-only:** discover child repos by listing first-level directories under the
+  workspace root that contain a `.git/` folder (same detection the `session-init` hook uses).
   For repos whose current branch **is** the main/default branch, skip the rebase step but still
-  pull (`git pull --ff-only`) so the local main stays current — and report them as "pulled (on main)".
-- **Named-repo mode:** if the name does not match any child repo, stop immediately and list the
-  repos that do exist rather than silently doing nothing.
+  pull (`git pull --ff-only`) so the local main stays current — and report them as
+  **"pulled (on main)"**.
+- **Named-repo + ticket:** if the ticket branch cannot be resolved (missing or ambiguous),
+  **stop-gate that repo** — do **not** fall back to whatever branch is currently checked out.
+- **Ticket-only (all repos):** repos with no matching branch are `"skipped — no ticket branch"`.
+  If **every** repo is skipped, stop and say no matching branch was found.
+
+## Ticket branch
+
+When a ticket key or explicit branch is present, **before** the rebase sequence, ensure the
+targeted repo is on that branch and in sync with `origin`.
+
+1. `git -C <repo> fetch origin` (so remote refs are current).
+2. **Resolve `<ticket-branch>`:**
+   - Explicit branch token → use it as-is (must exist locally or on `origin`).
+   - Ticket key → collect local (`git branch --list`) and remote (`git branch -r`) names whose
+     **last path segment** equals the key (case-insensitive), e.g. `feat/BG-11320`,
+     `fix/BG-11320`, `BG-11320`. Also accept a last segment that **starts with** `KEY-` or
+     `KEY_` (slug suffix) when there is no exact segment match.
+   - **Ignore** names under `backup/`.
+   - Strip the `origin/` prefix from remotes; compare unique short names.
+   - **0 matches:** named-repo+ticket → stop-gate (list nearby branches). Ticket-only → skip
+     that repo.
+   - **2+ distinct short names:** stop-gate and list them — do not guess `feat/` vs `fix/`.
+3. If HEAD is already `<ticket-branch>`, keep it.
+4. If there is **no local** branch but `origin/<ticket-branch>` exists:
+   `git -C <repo> checkout --track origin/<ticket-branch>`
+   (creates the local branch at the remote tip). **Do not** invent a name that does not exist
+   on `origin` (never `git checkout -b feat/BG-11320` from main).
+5. If the local branch exists but HEAD is elsewhere: `git -C <repo> checkout <ticket-branch>`.
+6. **Sync with origin:** `git -C <repo> pull --ff-only` (or fast-forward to `origin/<ticket-branch>`
+   if upstream is not set but the remote ref exists). If ff-only fails (diverged), **stop-gate**
+   — do not merge, reset, or rebase onto origin yet; leave the tree as-is.
+7. That branch is now `<working-branch>` for the rest of the workflow.
+
+Dirty tree (step 2 of the per-repo loop) still wins: never checkout/create over local work.
 
 ## Workflow
 
 For each targeted repo:
 
-1. **Record current branch:** `git -C <repo> branch --show-current` → `<working-branch>`. Detect
-   main/default via `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`.
-   - If `<working-branch>` **equals** main: run steps 4–5 only (checkout is a no-op, just pull),
-     then report as **"pulled (on main)"** and move to the next repo — no backup branch needed,
-     **no push**.
-   - Otherwise: proceed with the full rebase sequence (steps 2–10).
+1. **Record current branch** (before any checkout): `git -C <repo> branch --show-current`.
+   Detect main/default via `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`.
 2. **Dirty-tree guard:** if `git -C <repo> status --porcelain` is non-empty, **skip and warn** —
-   never stash/reset over local work. **Do not push.**
-3. **Backup branch:** create `backup/<working-branch>-pre-rebase-<timestamp>` at the current
+   never stash/reset over local work. **Do not** checkout, create, rebase, or push.
+3. **Ticket-branch ensure:** if a ticket key or explicit branch was given, run **Ticket branch**
+   above and set `<working-branch>` to the resolved name. Otherwise `<working-branch>` stays
+   the branch recorded in step 1.
+   - If `<working-branch>` **equals** main: run steps 6–7 only (checkout is a no-op, just pull),
+     then report as **"pulled (on main)"** and move to the next repo — no backup branch needed,
+     **no push**. A ticket key must **not** resolve to the main/default branch; if it does,
+     stop-gate.
+   - Otherwise: proceed with the full rebase sequence (steps 4–11).
+4. **Backup branch:** create `backup/<working-branch>-pre-rebase-<timestamp>` at the current
    `<working-branch>` HEAD, so the pre-rebase state is always recoverable.
-4. **Checkout main/default:** `git -C <repo> checkout <main-branch>`.
-5. **Pull:** `git -C <repo> pull --ff-only` (non-destructive; if this fails, stop-gate — do not
+5. **Checkout main/default:** `git -C <repo> checkout <main-branch>`.
+6. **Pull:** `git -C <repo> pull --ff-only` (non-destructive; if this fails, stop-gate — do not
    force). **Do not push.**
-6. **Checkout back:** `git -C <repo> checkout <working-branch>`.
-7. **Rebase:** `git -C <repo> rebase <main-branch>`. On conflicts, stop-gate — surface the
+7. **Checkout back:** `git -C <repo> checkout <working-branch>`.
+8. **Rebase:** `git -C <repo> rebase <main-branch>`. On conflicts, stop-gate — surface the
    conflicting files and halt; do **not** attempt to auto-resolve. Leave the backup branch in place
    so the user can abort (`git rebase --abort`) and return to the pre-rebase state. **Do not push.**
-8. **Backup cleanup:** if the rebase in step 7 completed cleanly (no conflicts), delete the backup
-   branch created in step 3 (`git -C <repo> branch -D backup/<working-branch>-pre-rebase-<timestamp>`)
+9. **Backup cleanup:** if the rebase in step 8 completed cleanly (no conflicts), delete the backup
+   branch created in step 4 (`git -C <repo> branch -D backup/<working-branch>-pre-rebase-<timestamp>`)
    — it is no longer needed once the working branch is safely rebased, and leaving it would
    accumulate one stale backup branch per run. On conflicts (or any stop-gate before the rebase
    finishes), **do not** delete it — it stays until the user resolves or aborts.
-9. **Push (clean rebase only):** after step 7 succeeded with no conflicts, and only when
-   `<working-branch>` is **not** a protected branch (`main` / `master` / `develop` / `development`
-   / `release/*`):
-   - If `<working-branch>` has **no** upstream: `git -C <repo> push -u origin <working-branch>`.
-   - If it has an upstream: `git -C <repo> push --force-with-lease origin <working-branch>`.
-   - **Never** `git push --force` / `-f` without lease.
-   - If `--force-with-lease` is rejected (remote advanced), **stop-gate** for that repo — report
-     the rejection and do **not** retry with `--force`.
-   - If local already matches upstream after the rebase, the push is a no-op; report
-     **pushed (already up to date)**.
-10. **Report:** whether the repo was already current (skipped), rebased cleanly, pushed, stopped
-    on conflicts, or failed the lease — and the backup branch name (noting it was deleted after a
-    clean rebase, or is still present pending manual resolution).
+10. **Push (clean rebase only):** after step 8 succeeded with no conflicts, and only when
+    `<working-branch>` is **not** a protected branch (`main` / `master` / `develop` / `development`
+    / `release/*`):
+    - If `<working-branch>` has **no** upstream: `git -C <repo> push -u origin <working-branch>`.
+    - If it has an upstream: `git -C <repo> push --force-with-lease origin <working-branch>`.
+    - **Never** `git push --force` / `-f` without lease.
+    - If `--force-with-lease` is rejected (remote advanced), **stop-gate** for that repo — report
+      the rejection and do **not** retry with `--force`.
+    - If local already matches upstream after the rebase, the push is a no-op; report
+      **pushed (already up to date)**.
+11. **Report:** whether the repo was already current (skipped), had a local branch created from
+    origin, rebased cleanly, pushed, stopped on conflicts, or failed the lease — and the backup
+    branch name (noting it was deleted after a clean rebase, or is still present pending manual
+    resolution).
 
 ## Output
 
-Per-repo summary table: repo, branch, action (`pulled (on main)` / `rebased` / `pushed` /
-`pushed (already up to date)` / `push failed — lease` / `conflict` / `skipped — dirty tree`),
-backup branch (`deleted (clean rebase)` / `<branch-name> (kept — conflict)` / `n/a`), and any
-follow-up needed (e.g. resolve conflicts, then re-run; or recover from a rejected lease).
+Per-repo summary table: repo, branch, action (`pulled (on main)` / `checked out` /
+`created local from origin` / `rebased` / `pushed` / `pushed (already up to date)` /
+`push failed — lease` / `conflict` / `skipped — dirty tree` / `skipped — no ticket branch` /
+`stop — ambiguous ticket branch`), backup branch (`deleted (clean rebase)` /
+`<branch-name> (kept — conflict)` / `n/a`), and any follow-up needed (e.g. resolve conflicts,
+then re-run; recover from a rejected lease; pick among ambiguous branches).
 
 ## Guardrails
 
@@ -93,6 +143,10 @@ follow-up needed (e.g. resolve conflicts, then re-run; or recover from a rejecte
 - **Never** `git push --force` / `-f` without `--force-with-lease`.
 - **Never** push to a protected branch (`main` / `master` / `develop` / `development` /
   `release/*`). On-main runs are pull-only.
+- **Never** invent a ticket branch that does not exist on `origin`. Create local **only** by
+  tracking an existing remote branch.
+- **Never** fall back to the currently checked-out branch when a ticket key was given and
+  resolution failed.
 - **Push after a clean rebase is required**, not optional: invoking `/rebase` is the consent.
   Do not prompt for a second Yes. Do **not** push on conflict, dirty-tree skip, failed pull, or
   when the working branch is the main/default.

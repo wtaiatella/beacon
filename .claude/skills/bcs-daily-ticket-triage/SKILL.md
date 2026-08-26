@@ -165,7 +165,7 @@ git -C <repo> merge-base --is-ancestor origin/<base_branch> <working-branch>
 # or: git -C <repo> rev-list --left-right --count origin/<base_branch>...<working-branch>
 ```
 
-- Behind base → queue `Task(rebase)` with **that repo name only** (named-repo mode).
+- Behind base → queue `Task(rebase)` with **that repo name and the Jira key** (named-repo + ticket mode, e.g. `br-tax-engine BG-11320`) so rebase checks out/creates the ticket branch from origin before rebasing.
 - Dirty tree → do **not** rebase; report `skipped — dirty tree`.
 - Rebase conflict → report conflict + backup branch; do not auto-resolve.
 - After clean rebase → report push needed; do not push.
