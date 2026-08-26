@@ -1,6 +1,6 @@
 ---
 name: bcs-sandbox
-description: "Local multi-service environment lifecycle for the br-tax-engine + br-tax-ui repo pair: start/stop/inspect each datastore and app process individually (mongo, redis, engine, mock, swagger/pecten, ui-proxy, ui) via scripts/tools/sandbox.sh, so /bcs-repro and manual Postman/Swagger/UI testing always run against an already-standing environment instead of re-deriving the local-dev recipe each time. Auto-detects the workspace folder (e.g. bcs, bcs1, bcs2...) to give each simultaneous ticket its own engine/swagger/ui-proxy/ui port range and Mongo DB name, with zero edits to any file inside br-tax-engine/br-tax-ui. Standalone — not wired into the required /run orchestrator."
+description: "Local multi-service environment lifecycle for the br-tax-engine + br-tax-ui repo pair: start/stop/inspect each datastore and app process individually (mongo, redis, engine, mock, swagger/pecten, ui-proxy, ui) via scripts/tools/sandbox.sh, so /bcs-repro and manual Postman/Swagger/UI testing always run against an already-standing environment instead of re-deriving the local-dev recipe each time. Auto-detects the workspace folder (e.g. bcs, bcs1, bcs2...) to give each simultaneous ticket its own engine/mock/swagger/ui-proxy/ui port range and Mongo DB name (bcs never uses bare :3000/:3888 — those stay free for Next.js and npm test), with zero edits to tracked files inside br-tax-engine/br-tax-ui beyond mock-servers.js honoring SERVER_PORT. Standalone — not wired into the required /run orchestrator."
 ---
 
 # Sandbox
@@ -43,11 +43,11 @@ All service metadata (dir, port, start command, health-check timeout) lives in o
 | `mongo` | docker | 27017 | engine (always) | — | from **br-tax-engine's** `docker-compose.yml` only |
 | `redis` | docker | 6379 | engine (always) | — | same compose file as `mongo` |
 | `postgres` | native | 5432 | neither (your own native install) | — | **status-only** — never started/stopped by this tool (see Guardrails) |
-| `engine` | process | 3000 | engine (always) | mongo, redis, mock, postgres | `npm start` in `br-tax-engine/` |
-| `mock` | process | 3888 | engine (always) | — | `npm run mock:server` in `br-tax-engine/` — needed for any `/v3/*` auth call |
-| `swagger` | process | 8000 | engine (always) | engine, mongo, redis, mock, postgres | `npm start` in `br-tax-engine/pecten/` — regenerates the OpenAPI JSON from YAML models, then serves the Swagger UI |
-| `ui-proxy` | process | 4000 | ui (always) | engine, mongo, redis, mock, postgres | `npm run proxy:start` in `br-tax-ui/` — forwards to `$ENGINE_URL` (defaults to `http://localhost:3000`) |
-| `ui` | process | 4200 | ui (always) | ui-proxy, engine, mongo, redis, mock, postgres | `npm start` in `br-tax-ui/` — Angular dev server, proxies via `proxy.conf.json` to `ui-proxy` |
+| `engine` | process | 3000 + offset | engine (always) | mongo, redis, mock, postgres | `npm start` in `br-tax-engine/` |
+| `mock` | process | 3888 + offset | engine (always) | — | `npm run mock:server` in `br-tax-engine/` — needed for any `/v3/*` auth call. Bare **:3888** is reserved for `npm test` / `test:services` |
+| `swagger` | process | 8000 + offset | engine (always) | engine, mongo, redis, mock, postgres | `npm start` in `br-tax-engine/pecten/` — regenerates the OpenAPI JSON from YAML models, then serves the Swagger UI |
+| `ui-proxy` | process | 4000 + offset | ui (always) | engine, mongo, redis, mock, postgres | `npm run proxy:start` in `br-tax-ui/` — forwards to `$ENGINE_URL` (this workspace's engine) |
+| `ui` | process | 4200 + offset | ui (always) | ui-proxy, engine, mongo, redis, mock, postgres | `npm start` in `br-tax-ui/` — Angular dev server, proxies via `proxy.conf.json` to `ui-proxy` |
 
 **Origin never varies today** — `mongo`/`redis`/`engine`/`mock`/`swagger` always resolve to
 `br-tax-engine`, `ui-proxy`/`ui` always resolve to `br-tax-ui`, regardless of which other services
@@ -137,21 +137,40 @@ service-by-service control.
 
 Added 2026-08-06 after the workspace's actual usage pattern: several sibling folders (e.g. `bcs`,
 `bcs1`, `bcs2`, `bcs3`), each its own full clone of `aw1` + `br-tax-engine` + `br-tax-ui`, one
-ticket in progress per folder, each needing its own `engine`/`swagger`/`ui-proxy`/`ui` — because
-those hold the actual ticket branch code, unlike `mongo`/`redis`/`mock`/`postgres` which stay
-shared (see the Services table's Origin column).
+ticket in progress per folder, each needing its own `engine`/`mock`/`swagger`/`ui-proxy`/`ui` —
+because those hold the actual ticket branch code (or must not steal the test-reserved mock port),
+unlike `mongo`/`redis`/`postgres` which stay shared (see the Services table's Origin column).
 
 **Fully automatic — no new flag.** `WORKSPACE_NAME` is `basename "$ROOT"` (the workspace folder
-itself); `WORKSPACE_ID` parses a trailing number (`bcs`→0, `bcs1`→1, `bcs2`→2, `bcs3`→3; any other
-folder name hashes to a stable 0–49 via `cksum`). `PORT_OFFSET = WORKSPACE_ID * 10000`, added to
-`engine`(3000)/`swagger`(8000)/`ui-proxy`(4000)/`ui`(4200) only. Every `--start`/`--stop`/`--status`
-prints `Workspace: <name> (... port offset: +N)` up front so it's always visible which range is
-active. Validated 2026-08-06 in `bcs3` (offset +300, the *old* `*100` step): `engine:3300`,
-`swagger:8300`, `ui-proxy:4300`, `ui:4500`, full request chain confirmed with real HTTP calls
-through all of them.
+itself); `WORKSPACE_ID` parses a trailing number and **always starts at 1** (`bcs`→1, `bcs1`→2,
+`bcs2`→3, `bcs3`→4; any other folder name hashes to a stable 1–49 via `cksum`, never 0).
+`PORT_OFFSET = WORKSPACE_ID * 10000`, added to `engine`(3000)/`mock`(3888)/`swagger`(8000)/
+`ui-proxy`(4000)/`ui`(4200). Every `--start`/`--stop`/`--status` prints
+`Workspace: <name> (... port offset: +N; npm-test mock stays :3888)` up front so it's always
+visible which range is active.
 
-**Step revised same day to `*10000` — the `*100` step had a real, confirmed cross-workspace
-collision, not a hypothetical one.** All four service base ports are multiples of 100, and `ui`
+**Why ID never 0 (revised 2026-08-26):** offset 0 kept `bcs` on engine `:3000` (Next.js default —
+collides with parallel Next apps) and mock `:3888` (hardcoded by `npm test` / `test:services`).
+Starting the sandbox mock on `:3888` made `test:services` fail to bind. Mapping `bcs`→1 pushes
+that workspace to `+10000` (`engine:13000`, `mock:13888`, …). Bare `:3888` stays free for the
+product suite's own short-lived mock.
+
+**Example ports (after 2026-08-26 mapping):**
+
+| Workspace | ID | Offset | engine | mock | ui-proxy | ui | swagger |
+|---|---|---|---|---|---|---|---|
+| `bcs` | 1 | +10000 | 13000 | 13888 | 14000 | 14200 | 18000 |
+| `bcs1` | 2 | +20000 | 23000 | 23888 | 24000 | 24200 | 28000 |
+| `bcs2` | 3 | +30000 | 33000 | 33888 | 34000 | 34200 | 38000 |
+
+**Mock is per-workspace (revised 2026-08-26)** — previously shared on `:3888`. Sandbox starts mock
+with `SERVER_PORT=<3888+offset>`; `test/_tools/mock-servers.js` honors that env var and defaults
+to `3888` when unset (so `npm test` is unchanged). Engine's `app.config.js` hardcodes every
+external mock URL to `:3888`; `svc_env_overrides` rewrites those URLs to this workspace's mock
+port via the same `sandbox-pm2-override.js` path used for `SRV_PORT`/`DB_NAME`.
+
+**Step revised earlier to `*10000` — the `*100` step had a real, confirmed cross-workspace
+collision, not a hypothetical one.** All service base ports are multiples of 100, and `ui`
 (4200) minus `ui-proxy` (4000) is exactly 200 — two `*100` steps. That means workspace N's `ui` and
 workspace N+2's `ui-proxy` always land on the *identical* absolute port. This actually happened in
 production use on 2026-08-06: a `/bcs-repro` run in `bcs1` (offset would've been +100 under the old
@@ -159,7 +178,7 @@ step) trusted `--status`'s "already up" label for port 4300, which turned out to
 `ui-proxy`** (offset +300 under the old step), not `bcs1`'s `ui` at all — caught only because that
 session independently re-verified port ownership via `lsof`+`ps`+`cwd` walking. `*10000` (bigger
 than the full 5000-wide spread from `engine`'s 3000 to `swagger`'s 8000) makes every workspace's
-entire 4-service range a self-contained block that cannot overlap any other workspace's range, for
+entire service range a self-contained block that cannot overlap any other workspace's range, for
 any service, at any workspace-ID distance — this class of collision is now structurally impossible,
 not just less likely.
 
@@ -226,10 +245,10 @@ to this workspace's own `ui-proxy` port — `br-tax-ui/proxy.conf.json` hardcode
 `--proxy-config`. Confirmed via `git status`/`git diff` after a real run: `br-tax-ui/proxy.conf.json`
 shows zero diff.
 
-**Net result: zero files inside `br-tax-engine`/`br-tax-ui` are ever modified, tracked or not** —
-every override goes through either an environment variable, a `NODE_OPTIONS`-loaded script that
-mutates an in-memory `require()` cache entry, or a generated file that lives entirely under this
-workspace's own `.sandbox/`. Only two files change, ever, and both live in `aw1` (this repo) —
+**Net result:** runtime overrides still go through env vars / `NODE_OPTIONS`-loaded scripts /
+generated files under `.sandbox/` — no per-ticket edits inside the child repos. The one lasting
+child-repo change is `br-tax-engine/test/_tools/mock-servers.js` honoring `SERVER_PORT` (defaults
+to `3888` when unset so `npm test` is unchanged). Lifecycle logic lives in `aw1` —
 `scripts/tools/sandbox.sh` and `scripts/tools/sandbox-pm2-override.js` — committed once and shared
 to every sibling workspace folder by an ordinary `git pull`.
 
@@ -248,12 +267,13 @@ port is always the reliable one, since it names whoever actually bound it.
 ## Known gotchas (confirmed by a real run, not hypothetical)
 
 - **`mock` must start before/with `engine`, not after** — starting engine first races a scheduled
-  `hoplias:schedules:portal-reader` job against `mock` (port 3888) not being up yet, producing 3
-  one-time `ECONNREFUSED` errors in `engine.log`. Validated 2026-08-06 with a literal
-  `--start engine mock`. Non-fatal (engine still finished booting, `/v3/token` worked once both
-  were up), but avoidable — this is exactly why `CASCADE_ORDER` puts `mock` before `engine`: since
-  `--start` now ignores the literal argument order and always walks `CASCADE_ORDER` instead, this
-  race is structurally prevented today, not just avoided by remembering the right argument order.
+  `hoplias:schedules:portal-reader` job against `mock` (sandbox port `3888 + offset`) not being
+  up yet, producing 3 one-time `ECONNREFUSED` errors in `engine.log`. Validated 2026-08-06 with
+  a literal `--start engine mock`. Non-fatal (engine still finished booting, `/v3/token` worked
+  once both were up), but avoidable — this is exactly why `CASCADE_ORDER` puts `mock` before
+  `engine`: since `--start` now ignores the literal argument order and always walks
+  `CASCADE_ORDER` instead, this race is structurally prevented today, not just avoided by
+  remembering the right argument order.
 - **`engine` and `ui-proxy` both hardcode a Prometheus metrics server on port 8091** (`engine`'s
   `tarrafa:core:common:prometheus-server`; `br-tax-ui/proxy/utils/prometheus-server.js:29`).
   Validated 2026-08-06: with `engine` already up, starting `ui-proxy` logs an `uncaughtException:

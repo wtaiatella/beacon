@@ -17,24 +17,32 @@ PM2_OVERRIDE_SCRIPT="$ROOT/scripts/tools/sandbox-pm2-override.js"
 SERVICES="mongo redis postgres engine mock swagger ui-proxy ui"
 
 # Multi-workspace support: running this same repo pair cloned into several sibling workspace
-# folders (e.g. bcs, bcs1, bcs2, bcs3) needs its own engine/swagger/ui-proxy/ui, one per ticket in
-# progress, without editing any file inside br-tax-engine/br-tax-ui (tracked or not). Derived
-# automatically from the workspace folder's own name — no extra flag needed. mongo/redis/mock/
-# postgres stay shared/unoffset on purpose (see the Services table in SKILL.md).
+# folders (e.g. bcs, bcs1, bcs2, bcs3) needs its own engine/mock/swagger/ui-proxy/ui, one per
+# ticket in progress, without editing any file inside br-tax-engine/br-tax-ui (tracked or not).
+# Derived automatically from the workspace folder's own name — no extra flag needed.
+# mongo/redis/postgres stay shared/unoffset on purpose (see the Services table in SKILL.md).
+#
+# WORKSPACE_ID is never 0: offset 0 would keep engine on :3000 (Next.js default — conflicts with
+# parallel Next apps) and mock on :3888 (reserved for `npm test` / `test:services`, which hardcode
+# that port). So bcs→1, bcs1→2, bcs2→3…; non-bcs names that hash to 0 bump to 1.
 WORKSPACE_NAME="$(basename "$ROOT")"
 if [[ "$WORKSPACE_NAME" =~ ^bcs([0-9]*)$ ]]; then
-  WORKSPACE_ID="${BASH_REMATCH[1]:-0}"
+  WORKSPACE_ID=$(( ${BASH_REMATCH[1]:-0} + 1 ))
 else
   WORKSPACE_ID=$(( $(printf '%s' "$WORKSPACE_NAME" | cksum | cut -d' ' -f1) % 50 ))
+  [ "$WORKSPACE_ID" -eq 0 ] && WORKSPACE_ID=1
 fi
 # Step must exceed the full spread between the lowest and highest service base port (engine 3000
 # to swagger 8000 = 5000), otherwise two workspaces N apart can land the SAME absolute port for
 # two DIFFERENT services -- confirmed for real on 2026-08-06 with the old *100 step: workspace N's
 # ui (base 4200) landed on the identical port as workspace N+2's ui-proxy (base 4000), since both
 # base ports are multiples of 100 and differ by exactly 200 (2 steps). *10000 makes every
-# workspace's whole 4-service range a self-contained block that can never overlap another
+# workspace's whole service range a self-contained block that can never overlap another
 # workspace's, for any service, at any workspace-ID distance.
 PORT_OFFSET=$(( WORKSPACE_ID * 10000 ))
+# Bare :3888 is reserved for the product test suite's own mock (`npm run mock:server` /
+# `test:services`). Sandbox mock always uses 3888+PORT_OFFSET so it never steals that port.
+MOCK_TEST_PORT=3888
 
 # Canonical boot order for --start's dependency cascade (see svc_deps below). mock comes before
 # engine on purpose — starting engine first races a scheduled job against mock not being up yet
@@ -53,15 +61,14 @@ svc_kind() { case "$1" in
   *) echo process ;;
 esac; }
 
-# mongo/redis/postgres/mock are shared across workspaces (unoffset, same port always) — mock
-# mocks external SEFAZ/AWS endpoints only, it holds no ticket-specific code, so one instance can
-# safely serve every workspace's engine. engine/swagger/ui-proxy/ui hold the actual ticket branch
-# code, so each workspace gets its own via PORT_OFFSET.
+# mongo/redis/postgres are shared across workspaces (unoffset). mock/engine/swagger/ui-proxy/ui
+# each get PORT_OFFSET — mock must be per-workspace so a long-running sandbox mock does not
+# occupy :3888, which `npm test` / `test:services` still hardcode for their own short-lived mock.
 svc_port() { case "$1" in
   mongo) echo 27017 ;;
   redis) echo 6379 ;;
   postgres) echo 5432 ;;
-  mock) echo 3888 ;;
+  mock) echo $(( MOCK_TEST_PORT + PORT_OFFSET )) ;;
   engine) echo $(( 3000 + PORT_OFFSET )) ;;
   swagger) echo $(( 8000 + PORT_OFFSET )) ;;
   ui-proxy) echo $(( 4000 + PORT_OFFSET )) ;;
@@ -89,8 +96,17 @@ esac; }
 # sandbox-pm2-override.js (loaded via NODE_OPTIONS, see process_start) patches pm2.config.js's own
 # *exported* env object before that Object.assign runs, so the merge picks up these values
 # instead of fighting it — zero edits to any file inside br-tax-engine/br-tax-ui, tracked or not.
+# engine's app.config.js hardcodes every external mock URL to localhost:3888 — rewrite them to
+# this workspace's offset mock port so the engine talks to *our* mock, not the test-reserved :3888
+# (and not another workspace's mock). Paths mirror app.config.js development defaults.
 svc_env_overrides() { case "$1" in
-  engine) printf '{"SRV_PORT":"%s","DB_NAME":"%s"}' "$(svc_port engine)" "$(svc_db_name engine)" ;;
+  engine)
+    local mp ep db base
+    mp="$(svc_port mock)"; ep="$(svc_port engine)"; db="$(svc_db_name engine)"
+    base="http://localhost:${mp}"
+    printf '{"SRV_PORT":"%s","DB_NAME":"%s","API_PORTAL_URL":"%s/api-portal/avalarabrasil/com/br","OAUTH_PORTAL_URL":"%s/oauth-portal/avalarabrasil/com/br","TAXDOCS_URL":"%s/taxdocs/qa/avalarabrasil/com/br","MIGRATE_URL":"%s/homolog/invoicy/com/br","MIGRATE_SERVICE_URL":"%s/homolog/invoicy/com/br","MIGRATE_SEND_URL":"%s/homolog/invoicy/com/br","MIGRATE_SEARCH_URL":"%s/consultahomolog/invoicy/com/br","IBPT_URL":"%s/apidoni/ibpt/org/br/api/v1","AWS_ENDPOINT_URI":"%s/aws.amazon.com","AWS_S3_ENDPOINT_URI":"%s/aws-s3.amazon.com","AWS_SQS_ENDPOINT_URI":"%s/aws-sqs.amazon.com","AWS_LAMBDA_ENDPOINT_URI":"%s/aws-lambda.amazon.com","ECS_CONTAINER_METADATA_URI_V4":"%s/aws-ecs.amazon.com/ecs-dev-br-tax-worker"}' \
+      "$ep" "$db" "$base" "$base" "$base" "$base" "$base" "$base" "$base" "$base" "$base" "$base" "$base" "$base" "$base"
+    ;;
   ui-proxy) printf '{"SRV_PORT":"%s","DB_NAME":"%s","ENGINE_URL":"http://localhost:%s"}' \
     "$(svc_port ui-proxy)" "$(svc_db_name ui-proxy)" "$(svc_port engine)" ;;
   *) echo "" ;;
@@ -125,7 +141,7 @@ svc_note() { case "$1" in
   mongo|redis) echo "shared datastore for both repos" ;;
   postgres) echo "native install — not managed by this script, status-only" ;;
   engine) echo "needs mongo+redis (+ your native postgres) up first for real calculations" ;;
-  mock) echo "needed for /v3/token auth calls (else ECONNREFUSED to :3888)" ;;
+  mock) echo "needed for /v3/token auth calls (else ECONNREFUSED to :$(svc_port mock)); bare :${MOCK_TEST_PORT} reserved for npm test" ;;
   swagger) echo "pecten; regenerates OpenAPI JSON from YAML models on every start" ;;
   ui-proxy) echo "forwards to this workspace's own engine (http://localhost:$(svc_port engine))" ;;
   ui) echo "ng serve, proxies via generated proxy config -> this workspace's ui-proxy (:$(svc_port ui-proxy))" ;;
@@ -214,7 +230,48 @@ docker_stop() {
   compose stop "$svc"
 }
 
-# --- process services (npm/ng background jobs) -----------------------------
+# Detach into a new session (double-fork + setsid) so IDE/agent shells that reap their
+# process group when a tool command exits do not kill long-lived sandbox services.
+# macOS has no setsid(1); python's os.setsid() is the portable path.
+# stdin protocol: KEY=VAL env lines, blank line, then the command words (e.g. "npm start").
+# Caller must already cd into the service dir — the grandchild inherits that cwd.
+# Runs in the foreground of the caller's backgrounded `( cd …; … | _sandbox_detach_start )&`
+# group; do NOT background here or the enclosing subshell will SIGHUP us on exit.
+_sandbox_detach_start() {
+  local logfile="$1"
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "  [sandbox] python3 required to detach long-lived services" >&2
+    return 1
+  fi
+  # -c (not a heredoc) so stdin stays the caller's pipe with env + command.
+  python3 -c '
+import os, sys
+logfile = sys.argv[1]
+env_lines = []
+while True:
+    line = sys.stdin.readline()
+    if not line or line == "\n":
+        break
+    env_lines.append(line.rstrip("\n"))
+for item in env_lines:
+    if "=" in item:
+        k, v = item.split("=", 1)
+        os.environ[k] = v
+cmd = sys.stdin.read().strip().split()
+if not cmd:
+    sys.exit(1)
+if os.fork() > 0:
+    sys.exit(0)
+os.setsid()
+if os.fork() > 0:
+    sys.exit(0)
+with open("/dev/null", "r") as inn, open(logfile, "a", buffering=1) as out:
+    os.dup2(inn.fileno(), 0)
+    os.dup2(out.fileno(), 1)
+    os.dup2(out.fileno(), 2)
+os.execvp(cmd[0], cmd)
+' "$logfile"
+}
 
 process_start() {
   local svc="$1" dir port timeout_s cmd pidfile logfile pid overrides
@@ -242,24 +299,44 @@ process_start() {
   fi
 
   echo "  [$svc] starting: $cmd (cwd: $dir)"
+  : >"$logfile"
   if [ -n "$overrides" ]; then
     ( cd "$dir"
-      export SANDBOX_PM2_CONFIG="$(svc_pm2_config "$svc")"
-      export SANDBOX_ENV_OVERRIDES="$overrides"
-      export NODE_OPTIONS="--require $PM2_OVERRIDE_SCRIPT"
-      exec $cmd
-    ) >"$logfile" 2>&1 &
+      {
+        printf 'SANDBOX_PM2_CONFIG=%s\n' "$(svc_pm2_config "$svc")"
+        printf 'SANDBOX_ENV_OVERRIDES=%s\n' "$overrides"
+        printf 'NODE_OPTIONS=%s\n' "--require $PM2_OVERRIDE_SCRIPT"
+        printf '\n'
+        printf '%s\n' "$cmd"
+      } | _sandbox_detach_start "$logfile"
+    ) &
+  elif [ "$svc" = mock ]; then
+    # mock-servers.js defaults to :3888 (reserved for npm test); honor SERVER_PORT for sandbox.
+    ( cd "$dir"
+      {
+        printf 'SERVER_PORT=%s\n' "$(svc_port mock)"
+        printf '\n'
+        printf '%s\n' "$cmd"
+      } | _sandbox_detach_start "$logfile"
+    ) &
   else
-    ( cd "$dir" && exec $cmd ) >"$logfile" 2>&1 &
+    ( cd "$dir"
+      {
+        printf '\n'
+        printf '%s\n' "$cmd"
+      } | _sandbox_detach_start "$logfile"
+    ) &
   fi
+  # Immediate bash/python parents exit after the double-fork; port-based stop is the source of truth.
   pid=$!
   echo "$pid" > "$pidfile"
   disown "$pid" 2>/dev/null || true
+  sleep 0.3
 
   if wait_for_port "$port" "$timeout_s"; then
-    echo "  [$svc] up — listening on :$port (pid $pid, log: $logfile)"
+    echo "  [$svc] up — listening on :$port (log: $logfile)"
   else
-    echo "  [$svc] started (pid $pid) but port :$port not open after ${timeout_s}s — check $logfile" >&2
+    echo "  [$svc] started but port :$port not open after ${timeout_s}s — check $logfile" >&2
     return 1
   fi
 }
@@ -331,7 +408,7 @@ ACTION="${1:-}"
 
 case "$ACTION" in
   --start|--stop|--status|--seed)
-    echo "Workspace: $WORKSPACE_NAME (engine/swagger/ui-proxy/ui port offset: +$PORT_OFFSET)" >&2
+    echo "Workspace: $WORKSPACE_NAME (engine/mock/swagger/ui-proxy/ui port offset: +$PORT_OFFSET; npm-test mock stays :${MOCK_TEST_PORT})" >&2
     ;;
 esac
 
