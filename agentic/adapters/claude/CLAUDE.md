@@ -48,7 +48,7 @@ Three commands are not persona subagents: **`/run`** is main-loop orchestration 
 | /kb | Knowledge Base Builder | `kb` | `<target-dirs>` |
 | /run | Pipeline Orchestrator | — (main loop + `run-pipeline` skill) | `<ticket-folder-path-or-jira-key> [idea] [flags]` |
 | /clone | Repo Cloner (utility) | — | `<git-url> [target-dir]` |
-| /rebase | Multi-repo git-sync (utility) | — (thin command) | `[repo ...] [ticket-key]` |
+| /rebase | Multi-repo git-sync (utility) | — (thin command) | `[repo ...] [ticket-key]` (empty args: infer one conversation ticket and its repo — `_state.json` fallback — else all child repos) |
 | /kb-refresh | Standalone: incremental multi-repo KB refresh | — (thin command) | `[repo ...]` |
 | /kb-concentrator | Standalone: global cross-repo KB concentrator | — (thin command) | `[flow-or-topic hint]` |
 | /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --reset]` |
@@ -217,7 +217,10 @@ See the `bcs-ticket-workflow` skill for the full `_state.json` schema, `_notes.m
 - Phases order dependencies
 - Within phases: parallel. Between phases: sequential.
 - Single-repo work: omit `:repo` tags; scope table may list one repo only
-- `/rebase` (standalone skill) and `/kb-refresh` (standalone skill) both iterate every child repo directly, independent of any ticket folder
+- `/rebase` (standalone skill): empty `/rebase` infers at most one ticket from **this conversation**,
+  then rebases the child repo(s) that ticket actually changed (fallback: that ticket's
+  `_state.json` `repo`/`branch`). Otherwise it iterates every child repo (current branch).
+  `/kb-refresh` iterates every child repo directly, independent of any ticket folder.
 
 ## Knowledge Base
 
