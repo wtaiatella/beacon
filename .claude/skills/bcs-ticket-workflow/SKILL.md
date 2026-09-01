@@ -70,6 +70,12 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
     "plan_segment": { "score": 89, "verdict": "PROCEED", "threshold": 80 },
     "code_review": { "dev_reviewer_score": 93, "qa_verdict": "APPROVED" }
   },
+  "commit_policy": {
+    "mode": "per_task",
+    "consent": "batch",
+    "rework_prefix": "fix",
+    "asked_at": "2026-09-01T15:00:00Z"
+  },
   "updated_at": "2026-07-15T12:00:00Z"
 }
 ```
@@ -90,11 +96,28 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
 - `gates` is optional, additive detail: machine-readable score/verdict per gate (e.g.
   `plan_segment` for the `/prd`→`/spectech`→`/tasks`→`plan-reviewer`→`scrum` gate, `code_review`
   for the implementation review gate).
+- **`commit_policy` (optional):** how the **`/run` orchestrator** commits product-repo changes
+  during implementation. Written only after an explicit user answer (`AskQuestion` / chat) at
+  `/run` start (or before the first § 5 `Task(dev|sre|data)` if still missing). Mirror a one-line
+  summary in `_notes.md`. Fields:
+  - `mode`: `end` (only § 9 Finish — legacy default when unset) | `per_phase` (after § 6 PROCEED +
+    authorized `Task(do)` for that phase) | `per_task` (after each implementation `Task` slice;
+    when `per_task`, prefer **one** unchecked `tasks.md` bullet per `Task(dev|sre|data)`).
+  - `consent`: `batch` (user authorized all mid-pipeline commits for this run when answering the
+    policy prompt) | `each` (orchestrator must `AskQuestion` / confirm **every** mid-pipeline
+    commit message before `pipeline-commit.sh`).
+  - `rework_prefix`: conventionally `fix` — mid-pipeline commits after a § 6 **REWORK** loop use
+    conventional-commit type `fix` (e.g. `fix(scope): …`), not `feat`.
+  - `asked_at`: ISO timestamp when the user answered.
+  Personas (`dev` / reviewers / etc.) **never** read this to self-commit — only the main
+  orchestrator + `scripts/hooks/pipeline-commit.sh` (see run-pipeline **Commit policy**).
 - **Write-authority split:** `/prd`, `/spectech`, `/tasks` self-write their own `steps` entries
   directly (same self-write privilege as any other step). `implement`/`code_review`/`summary`
   entries are written by the orchestrator's `Task(do)` mechanism, in the same gate-authorized batch
   that already applies `tasks.md` checkbox updates after a `Task(scrum)` PROCEED — this prevents an
-  implementation persona from self-certifying its own step `done`.
+  implementation persona from self-certifying its own step `done`. `commit_policy` is written by
+  the orchestrator (via `Task(do)` or a direct ticket-folder update in the main session) after the
+  user's policy answers — not by implementation personas.
 
 ## Gate conventions
 
@@ -103,8 +126,10 @@ docs/specs/<YYYY-MM-DD>-<slug>/                   # without ticket key
   `blocked`, and halts. Never guess past a stop-gate.
 - **Human-in-the-loop (HITL):** the step pauses and asks for the user's explicit OK before doing
   something outward-facing or hard to reverse — before implementing, before push/MR, before
-  responding to review threads, and after the plan-segment review when acceptance is low (loop back
-  to whichever of `prd`/`spectech`/`tasks` the reviewer's findings point at).
+  responding to review threads, after the plan-segment review when acceptance is low (loop back
+  to whichever of `prd`/`spectech`/`tasks` the reviewer's findings point at), and for **commit
+  policy** at `/run` start (granularity + consent — see `_state.json.commit_policy` and
+  run-pipeline **Commit policy**) plus per-commit confirmation when `consent` is `each`.
 - **Out of scope:** MR **approval** is a team-specific process — no step here auto-approves.
 
 ## AC-1 regression guard: two control files detected
