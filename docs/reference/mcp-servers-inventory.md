@@ -1,6 +1,6 @@
-# MCP servers inventory (`.cursor/mcp.json`)
+# MCP servers inventory
 
-This workspace registers four **Streamable HTTP** MCP servers in **`.cursor/mcp.json`**. Tool names below match **Cursor MCP tool descriptors** under the user’s **`mcps/`** tree when the IDE has loaded the server (path pattern: `~/.cursor/projects/<project>/mcps/<server>/tools/*.json`). **Verify live tools** in **Settings → MCP** after upgrades — lists can drift.
+Optional MCP servers used with this workspace. **GitLab** is a local **stdio** process (`@zereight/mcp-gitlab`) in **user-global** `~/.cursor/mcp.json`. Atlassian, Glean, and ARC are typically **Streamable HTTP**. Tool names match Cursor descriptors when the IDE has loaded the server (`~/.cursor/projects/<project>/mcps/<server>/tools/*.json`). **Verify live tools** in **Settings → Tools & MCP** after upgrades — lists can drift.
 
 ## Read vs write and `Task(readonly)`
 
@@ -26,13 +26,18 @@ This workspace registers four **Streamable HTTP** MCP servers in **`.cursor/mcp.
 
 | | |
 |--|--|
-| **`mcp.json` key** | `GitLab` |
-| **URL (committed)** | `https://gitlab-mcp-service.gamma.dev.us-west-2.aws.avalara.io/mcp` |
-| **Typical use** | Read-only project / MR metadata for planning and triage. |
+| **`mcp.json` key** | `GitLab` (Cursor namespace `user-GitLab`) |
+| **Transport** | **stdio** — `@zereight/mcp-gitlab` |
+| **API** | `GITLAB_API_URL` = `https://scm.platform.us-west-2.avalara.io/api/v4` |
+| **Auth** | `${env:GITLAB_PERSONAL_ACCESS_TOKEN}` — never commit the PAT |
+| **Config path** | `~/.cursor/mcp.json` (not a committed HTTP `gitlab.com` / native `/api/v4/mcp` entry) |
+| **Typical use** | Project / MR / issue metadata; MR create/update only after explicit Finish confirmation. |
 
-**Tools (from descriptors):** `get_branch_protection`, `get_merge_request_approval_rules`, `get_project`, `get_protected_environments`
+**Do not install** the Cursor marketplace **GitLab** plugin (OAuth to gitlab.com). Avalara SCM is GitLab **17.5** and has no native `/api/v4/mcp`.
 
-**Read vs write:** Listed tools are **read** (fetch configuration and metadata). Workspace policy: **read-only usage** — no MR create/update or other mutating GitLab API from agents orchestrating **`/run`**; see [gitlab-cursor-workflow.md](gitlab-cursor-workflow.md).
+**Tools:** depend on the zereight server version (e.g. `health_check`, `whoami`, `get_project`, `search_repositories`, `list_merge_requests`, `get_merge_request`, approval/protection reads, plus write tools when not in read-only mode). Verify in **Settings → Tools & MCP**.
+
+**Read vs write:** The package can mutate GitLab. **`/run` orchestrator policy:** no MR/API writes without explicit user confirmation — see [gitlab-cursor-workflow.md](gitlab-cursor-workflow.md) and **`.cursor/rules/git-gitlab-mutations.mdc`**.
 
 ---
 

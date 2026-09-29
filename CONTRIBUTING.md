@@ -35,7 +35,7 @@ When reviewing MRs that touch **session storage**, **`.gitignore`**, or **`scrip
 
 This repo’s merge requests go through **GitLab**. After implementation, use the **run-pipeline Finish** prompts: **commit** (optional — if you pick a suggested message, the orchestrator may run **`git commit`** for you; choose **do not commit** or **manual** to skip), then **push** and **MR** (always your confirmation; orchestrators **never** auto-push). Orchestrators **prefer** the **`AskQuestion`** tool when available (see **`docs/reference/cursor-mcp.md`**). Persona agents never run **`git commit`** or **`git push`**.
 
-**GitLab MCP:** The committed **`.cursor/mcp.json`** includes a **GitLab** HTTP MCP entry (URL is team-specific; it may be **gitlab.com**, self-managed, or an org gateway — see **`docs/reference/gitlab-cursor-workflow.md`**). Authenticate per your host. For MR body text from a spec and label hints, use **`scripts/tools/mr-description-from-spec.sh`**.
+**GitLab MCP:** Configure **`@zereight/mcp-gitlab`** (stdio) in **`~/.cursor/mcp.json`**, with **`GITLAB_API_URL`** `https://scm.platform.us-west-2.avalara.io/api/v4` and **`GITLAB_PERSONAL_ACCESS_TOKEN`** from the environment — see **`docs/reference/gitlab-cursor-workflow.md`**. Do **not** install the Cursor GitLab marketplace plugin (it OAuths to gitlab.com). For MR body text from a spec and label hints, use **`scripts/tools/mr-description-from-spec.sh`**.
 
 ### Optional MCP and agent toolboxes
 

@@ -181,7 +181,7 @@ printf '%s\n' \
   "  • Open in Cursor: cursor ." \
   "  • Verify agents are loaded: check Cursor Settings > Rules and Agents" \
   '  • Try: /plan myapp/ "add user auth"' \
-  "  • Optional: GitLab MCP is predeclared in .cursor/mcp.json (OAuth + GitLab Duo) — see docs/setup.md" \
+  "  • Optional: GitLab MCP is @zereight/mcp-gitlab in ~/.cursor/mcp.json (SCM API + PAT) — docs/reference/gitlab-cursor-workflow.md" \
   "  • Optional: Atlassian MCP (Jira/Confluence read) — docs/reference/atlassian-cursor-workflow.md" \
   "  • Optional: Glean MCP (enterprise search) — set GLEAN_MCP_URL + auth; docs/reference/glean-cursor-workflow.md"
 [[ "$CURSOR_OK" -eq 1 ]] || warn "Install Cursor CLI or IDE when ready."

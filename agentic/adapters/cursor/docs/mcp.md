@@ -13,7 +13,7 @@ For **ARC** (optional AvaTax Release Central MCP, project-scoped curated knowled
 | Optional integration | Primary doc |
 |----------------------|-------------|
 | **All servers in `.cursor/mcp.json` (tools, read/write)** | [mcp-servers-inventory.md](mcp-servers-inventory.md) |
-| GitLab (HTTP MCP) | [gitlab-cursor-workflow.md](gitlab-cursor-workflow.md) |
+| GitLab (stdio `@zereight/mcp-gitlab` → SCM `/api/v4`) | [gitlab-cursor-workflow.md](gitlab-cursor-workflow.md) |
 | Atlassian Rovo (Jira / Confluence read) | [atlassian-cursor-workflow.md](atlassian-cursor-workflow.md) |
 | Glean (enterprise search) | [glean-cursor-workflow.md](glean-cursor-workflow.md) |
 | ARC (AvaTax Release Central knowledge base) | [arc-mcp-workflow.md](arc-mcp-workflow.md) |

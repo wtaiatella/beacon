@@ -1,76 +1,73 @@
 # GitLab workflow with Cursor (human-in-the-loop)
 
-This workspace **ships through GitLab** merge requests. Agents **document** and **generate text**; **you** run git, IDE commands, or CLI tools after explicit confirmation at each step. See also **`docs/reference/cursor-plugins.md`** for plugin packaging and marketplace mechanics.
+This workspace **ships through GitLab** merge requests. Agents **document** and **generate text**; **you** confirm commit, push, and MR steps. See also **`docs/reference/cursor-plugins.md`** for plugin packaging (unrelated to GitLab MCP).
 
-## Project-level GitLab MCP (`.cursor/mcp.json`)
+## Supported GitLab MCP (`@zereight/mcp-gitlab`)
 
-The repo includes a **GitLab MCP** entry using the **official HTTP transport** from [GitLab’s MCP documentation](https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/):
+Avalara SCM is **GitLab 17.5**. The **native** GitLab HTTP MCP (`/api/v4/mcp`) requires **18.3+**. The **Cursor marketplace GitLab plugin** OAuths to **gitlab.com** by default and must **not** be installed — it fights the working server.
+
+Use the **stdio** server **`@zereight/mcp-gitlab`** against the SCM REST API.
+
+**Live config (Cursor):** `~/.cursor/mcp.json` (user-global). Do **not** put PATs in git.
 
 ```json
 "GitLab": {
-  "type": "http",
-  "url": "https://gitlab.com/api/v4/mcp"
+  "command": "npx",
+  "args": ["-y", "@zereight/mcp-gitlab"],
+  "env": {
+    "GITLAB_PERSONAL_ACCESS_TOKEN": "${env:GITLAB_PERSONAL_ACCESS_TOKEN}",
+    "GITLAB_API_URL": "https://scm.platform.us-west-2.avalara.io/api/v4",
+    "GITLAB_READ_ONLY_MODE": "false",
+    "USE_GITLAB_WIKI": "false",
+    "USE_MILESTONE": "false",
+    "USE_PIPELINE": "false"
+  }
 }
 ```
 
-**Why it was not present in the first ROAD-24 pass:** early implementation avoided committing MCP entries so clones without **GitLab Duo** (Premium/Ultimate — MCP is beta) would not see a half-configured integration. The team chose to **ship the canonical URL** so the project declares the intended integration; adjust or remove as below.
+**Requirements:**
 
-**Requirements (GitLab.com):**
+- Env var **`GITLAB_PERSONAL_ACCESS_TOKEN`** (PAT on SCM with `api` scope as needed). Cursor interpolates `${env:…}` — no token in the JSON file.
+- **`GITLAB_API_URL`** must include **`/api/v4`** (API root, not the web UI host alone).
+- Node on `PATH` (or an absolute `command` / `PATH` in `env`, as on some nvm setups).
 
-- [GitLab Duo](https://docs.gitlab.com/user/duo_agent_platform/turn_on_off/) and beta/experimental features enabled on the group or instance.
-- First connect: Cursor opens **OAuth** in the browser — **no tokens in the repo**.
+**Do not:**
 
-**Self-managed GitLab:** replace the host in **`url`** with your instance, e.g. `https://gitlab.example.com/api/v4/mcp`, or use **`"url": "${env:GITLAB_MCP_URL}"`** so the committed file stays free of internal hostnames (**[cursor-mcp.md](cursor-mcp.md)** — config interpolation).
+- Install the Cursor **GitLab** marketplace plugin.
+- Point MCP at `https://gitlab.com/api/v4/mcp` or `https://scm…/api/v4/mcp` (native MCP is not on this instance).
+- Commit tokens or OAuth client secrets.
 
-**Not using GitLab MCP:** delete the **`GitLab`** block from **`mcpServers`** in `.cursor/mcp.json` (or clear **`mcpServers`** to `{}`). Your clone may already use a **custom** URL locally — that is fine; do not commit secrets.
+**Not using GitLab MCP:** omit the **`GitLab`** block from `~/.cursor/mcp.json`. Personas degrade gracefully.
 
-## Preferred path: Cursor GitLab integration
+After a config change: **Settings → Tools & MCP**, confirm a single **GitLab** / `user-GitLab` server (no `plugin-gitlab-GitLab`). Smoke test: `health_check` then `whoami` — URL must be the SCM API, user your Avalara account.
 
-1. **Install** the **GitLab**-verified plugin from the Cursor **marketplace** (browse from the editor’s Extensions/Marketplace panel or [cursor.com/marketplace](https://cursor.com/marketplace)). The upstream source is commonly published as **`cursor-gitlab-plugin`** on GitHub; use the marketplace entry as the supported install path so updates track the editor.
-2. **Configure** the **GitLab MCP server** — project entry is in **`.cursor/mcp.json`** (above); complete OAuth when Cursor prompts. The marketplace plugin may bundle or complement the same GitLab MCP endpoint; follow Cursor **Settings → Tools & MCP** for connection status.
-3. After you have **locally committed** changes you approve, use plugin or MCP commands such as **`create-merge-request`** (exact naming may vary by plugin version) to open the MR flow from the current branch. The agent **does not** click the UI for you.
+## Human-in-the-loop MR flow (summary)
 
-Agents reference this flow in **`run-pipeline`** Finish: they suggest steps; **you** execute.
+1. Complete **`/run`** through **`/summary`** (or your team’s gates).
+2. Respond to **Finish** prompts: commit message → push confirmation → MR target branch.
+3. Run **`git commit`** / **`git push`** only as Finish / git rules allow after you confirm.
+4. After explicit MR confirmation, the orchestrator may create/update the MR **via GitLab MCP** (`mcp__GitLab__*` / `user-GitLab`), presenting title/body first. Paste output from **`scripts/tools/mr-description-from-spec.sh`** if you create the MR in the UI instead.
+
+Agents reference this flow in **`run-pipeline`** Finish: they suggest steps; mutating GitLab stays behind confirmation.
 
 ## Reference docs
 
 | Doc | Purpose |
 |-----|---------|
-| [cursor-plugins.md](cursor-plugins.md) | Plugin layout, local testing, team marketplaces |
 | [cursor-mcp.md](cursor-mcp.md) | MCP transports and configuration |
+| [mcp-servers-inventory.md](mcp-servers-inventory.md) | Server keys and typical tools |
 
-## Human-in-the-loop MR flow (summary)
+## Optional: `glab` CLI
 
-1. Complete **`/run`** through **`/summary`** (or your team’s gates).
-2. Respond to **Finish** prompts: commit message suggestions → push confirmation → MR target branch confirmation.
-3. Run **`git commit`** / **`git push`** yourself (or via IDE) after confirming.
-4. Create the MR with the **plugin**, or paste output from **`scripts/tools/mr-description-from-spec.sh`** into the GitLab UI, or use **`glab`** (below).
-
-## Optional: `glab` CLI (scriptable fallback)
-
-Use when you prefer the terminal. **Do not** commit tokens. Pass tokens via env (e.g. **`GITLAB_TOKEN`**) or `glab` auth for your session only.
-
-**Non-interactive-style placeholders** (fill in before running):
-
-```bash
-# Example only — adjust project, branches, and labels to your repo
-export GITLAB_TOKEN="***"   # set in your shell; never commit
-glab mr create \
-  --title "ROAD-24: GitLab integration" \
-  --description "$(./scripts/tools/mr-description-from-spec.sh docs/specs/YYYY-MM-DD-slug-spec.md)" \
-  --target-branch main \
-  --label dev --label sre
-```
-
-Remove or change `--label` flags to match **your** project’s label set. Domain tags in specs map to labels as: **`[dev]` → `dev`**, **`[sre]` → `sre`**, **`[data]` → `data`** (see **`run-pipeline`** skill and MR generator output).
+This workspace is **not** authenticated for `glab`; do not treat it as the default path. If you use it locally, pass tokens via env only — **never** commit them.
 
 ## Agent reference pattern
 
-- **Do:** Link to this doc, emit MR title/body text, suggest `glab` lines with placeholders.
+- **Do:** Link to this doc, emit MR title/body text, use GitLab MCP after confirmation.
 - **Do not:** Invoke mutating GitLab APIs or `glab mr create` autonomously from orchestration; **do not** store credentials in the repo.
 
 ## Limitations (high level)
 
-- **MCP / plugin availability** varies by machine and Cursor version; skills must not assume GitLab MCP tools exist in every session.
-- **GitLab tier and instance settings** (required approvals, protected branches, MR rules) affect what you can do in the UI or API — not controlled by this workspace.
-- **Forum / feature gaps** vs other hosts (e.g. GitHub) change over time; prefer official GitLab and Cursor docs for authoritative behavior.
+- **MCP availability** varies by machine; skills must not assume GitLab tools exist in every session.
+- **GitLab instance settings** (approvals, protected branches) are not controlled by this workspace.
+- Native GitLab MCP / Duo HTTP MCP is **out of scope** until SCM is on a version that exposes `/api/v4/mcp`.

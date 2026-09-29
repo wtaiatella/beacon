@@ -20,7 +20,7 @@ Read-only specialist using **GitLab MCP** for **project and merge-request metada
 
 - **Read-only:** no `git` mutations, no MR create/update/merge, no pipeline trigger writes, no token exposure in output.
 - **Scope:** Prefer **project/ref** the orchestrator names; avoid scanning unrelated groups without explicit need.
-- If GitLab MCP is disabled or OAuth incomplete, return a **one-line degraded** note.
+- If GitLab MCP is disabled, missing, or the PAT / `GITLAB_API_URL` is wrong, return a **one-line degraded** note. Do not send the user to gitlab.com OAuth or the Cursor GitLab marketplace plugin.
 
 ## Bounded output (normative)
 
