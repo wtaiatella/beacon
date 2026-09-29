@@ -38,6 +38,10 @@
 !docs/
 !docs/**
 
+# Finder metadata (docs/** is whitelisted above)
+.DS_Store
+**/.DS_Store
+
 # Adapter-installed IDE docs (generated into docs/adapters/ by setup-agentic.sh)
 docs/adapters/
 
