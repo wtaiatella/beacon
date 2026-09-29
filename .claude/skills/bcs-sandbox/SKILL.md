@@ -169,6 +169,13 @@ to `3888` when unset (so `npm test` is unchanged). Engine's `app.config.js` hard
 external mock URL to `:3888`; `svc_env_overrides` rewrites those URLs to this workspace's mock
 port via the same `sandbox-pm2-override.js` path used for `SRV_PORT`/`DB_NAME`.
 
+**Sandbox UI authentication uses the fixture's valid compact JWE.** The OAuth mock's password-flow
+`default` fixture is a legacy opaque token that the current engine rejects with
+`ERR_JWE_INVALID`. `scripts/tools/sandbox-mock-override.js`, loaded only by the sandbox mock via
+`NODE_OPTIONS`, replaces that fallback in Node's module cache with the existing `token_unlimited`
+JWE before the OAuth router loads. Product tests remain unchanged because they do not load this
+preload script.
+
 **Step revised earlier to `*10000` — the `*100` step had a real, confirmed cross-workspace
 collision, not a hypothetical one.** All service base ports are multiples of 100, and `ui`
 (4200) minus `ui-proxy` (4000) is exactly 200 — two `*100` steps. That means workspace N's `ui` and
@@ -266,6 +273,14 @@ port is always the reliable one, since it names whoever actually bound it.
 
 ## Known gotchas (confirmed by a real run, not hypothetical)
 
+- **Node 20 from workspace-root `.nvmrc`** — confirmed 2026-09-18 in `bcs1`. Agent/Cursor shells
+  often ship Node 24 while the user's interactive terminal (and `br-tax-engine` native modules
+  such as `node-expat`) are Node 20. `.nvmrc` lives at the **workspace root**, not inside
+  `br-tax-engine/` or `br-tax-ui/`, so `cd <child-repo> && npm start` never loads it.
+  `sandbox.sh` now runs `sandbox_use_node` (nvm + PATH prepend of `$ROOT/.nvmrc`, fallback 20)
+  before every Node process (`engine`/`mock`/`ui-proxy`/`ui`/`swagger` and `--seed`) and refuses
+  those starts if the resolved `node -v` is not major 20. Do not copy `.nvmrc` into the child
+  repos to “fix” this.
 - **`mock` must start before/with `engine`, not after** — starting engine first races a scheduled
   `hoplias:schedules:portal-reader` job against `mock` (sandbox port `3888 + offset`) not being
   up yet, producing 3 one-time `ECONNREFUSED` errors in `engine.log`. Validated 2026-08-06 with

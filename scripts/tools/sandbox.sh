@@ -14,6 +14,7 @@ STATE_DIR="$ROOT/.sandbox"
 PID_DIR="$STATE_DIR/pids"
 LOG_DIR="$STATE_DIR/logs"
 PM2_OVERRIDE_SCRIPT="$ROOT/scripts/tools/sandbox-pm2-override.js"
+MOCK_OVERRIDE_SCRIPT="$ROOT/scripts/tools/sandbox-mock-override.js"
 SERVICES="mongo redis postgres engine mock swagger ui-proxy ui"
 
 # Multi-workspace support: running this same repo pair cloned into several sibling workspace
@@ -202,6 +203,48 @@ is_known_service() {
   return 1
 }
 
+# Agent/Cursor shells often have a different Node than the user's interactive
+# nvm (confirmed 2026-09-18: engine died with node-expat NODE_MODULE_VERSION 115
+# vs 137). Workspace .nvmrc lives at ROOT, not in br-tax-engine/br-tax-ui, so
+# `cd $dir && npm start` never picks it up. Honor ROOT/.nvmrc (fallback: 20)
+# before any npm/node process.
+sandbox_use_node() {
+  local want nvm_sh nvm_root major d
+  if [ -f "$ROOT/.nvmrc" ]; then
+    want="$(tr -d '[:space:]' < "$ROOT/.nvmrc")"
+  else
+    want="20"
+  fi
+  want="${want#v}"
+  nvm_root="${NVM_DIR:-$HOME/.nvm}"
+  nvm_sh="$nvm_root/nvm.sh"
+  if [ -s "$nvm_sh" ]; then
+    # shellcheck disable=SC1090
+    . "$nvm_sh"
+    nvm use "$want" >/dev/null 2>&1 || nvm use "v$want" >/dev/null 2>&1 || nvm use 20 >/dev/null 2>&1 || true
+  fi
+  major="$(node -p 'parseInt(process.versions.node,10)' 2>/dev/null || echo 0)"
+  if [ "$major" != "20" ]; then
+    if [ -x "$nvm_root/versions/node/v${want}/bin/node" ]; then
+      export PATH="$nvm_root/versions/node/v${want}/bin:$PATH"
+    else
+      for d in "$nvm_root/versions/node"/v20.*/bin; do
+        if [ -x "$d/node" ]; then
+          export PATH="$d:$PATH"
+          break
+        fi
+      done
+    fi
+    major="$(node -p 'parseInt(process.versions.node,10)' 2>/dev/null || echo 0)"
+  fi
+  echo "  [sandbox] node $(command -v node 2>/dev/null || echo missing) ($(node -v 2>/dev/null || echo none)) — need major 20 (workspace .nvmrc)"
+  if [ "$major" != "20" ]; then
+    echo "  [sandbox] refusing Node services: need Node 20 (got $(node -v 2>/dev/null || echo none)). Use nvm with $ROOT/.nvmrc" >&2
+    return 1
+  fi
+  return 0
+}
+
 # --- docker services --------------------------------------------------------
 
 docker_start() {
@@ -284,6 +327,8 @@ process_start() {
     return 0
   fi
 
+  sandbox_use_node || return 1
+
   if [ ! -d "$dir/node_modules" ]; then
     echo "  [$svc] node_modules missing in $dir — running npm ci (logged to $logfile)..."
     if ! ( cd "$dir" && npm ci ) >"$logfile" 2>&1; then
@@ -298,7 +343,7 @@ process_start() {
     sed "s/4000/$(svc_port ui-proxy)/g" "$UI_DIR/proxy.conf.json" > "$STATE_DIR/proxy.$WORKSPACE_NAME.json"
   fi
 
-  echo "  [$svc] starting: $cmd (cwd: $dir)"
+  echo "  [$svc] starting: $cmd (cwd: $dir, node: $(node -v))"
   : >"$logfile"
   if [ -n "$overrides" ]; then
     ( cd "$dir"
@@ -312,9 +357,14 @@ process_start() {
     ) &
   elif [ "$svc" = mock ]; then
     # mock-servers.js defaults to :3888 (reserved for npm test); honor SERVER_PORT for sandbox.
+    # Its password-flow default fixture is a legacy opaque token that the current engine rejects
+    # as an invalid compact JWE. Preload a sandbox-only fixture override so UI auth receives the
+    # existing valid token_unlimited fixture without changing product test behavior.
     ( cd "$dir"
       {
         printf 'SERVER_PORT=%s\n' "$(svc_port mock)"
+        printf 'SANDBOX_OAUTH_TOKEN_FIXTURE=%s\n' "$ENGINE_DIR/test/_tools/data/oauth-portal-token.json"
+        printf 'NODE_OPTIONS=%s\n' "--require $MOCK_OVERRIDE_SCRIPT"
         printf '\n'
         printf '%s\n' "$cmd"
       } | _sandbox_detach_start "$logfile"
@@ -507,6 +557,7 @@ case "$ACTION" in
     if ! port_open "$(svc_port mongo)"; then
       echo "  [seed] warning: mongo (port $(svc_port mongo)) not reachable — this will likely fail" >&2
     fi
+    sandbox_use_node || exit 1
     if [ ! -d "$ENGINE_DIR/node_modules" ]; then
       echo "  [seed] node_modules missing in $ENGINE_DIR — running npm ci first..."
       ( cd "$ENGINE_DIR" && npm ci ) || { echo "  [seed] npm ci failed" >&2; exit 1; }
