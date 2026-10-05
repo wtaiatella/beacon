@@ -34,10 +34,14 @@ usage() {
   cat <<'EOF'
 Usage: scripts/setup-agentic.sh <claude|cursor|antigravity|all> [--dry-run] [--keep-claude]
 
-  claude       Install framework into .claude/ (verbatim from agentic/)
-  cursor       Install + adapt into .cursor/ + .agents/skills/
-               Also deactivates the managed Claude mirror under .claude/
-               (avoids Cursor discovering duplicate / entries). Overlays stay.
+  claude       Install the framework as a user-level Claude plugin
+               (~/.claude/plugins/marketplaces/bcs-sdd-local, not ~/.claude/skills).
+               If that plugin is already installed and the source is unchanged,
+               only refresh workspace control files (CLAUDE.md, adapter docs)
+               and drop the managed .claude/ framework mirror. Overlays stay.
+  cursor       Install + adapt entirely under .cursor/ (agents, hooks, rules,
+               skills). Also deactivates managed Claude and .agents mirrors
+               so / entries are not duplicated. Overlays stay.
   antigravity  Stub install into .agent/
   all          Run claude + cursor + antigravity (no Claude deactivation)
 
@@ -52,20 +56,25 @@ that are no longer produced by this install. Unmanaged files are left untouched.
 
 Cursor adapter specifics:
   - agents  → .cursor/agents/  (subagents / Task — these are the slash/persona entrypoints)
-  - skills  → .agents/skills/  (path refs rewritten off .claude/; NO command→skill emission)
-  - commands stay in agentic/ for Claude only — Cursor does not mirror them as skills
+  - skills  → .cursor/skills/  (path refs rewritten off .claude/; NO command→skill emission)
+  - commands stay in the Claude plugin — Cursor does not mirror them as skills
     (avoids duplicate / entries alongside .cursor/agents/)
   - hooks   → .cursor/hooks/ + hooks.json
                (shared agentic/hooks/* + overlay agentic/adapters/cursor/hooks/*)
   - rules   → .cursor/rules/*.mdc  (always-on context; Cursor equivalent of CLAUDE.md)
   - docs    → docs/adapters/cursor/  (from agentic/adapters/cursor/docs/)
   - by default, prune .claude/ paths listed in .claude/.agentic-managed
+  - by default, prune .agents/ paths listed in .agents/.agentic-managed
   - project overlays under .claude/ (unmanaged) are kept
 
-Claude adapter also installs:
+Claude adapter:
+  - framework → ~/.claude/plugins/marketplaces/bcs-sdd-local/bcs-sdd
+    (skills, agents, commands, hooks). Slash names are /bcs-sdd:<name>.
+  - skips the plugin copy when it is already installed and the source stamp matches
   - agentic/adapters/claude/CLAUDE.md → ./CLAUDE.md  (generated; edit the agentic source)
   - agentic/adapters/claude/docs/ → docs/adapters/claude/
-  - optional overlay agentic/adapters/claude/hooks/* (action audit TBD — not installed yet)
+  - does not copy the framework into .claude/; prunes previously managed copies
+  - optional overlay agentic/adapters/claude/hooks/* is not installed into the project
 EOF
 }
 
@@ -284,10 +293,10 @@ adapt_cursor_paths() {
       -e 's|\.claude/hooks/|.cursor/hooks/|g' \
       "$f" > "$tmp"
 
-    # Framework skills only: .claude/skills/<name>/ → .agents/skills/<name>/
+    # Framework skills only: .claude/skills/<name>/ → .cursor/skills/<name>/
     local name
     for name in "${skill_names[@]}"; do
-      sed -i '' -e "s|\\.claude/skills/${name}/|.agents/skills/${name}/|g" "$tmp"
+      sed -i '' -e "s|\\.claude/skills/${name}/|.cursor/skills/${name}/|g" "$tmp"
     done
     mv "$tmp" "$f"
   done < <(find "$dest" -type f -print0 2>/dev/null)
@@ -323,8 +332,137 @@ install_adapter_docs() {
   managed_finish
 }
 
+# Point each IDE at the shared bcs-* overlays under .agents/.
+# Cursor already loads .agents/skills/. It does not load .agents/agents or
+# .agents/commands, so those are linked into .cursor/. Claude Code does not
+# load .agents/ at all, so agents, commands, and skills are linked into .claude/.
+# Skills are not linked into .cursor/skills/ (that would list each skill twice).
+link_bcs_overlays() {
+  local overlay_root="$ROOT/.agents"
+  [[ -d "$overlay_root" ]] || return 0
+
+  link_overlay_tree() {
+    local kind="$1"
+    local dest_root="$2"
+    local src_dir="$overlay_root/$kind"
+    [[ -d "$src_dir" ]] || return 0
+    local path name dest rel
+    for path in "$src_dir"/*; do
+      [[ -e "$path" ]] || continue
+      name="$(basename "$path")"
+      case "$name" in
+        bcs-*) ;;
+        *) continue ;;
+      esac
+      dest="$dest_root/$name"
+      if [[ "$DRY_RUN" -eq 1 ]]; then
+        echo "DRY: link $dest → $path"
+        continue
+      fi
+      mkdir -p "$dest_root"
+      rel="$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1], os.path.dirname(sys.argv[2])))' "$path" "$dest")"
+      ln -sfn "$rel" "$dest"
+    done
+  }
+
+  echo "    link bcs-* overlays from .agents/"
+  link_overlay_tree agents "$ROOT/.cursor/agents"
+  link_overlay_tree commands "$ROOT/.cursor/commands"
+  link_overlay_tree agents "$ROOT/.claude/agents"
+  link_overlay_tree commands "$ROOT/.claude/commands"
+  link_overlay_tree skills "$ROOT/.claude/skills"
+}
+
+# User-level Claude plugin. Not under ~/.claude/skills: on this machine that
+# path is a symlink to ~/.agents/skills, which Cursor loads as its own skills root.
+CLAUDE_PLUGIN_NAME="bcs-sdd"
+CLAUDE_MARKET_NAME="bcs-sdd-local"
+
+claude_plugin_market_root() {
+  printf '%s\n' "$HOME/.claude/plugins/marketplaces/$CLAUDE_MARKET_NAME"
+}
+
+claude_plugin_source_stamp() {
+  tar -cf - \
+    -C "$SRC" agents skills commands hooks \
+    -C "$SRC/adapters/claude" settings.json \
+    | shasum -a 256 | awk '{print $1}'
+}
+
+claude_plugin_installed() {
+  local installed_json="$HOME/.claude/plugins/installed_plugins.json"
+  [[ -f "$installed_json" ]] || return 1
+  grep -q "\"${CLAUDE_PLUGIN_NAME}@${CLAUDE_MARKET_NAME}\"" "$installed_json"
+}
+
+install_claude_plugin() {
+  local market plugin stamp dest_stamp
+  market="$(claude_plugin_market_root)"
+  plugin="$market/$CLAUDE_PLUGIN_NAME"
+  stamp="$(claude_plugin_source_stamp)"
+  dest_stamp="$plugin/.sdd-source-stamp"
+
+  if claude_plugin_installed && [[ -f "$dest_stamp" && "$(cat "$dest_stamp")" == "$stamp" ]]; then
+    echo "    plugin ${CLAUDE_PLUGIN_NAME}@${CLAUDE_MARKET_NAME} already installed (source unchanged)"
+    return 0
+  fi
+
+  echo "    sync Claude plugin → $plugin"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "DRY: would write plugin tree, marketplace manifest, and claude plugin install"
+    return 0
+  fi
+
+  if ! command -v claude >/dev/null 2>&1; then
+    echo "error: claude CLI not found; cannot register the user plugin" >&2
+    exit 1
+  fi
+
+  mkdir -p "$plugin/.claude-plugin" "$plugin/hooks" "$market/.claude-plugin"
+  rm -rf "$plugin/agents" "$plugin/skills" "$plugin/commands" "$plugin/hooks"
+  cp -R "$SRC/agents" "$plugin/agents"
+  cp -R "$SRC/skills" "$plugin/skills"
+  cp -R "$SRC/commands" "$plugin/commands"
+  cp -R "$SRC/hooks" "$plugin/hooks"
+  chmod +x "$plugin/hooks/"*.sh 2>/dev/null || true
+  sed 's|$CLAUDE_PROJECT_DIR/.claude/hooks/|${CLAUDE_PLUGIN_ROOT}/hooks/|g' \
+    "$SRC/adapters/claude/settings.json" > "$plugin/hooks/hooks.json"
+  cat > "$plugin/.claude-plugin/plugin.json" <<EOF
+{
+  "name": "$CLAUDE_PLUGIN_NAME",
+  "description": "Agentic SDD framework (skills, agents, commands, hooks)",
+  "version": "0.0.0"
+}
+EOF
+  printf '%s\n' "$stamp" > "$dest_stamp"
+  cat > "$market/.claude-plugin/marketplace.json" <<EOF
+{
+  "name": "$CLAUDE_MARKET_NAME",
+  "owner": { "name": "bcs" },
+  "plugins": [
+    {
+      "name": "$CLAUDE_PLUGIN_NAME",
+      "source": "./$CLAUDE_PLUGIN_NAME",
+      "description": "Agentic SDD framework"
+    }
+  ]
+}
+EOF
+
+  local known="$HOME/.claude/plugins/known_marketplaces.json"
+  if [[ ! -f "$known" ]] || ! grep -q "\"$CLAUDE_MARKET_NAME\"" "$known"; then
+    claude plugin marketplace add "$market" --scope user
+  fi
+
+  if claude_plugin_installed; then
+    claude plugin uninstall "${CLAUDE_PLUGIN_NAME}@${CLAUDE_MARKET_NAME}" --scope user -y
+  fi
+  claude plugin install "${CLAUDE_PLUGIN_NAME}@${CLAUDE_MARKET_NAME}" --scope user -y
+  echo "    installed ${CLAUDE_PLUGIN_NAME}@${CLAUDE_MARKET_NAME} (slash prefix /${CLAUDE_PLUGIN_NAME}:)"
+}
+
 install_claude() {
-  echo "==> Installing Claude adapter → .claude/ + CLAUDE.md"
+  echo "==> Installing Claude adapter → user plugin + workspace control files"
 
   local claude_md_src="$SRC/adapters/claude/CLAUDE.md"
   if [[ ! -f "$claude_md_src" ]]; then
@@ -332,16 +470,11 @@ install_claude() {
     exit 1
   fi
 
+  install_claude_plugin
+
+  # Drop the project framework mirror. Same-named files under .claude/ override
+  # the plugin, and skills there show up as a second /. Overlays stay.
   managed_begin "$ROOT/.claude"
-  sync_dir_managed "$SRC/agents" "$ROOT/.claude/agents" "agents"
-  sync_dir_managed "$SRC/skills" "$ROOT/.claude/skills" "skills"
-  sync_dir_managed "$SRC/commands" "$ROOT/.claude/commands" "commands"
-  sync_dir_managed "$SRC/hooks" "$ROOT/.claude/hooks" "hooks"
-  overlay_adapter_hooks "claude" "$ROOT/.claude/hooks" "hooks"
-  if [[ "$DRY_RUN" -eq 0 ]]; then
-    chmod +x "$ROOT/.claude/hooks/"*.sh 2>/dev/null || true
-  fi
-  copy_file_managed "$SRC/adapters/claude/settings.json" "$ROOT/.claude/settings.json" "settings.json"
   managed_finish
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -352,11 +485,12 @@ install_claude() {
   fi
 
   install_adapter_docs "claude"
-  echo "    done (only .agentic-managed paths are pruned; overlays left intact)"
+  link_bcs_overlays
+  echo "    done (plugin is user-level; bcs-* overlays stay in .agents/)"
 }
 
 install_cursor() {
-  echo "==> Installing Cursor adapter → .cursor/ + .agents/skills/"
+  echo "==> Installing Cursor adapter → .cursor/ (agents, hooks, rules, skills)"
 
   local rules_src="$SRC/adapters/cursor/rules"
   if [[ ! -d "$rules_src" ]]; then
@@ -370,8 +504,10 @@ install_cursor() {
   sync_dir_managed "$SRC/hooks" "$ROOT/.cursor/hooks" "hooks"
   overlay_adapter_hooks "cursor" "$ROOT/.cursor/hooks" "hooks"
   sync_dir_managed "$rules_src" "$ROOT/.cursor/rules" "rules"
+  sync_dir_managed "$SRC/skills" "$ROOT/.cursor/skills" "skills"
   adapt_cursor_paths "$ROOT/.cursor/agents"
   adapt_cursor_paths "$ROOT/.cursor/hooks"
+  adapt_cursor_paths "$ROOT/.cursor/skills"
   # rules are authored for Cursor paths already — no .claude rewrite needed
   if [[ "$DRY_RUN" -eq 0 ]]; then
     chmod +x "$ROOT/.cursor/hooks/"*.sh 2>/dev/null || true
@@ -379,11 +515,12 @@ install_cursor() {
   copy_file_managed "$SRC/adapters/cursor/hooks.json" "$ROOT/.cursor/hooks.json" "hooks.json"
   managed_finish
 
-  # --- .agents: framework skills only (never emit Claude commands as skills) ---
-  managed_begin "$ROOT/.agents"
-  sync_dir_managed "$SRC/skills" "$ROOT/.agents/skills" "skills"
-  adapt_cursor_paths "$ROOT/.agents/skills"
-  managed_finish
+  # Previous installs wrote framework skills here. Cursor and Claude both
+  # discover .agents/skills/, so leave the managed tree removed.
+  if [[ -f "$ROOT/.agents/.agentic-managed" ]]; then
+    deactivate_managed_runtime "$ROOT/.agents" "legacy .agents skills"
+  fi
+  link_bcs_overlays
 
   install_adapter_docs "cursor"
 
@@ -414,7 +551,7 @@ install_cursor() {
     deactivate_managed_runtime "$ROOT/.claude" "Claude (.claude)"
   fi
 
-  echo "    done (agents+hooks+rules→.cursor/, skills→.agents/skills; paths adapted)"
+  echo "    done (agents+hooks+rules+skills→.cursor/; legacy .agents skills removed)"
 }
 
 install_antigravity() {
@@ -433,8 +570,8 @@ case "$TARGET" in
   cursor) install_cursor ;;
   antigravity) install_antigravity ;;
   all)
-    # Dual/multi install: keep every runtime populated; do not deactivate Claude.
-    KEEP_CLAUDE=1
+    # Claude framework is the user plugin. Cursor is .cursor/ only.
+    # Do not keep a project .claude/ framework mirror (it overrides the plugin).
     install_claude
     install_cursor
     install_antigravity

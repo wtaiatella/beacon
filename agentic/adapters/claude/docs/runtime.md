@@ -27,8 +27,8 @@ to avoid duplicate slash entries — overlays are kept.
 | Concern | Claude | Cursor |
 |---------|--------|--------|
 | Always-on | root `CLAUDE.md` | `.cursor/rules/*.mdc` |
-| Personas | `.claude/agents` + `.claude/commands` | `.cursor/agents` (+ skills in `.agents/skills`) |
-| Skills | `.claude/skills` | `.agents/skills` |
+| Personas | plugin `bcs-sdd` (`/bcs-sdd:<name>`) | `.cursor/agents` |
+| Skills | plugin `bcs-sdd` | `.cursor/skills` |
 | Hooks config | `.claude/settings.json` | `.cursor/hooks.json` |
 | Hook I/O | Claude Pre/PostToolUse | Cursor events (dual-protocol scripts) |
 

@@ -15,21 +15,21 @@ Company-wide Agentic Workspace for BMAD+SDD+GSD with self-healing review loops.
 
 **Core principle:** Agents write code and configuration. Agents never deploy. Deployments are CI/CD only. Code ships through GitLab MRs.
 
-**One control-file convention:** every ticket folder has exactly `_state.json` + `_notes.md` — never `context.json`. Required orchestrator `/run` starts at `/prd` → `/spectech` → `/tasks` (no `/plan`, no single-`spec.md` mode). Folder/schema contract: project skill `bcs-ticket-workflow` (`.claude/skills/bcs-ticket-workflow/`).
+**One control-file convention:** every ticket folder has exactly `_state.json` + `_notes.md` — never `context.json`. Required orchestrator `/run` starts at `/prd` → `/spectech` → `/tasks` (no `/plan`, no single-`spec.md` mode). Folder/schema contract: project skill `bcs-ticket-workflow` (`.agents/skills/bcs-ticket-workflow/`).
 
 ## Where things live (Cursor)
 
 | Kind | Path |
 |------|------|
 | Subagents / personas | `.cursor/agents/` |
-| Framework skills | `.agents/skills/` |
-| Project overlays | `.claude/agents|skills|commands/bcs-*` (kept by setup) |
+| Framework skills | `.cursor/skills/` |
+| Project overlays | `.agents/{agents,commands,skills}/bcs-*` (Cursor skills load from here; agents and commands are linked into `.cursor/`) |
 | Hooks | `.cursor/hooks.json` + `.cursor/hooks/` |
 | Canonical source | `agentic/` (edit here, then re-run setup) |
 
 ## Personas
 
-Invoke via Task / agent defs under `.cursor/agents/`, or slash skills where present (e.g. `/run` → `.agents/skills/run`).
+Invoke via Task / agent defs under `.cursor/agents/`, or slash skills where present (e.g. `/run` → `.cursor/skills/run`).
 
 | Trigger | Role | Agent |
 |---------|------|-------|
@@ -62,7 +62,7 @@ Never merge `prd`/`spectech`/`tasks` into one `spec.md`.
 
 ## Flat orchestration
 
-Subagents must not nest Task. Main session only. `/run` follows `.agents/skills/run-pipeline/SKILL.md`.
+Subagents must not nest Task. Main session only. `/run` follows `.cursor/skills/run-pipeline/SKILL.md`.
 
 ## Multi-repo
 

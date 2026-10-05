@@ -12,8 +12,8 @@ Canonical setup guide. Installed tooling comes from **`agentic/`**; IDE runtimes
 
 ```bash
 # from repo root
-scripts/setup-agentic.sh claude        # → .claude/ + root CLAUDE.md + docs/adapters/claude/
-scripts/setup-agentic.sh cursor        # → .cursor/ + .agents/skills/ + docs/adapters/cursor/
+scripts/setup-agentic.sh claude        # → user plugin bcs-sdd + root CLAUDE.md
+scripts/setup-agentic.sh cursor        # → .cursor/ (agents, hooks, rules, skills)
 scripts/setup-agentic.sh all           # claude + cursor (+ antigravity stub)
 scripts/setup-agentic.sh cursor --dry-run
 scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framework mirror
@@ -23,8 +23,8 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 
 | Runtime | Outputs |
 |---------|---------|
-| Claude | `.claude/{agents,skills,commands,hooks,settings.json}`, root `CLAUDE.md` |
-| Cursor | `.cursor/{agents,hooks,hooks.json,rules}`, `.agents/skills/` |
+| Claude | user plugin `bcs-sdd` (`/bcs-sdd:<name>`), root `CLAUDE.md`. Project `.claude/` keeps `bcs-*` overlays only |
+| Cursor | `.cursor/{agents,hooks,hooks.json,rules,skills}` |
 | Docs | `docs/adapters/{claude,cursor}/` |
 
 ### What stays tracked
@@ -36,9 +36,9 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 
 ## After install
 
-**Claude Code:** open the repo; confirm root `CLAUDE.md` exists and `/prd` (etc.) resolve via `.claude/commands` → Task.
+**Claude Code:** open the repo; confirm root `CLAUDE.md` exists and `/bcs-sdd:prd` (etc.) resolve from the user plugin. Third-party import in Cursor stays off, or those commands also appear in Cursor.
 
-**Cursor:** Settings → Rules (always-apply workspace rules); confirm agents under `.cursor/agents/` and skills under `.agents/skills/`; Hooks from `.cursor/hooks.json`.
+**Cursor:** Settings → Rules (always-apply workspace rules); confirm agents under `.cursor/agents/` and skills under `.cursor/skills/`; Hooks from `.cursor/hooks.json`. Leave **Include Third-Party Plugins, Skills, and Other Configs** off.
 
 ## Local action audit (per IDE)
 

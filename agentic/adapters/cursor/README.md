@@ -5,7 +5,7 @@
 | Canonical | Installed to | Why |
 |-----------|----------------|-----|
 | `agentic/agents/` | `.cursor/agents/` | Cursor subagent discovery (persona / Task entrypoints) |
-| `agentic/skills/` | `.agents/skills/` | Cursor native skills path (`/`) |
+| `agentic/skills/` | `.cursor/skills/` | Cursor skills path (`/`), kept inside `.cursor/` |
 | `agentic/commands/` | *(not installed)* | Avoid duplicate `/` next to agents; Claude-only thin proxies |
 | `agentic/hooks/` | `.cursor/hooks/` | Shared dual-protocol scripts (+ `lib/hook-protocol.js`) |
 | `adapters/cursor/hooks/*` | `.cursor/hooks/` (overlay) | Cursor-only hooks (e.g. `tool-audit.sh`) |
@@ -61,12 +61,12 @@ Default `scripts/setup-agentic.sh cursor` **deactivates** the managed Claude mir
 
 Path rewrites on install:
 
-- `.claude/skills/<framework>/` → `.agents/skills/<framework>/` (not `bcs-*` overlays)
+- `.claude/skills/<framework>/` → `.cursor/skills/<framework>/` (not `bcs-*` overlays)
 - `.claude/agents/` → `.cursor/agents/`
 - `.claude/hooks/` → `.cursor/hooks/`
 
 **No command→skill emission.** Personas live under `.cursor/agents/`; framework skills under
-`.agents/skills/` (including `/run`).
+`.cursor/skills/` (including `/run`).
 
 ## Notes
 
