@@ -5,11 +5,8 @@
 | Canonical | Installed to |
 |-----------|----------------|
 | `agentic/adapters/claude/CLAUDE.md` | `CLAUDE.md` (repo root, **generated**) |
-| `agentic/agents/` | `.claude/agents/` |
-| `agentic/skills/` | `.claude/skills/` |
-| `agentic/commands/` | `.claude/commands/` |
-| `agentic/hooks/` | `.claude/hooks/` |
-| `adapters/claude/settings.json` | `.claude/settings.json` |
+| `agentic/{agents,skills,commands,hooks}` | user plugin `bcs-sdd` (`~/.claude/plugins/marketplaces/bcs-sdd-local/bcs-sdd`) |
+| `adapters/claude/settings.json` | plugin `hooks/hooks.json` (`${CLAUDE_PLUGIN_ROOT}`) |
 | `adapters/claude/docs/` | `docs/adapters/claude/` |
 
 Managed framework paths are recorded in `.claude/.agentic-managed`. Prune only touches that list.

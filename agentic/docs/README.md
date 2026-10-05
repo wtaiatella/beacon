@@ -41,7 +41,7 @@ These are **not** installed by `setup-agentic.sh`. Edit them in place under `doc
 | `docs/adapters/claude/` | from `adapters/claude/docs/` | pruned if was managed* |
 | `docs/adapters/cursor/` | — | from `adapters/cursor/docs/` |
 | `.claude/*` framework | agents/skills/commands/hooks | deactivated by default |
-| `.cursor/*` + `.agents/skills` | — | full Cursor runtime |
+| `.cursor/*` including `.cursor/skills` | — | full Cursor runtime |
 
 \*Doc installs use `docs/adapters/.agentic-managed` so only generated adapter doc trees are pruned.
 

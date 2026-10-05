@@ -1,7 +1,1 @@
----
-description: "Build + test: regenerate pecten artifacts (keep full output), run the fast contract tier (and --full goods/services), with the mandatory update-flag re-run rule. Standalone — not wired into /run."
-argument-hint: "<ticket-folder | JIRA-KEY> [--full]"
----
-Use the **bcs-build-test** subagent (Task tool, `subagent_type: bcs-build-test`) to handle this request. Pass the following arguments to it verbatim, then relay the subagent's final result back to me:
-
-$ARGUMENTS
+../../.agents/commands/bcs-build-test.md

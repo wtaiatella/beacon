@@ -4,8 +4,10 @@
 > `scripts/setup-agentic.sh claude` (root file is generated — do not edit it; edit this source).
 > Cursor equivalent: `agentic/adapters/cursor/rules/*.mdc` → `.cursor/rules/` via `setup-agentic.sh cursor`.
 >
-> Framework SDD lives under `agentic/{agents,skills,commands,hooks}`. Project overlays (`bcs-*`)
-> stay in IDE runtime dirs and are outside the required orchestrator.
+> Framework SDD lives under `agentic/{agents,skills,commands,hooks}` and is installed as the
+> user-level Claude plugin `bcs-sdd` (`/bcs-sdd:<name>`). Project overlays (`bcs-*`) live in
+> `.agents/` and are linked into `.claude/` so Claude Code can see them. Cursor installs the
+> same framework under `.cursor/`, including skills, and reads overlay skills from `.agents/skills/`.
 
 ## Workspace Identity
 
@@ -28,7 +30,7 @@ unless they appear on that runtime’s `.agentic-managed` manifest.
 
 ## Personas (slash commands)
 
-Personas are invoked as slash commands (`.claude/commands/*.md`). Each command file is a **thin delegator**: typing `/prd …` hands the invocation to the matching persona **subagent** (`.claude/agents/prd.md`) via the Task tool. The subagent does the work and returns a structured result; when it needs a read-only helper or a human decision it escalates back to the main loop (see **Flat Orchestration** below).
+Personas are invoked as plugin slash commands (`/bcs-sdd:<name>`). Each command is a **thin delegator**: typing `/bcs-sdd:prd …` hands the invocation to the matching persona **subagent** in the `bcs-sdd` plugin via the Task tool. The subagent does the work and returns a structured result; when it needs a read-only helper or a human decision it escalates back to the main loop (see **Flat Orchestration** below).
 
 Three commands are not persona subagents: **`/run`** is main-loop orchestration driven by the `run-pipeline` skill (there is no `run` subagent); **`/clone`**, **`/rebase`**, **`/kb-refresh`**, and **`/kb-concentrator`** are thin utility commands that follow their matching `SKILL.md` directly (no dedicated subagent).
 
@@ -120,7 +122,7 @@ but **SDD personas and the required orchestrator must not require them**.
 
 ## Supporting Subagents
 
-All subagents live under `.claude/agents/` and are invoked via the Task tool (auto-delegated by description, or explicitly: "use the codebase-explorer agent"). Besides the persona subagents above, three families of **read-only** helpers support the pipeline — they never mutate repo state and return structured findings to the invoking persona, orchestrator, or user.
+Framework subagents ship in the `bcs-sdd` plugin and are invoked via the Task tool (auto-delegated by description, or explicitly: "use the codebase-explorer agent"). Project overlay agents live in `.agents/agents/bcs-*` (linked into `.claude/agents/`). Besides the persona subagents above, three families of **read-only** helpers support the pipeline — they never mutate repo state and return structured findings to the invoking persona, orchestrator, or user.
 
 **Reviewers, scanners, and scouts (read-only):**
 
@@ -152,7 +154,7 @@ All subagents live under `.claude/agents/` and are invoked via the Task tool (au
 > `REQUEST_MAIN:` (run the named helper/`mcp-*` subagent), `QUESTION:` / `ASK_USER`
 > (ask the user), or `APPROVAL_NEEDED:` (stop-for-approval). `/run` is likewise pure
 > main-loop orchestration driven by the `run-pipeline` skill. See
-> `.claude/skills/run-pipeline/SKILL.md` and `.claude/commands/run.md`.
+> the `bcs-sdd` plugin skill `run-pipeline` (`/bcs-sdd:run-pipeline`) and command `/bcs-sdd:run`.
 
 ## Pipeline
 
@@ -240,7 +242,7 @@ Structured project context at `knowledge/{project-name}/` (tracked in git, share
 
 ## Skills
 
-Defined under `.claude/skills/` (framework via setup from `agentic/skills/`) and project overlays.
+Framework skills ship in the `bcs-sdd` plugin (`/bcs-sdd:<skill>`). Project overlay skills live in `.agents/skills/bcs-*` (linked into `.claude/skills/`).
 - **bcs-ticket-workflow** — *(project overlay)* single source of truth for the `_state.json` schema, `_notes.md` convention, and stop-gate/HITL rules; every piece that touches a ticket folder reads this instead of re-describing the schema
 - **run-pipeline** — /run (the authoritative end-to-end orchestration workflow the main loop follows — PRD/Spectech/Tasks segment → implement → review → QA → summary)
 - **generate-prd** / **generate-spectech** / **generate-tasks** — the `/prd`/`/spectech`/`/tasks` personas' normative document templates, adapted to read/write `_state.json`+`_notes.md`
@@ -265,7 +267,7 @@ There is no Claude Code equivalent of per-run model swapping; pick the session m
 
 ## Hooks
 
-Registered in `.claude/settings.json`; scripts live in `.claude/hooks/`.
+Registered in the `bcs-sdd` plugin `hooks/hooks.json`. Scripts live in that plugin and use `${CLAUDE_PLUGIN_ROOT}`.
 
 | Script | Claude Code event | Matcher | Purpose |
 |--------|-------------------|---------|---------|

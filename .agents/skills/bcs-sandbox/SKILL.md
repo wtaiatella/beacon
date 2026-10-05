@@ -299,7 +299,7 @@ port is always the reliable one, since it names whoever actually bound it.
 ## Guardrails
 
 - **Never start/stop `postgres`.** This repo pair's developers commonly run Postgres natively (per
-  `.claude/agents/bcs-repro.md`'s own existing gotcha) — `--start`/`--stop postgres` refuses and tells
+  `.agents/agents/bcs-repro.md`'s own existing gotcha) — `--start`/`--stop postgres` refuses and tells
   the user to manage it themselves; `--status postgres` only checks port 5432 reachability.
 - **Never bring up `br-tax-ui`'s own `docker-compose.yml`** for `mongo`/`redis` — always use
   `br-tax-engine`'s, to avoid the port collision described above.
