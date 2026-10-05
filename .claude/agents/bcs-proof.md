@@ -1,1 +1,0 @@
-../../.agents/agents/bcs-proof.md

@@ -1,1 +1,0 @@
-../../.agents/commands/bcs-flowchart-check.md
