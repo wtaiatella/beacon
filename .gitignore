@@ -4,7 +4,6 @@
 # Whitelist workspace framework files
 !.gitignore
 !.gitlab-ci.yml
-!CODEOWNERS
 !README.md
 !CONTRIBUTING.md
 

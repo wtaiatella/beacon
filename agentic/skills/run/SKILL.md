@@ -1,7 +1,7 @@
 ---
 name: run
 disable-model-invocation: true
-description: Orchestrate the full BMAD+SDD+GSD pipeline (PRD → Spectech → Tasks → implement → review → QA → summary) via the run-pipeline skill.
+description: Orchestrate the full SDD+GSD pipeline (PRD → Spectech → Tasks → implement → review → QA → summary) via the run-pipeline skill.
 argument-hint: "<ticket-folder-or-jira-key> [idea] [flags]"
 ---
 

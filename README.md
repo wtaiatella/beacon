@@ -2,67 +2,102 @@
 
 ## Vision and value
 
-The **Agentic Workspace** is a command center for teams that want **spec-aligned delivery** without the failure modes of ad-hoc multi-agent sprawl: runaway context, duplicated work, and nobody sure what shipped. You get a **repeatable pipeline**—plan, implement, review, QA, summary—with human gates, reviewer scores, and bounded session outputs so work stays **traceable, reviewable, and economical on tokens**.
+The **Agentic Workspace** is a command center for teams that want **spec-aligned delivery** without the failure modes of ad-hoc multi-agent sprawl: runaway context, duplicated work, and nobody sure what shipped. You get a **repeatable pipeline** — PRD → technical spec → tasks → implement → review → QA → summary — with human gates, reviewer scores, and bounded session outputs so work stays **traceable, reviewable, and economical on tokens**.
 
-Three ideas sit on top of each other:
+Two ideas sit on top of each other:
 
-- **BMAD** frames *how* work flows: delivery is staged, gated, and owned—not a free-form chat.
-- **SDD** (Specification-Driven Development) makes **specs** authoritative: scope, acceptance, and phases live in `docs/specs/` (and related docs), not only in chat history.
-- **GSD** (Get Stuff Done) pushes **thin vertical slices**: small, testable changes per gate instead of monolithic “do everything” prompts.
+- **SDD** (Spec-Driven Development) makes **specs** authoritative: scope, architecture, acceptance criteria, and phases live in `prd.md` / `spectech.md` / `tasks.md` inside a **ticket folder** under `docs/specs/`, not only in chat history.
+- **GSD** (thin vertical slices) keeps each implementation phase **small and independently testable** — a gate between phases instead of one monolithic "do everything" change.
 
-**Flat orchestration** and **least-privilege slices** exist so the system does not recreate **infinite delegation loops** common in unconstrained AI setups—where one agent spawns another, which spawns another, until context explodes and accountability vanishes. Here, **only** the `/run` **main session** schedules `Task(plan)`, `Task(dev)`, readonly specialists, and gates; **personas do not nest** `Task` **on other personas** ([flat orchestration](.cursor/rules/00-workspace-router.mdc)). Implementers receive **least-privilege** work: **one phase**, **one domain** (e.g. dev vs sre), and `WORKTREE_PATHS` when needed—not full merged MCP dumps or whole-session transcripts. Readonly specialists write **bounded** artifacts under `docs/sessions/<id>/`. That structure keeps delegation **finite**, prompts **scoped**, and handoffs **explicit**.
+**Flat orchestration** and **least-privilege slices** exist so the system does not recreate the **infinite delegation loops** common in unconstrained multi-agent setups — where one agent spawns another, which spawns another, until context explodes and accountability vanishes. **Only** the `/run` **main session** schedules `Task(prd|spectech|tasks|dev|sre|data|qa|...)`, readonly specialists, and gates; **personas do not nest `Task` on other personas** (flat orchestration — a hard property of the Claude Code / Cursor agent runtime, not just a convention here). Implementers receive **least-privilege** work: **one phase**, **one domain** (e.g. `dev` vs `sre`), and `WORKTREE_PATHS` when needed — not full merged MCP dumps or whole-session transcripts. Readonly specialists write **bounded** artifacts under `docs/sessions/<id>/`. That structure keeps delegation **finite**, prompts **scoped**, and handoffs **explicit**.
 
-**In one line:** `/run` loads **[run-pipeline](.cursor/skills/run-pipeline/SKILL.md)**: plan → implement → review → QA → summary, with gates and least-privilege artifacts under `docs/sessions/<id>/`.
+**In one line:** `/run <ticket-folder | JIRA-KEY>` loads **[run-pipeline](agentic/skills/run-pipeline/SKILL.md)**: `/prd` → `/spectech` → `/tasks` → implement → review → QA → summary, with gates and least-privilege artifacts under `docs/sessions/<id>/`.
 
 ---
-
-
 
 ## Table of Contents
 
 - [Vision and value](#vision-and-value)
 - [What this is](#what-this-is)
+- [Framework source and IDE runtimes](#framework-source-and-ide-runtimes)
+- [The ticket folder](#the-ticket-folder)
 - [Orchestration hub](#orchestration-hub)
-- [Pipeline state machine](#pipeline-state-machine)
+- [Pipeline state machine (`/run`)](#pipeline-state-machine-run)
 - [Phase gates and shift-left security](#phase-gates-and-shift-left-security)
 - [Session directory anatomy](#session-directory-anatomy)
-- [Layered stack](#layered-stack)
 - [30-second setup](#30-second-setup)
 - [Zero-Trust script API](#zero-trust-script-api)
 - [Personas and commands](#personas-and-commands)
-- [Pipeline and flags](#pipeline-and-flags)
-- [Confidence and specs](#confidence-and-specs)
+- [Pipeline flags](#pipeline-flags)
+- [Confidence scoring](#confidence-scoring)
 - [Security and hooks](#security-and-hooks)
 - [Session memory and metrics](#session-memory-and-metrics)
-- [Troubleshooting and observability](#troubleshooting-and-observability)
 - [MCP configuration](#mcp-configuration)
 - [Models](#models)
-- [Token efficiency](#token-efficiency)
-- [Cursor platform reference](#cursor-platform-reference)
+- [Platform reference docs](#platform-reference-docs)
 - [Rules of engagement](#rules-of-engagement)
 - [Extending the workspace](#extending-the-workspace)
 
 ---
 
-
-
 ## What this is
 
-The workspace is a **spec-driven pipeline**: personas (`/plan`, `/dev`, `/qa`, …) and **readonly specialists** (explorers, validators, MCP helpers) coordinated by the **main agent** on `/run`. Escape hatches: `/fix`, `/do` for bugs and ad-hoc ops outside the main pipeline.
+The workspace is a **spec-driven pipeline**: personas (`/prd`, `/spectech`, `/tasks`, `/dev`, `/sre`, `/data`, `/qa`, `/scrum`, `/summary`, …) and **readonly specialists** (explorers, validators, MCP helpers) coordinated by the **main agent** on `/run`. Escape hatches: `/fix`, `/do` for bugs and ad-hoc ops outside the main pipeline.
 
-Procedure: [run-pipeline skill](.cursor/skills/run-pipeline/SKILL.md) · [human-oriented reference](docs/run-pipeline-reference.md) · [router](.cursor/rules/00-workspace-router.mdc).
+Procedure: [run-pipeline skill](agentic/skills/run-pipeline/SKILL.md) · [human-oriented reference](docs/run-pipeline-reference.md) (being refreshed to match the skill — the skill is authoritative) · [CLAUDE.md](CLAUDE.md) (Claude Code) · [00-workspace-router.mdc](.cursor/rules/00-workspace-router.mdc) (Cursor).
 
 ---
 
+## Framework source and IDE runtimes
 
+The SDD framework (agents, skills, commands, hooks) has **one canonical source**: `agentic/`. It is **installed** into whichever IDE runtime(s) you use — nothing under `.claude/` or `.cursor/` that came from `agentic/` should be hand-edited; edit the source and reinstall.
+
+```bash
+scripts/setup-agentic.sh claude   # → user-level Claude plugin `bcs-sdd` (/bcs-sdd:<name>) + root CLAUDE.md
+scripts/setup-agentic.sh cursor   # → .cursor/{agents,hooks,hooks.json,rules,skills}
+scripts/setup-agentic.sh all      # claude + cursor (+ antigravity stub)
+```
+
+| Layer | Canonical source | Claude Code | Cursor |
+|---|---|---|---|
+| Personas / subagents | `agentic/agents/` | `bcs-sdd` plugin subagents (Task tool) | `.cursor/agents/` |
+| Commands | `agentic/commands/` | `/bcs-sdd:<name>` slash commands | — (Cursor does not mirror commands as skills) |
+| Skills | `agentic/skills/` | `bcs-sdd` plugin skills | `.cursor/skills/` |
+| Hooks | `agentic/hooks/` + `agentic/adapters/<ide>/hooks/` | `bcs-sdd` plugin `hooks/hooks.json` | `.cursor/hooks.json` + `.cursor/hooks/` |
+| Always-on identity | `agentic/adapters/claude/CLAUDE.md` | root `CLAUDE.md` (generated — do not edit) | — |
+| Always-on identity | `agentic/adapters/cursor/rules/00-workspace-router.mdc` | — | `.cursor/rules/00-workspace-router.mdc` (generated) |
+
+**Project overlays** (`bcs-*`, optional, team- or repo-specific) live outside `agentic/` in the IDE runtime dirs (`.claude/`, `.cursor/`, or the shared `.agents/` tree that both read from) and are **never required** by the core SDD personas or the `/run` orchestrator. Full setup details: [agentic/docs/setup.md](agentic/docs/setup.md).
+
+---
+
+## The ticket folder
+
+Every unit of work — a support ticket or a feature — lives in **one folder**:
+
+```
+docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with a Jira key, e.g. BG-10965
+docs/specs/{YYYY-MM-DD}-{slug}/                   # without a ticket key
+├── _state.json      # machine state — the ONLY control file (never context.json)
+├── _notes.md        # human/agent running log — decisions + "where to resume"
+├── prd.md           # product requirements (/prd)
+├── spectech.md       # technical design, profile: lean | standard | full (/spectech)
+├── tasks.md          # phased task list derived from prd.md + spectech.md (/tasks)
+├── qa-report.md       # QA findings (/qa)
+└── summary.md           # post-pipeline handoff narrative (/summary)
+```
+
+`prd.md`, `spectech.md`, and `tasks.md` are **three separate, right-sized files — never merged into one `spec.md`**. There is **no `/plan` command and no single-file spec mode** in this repo; the required front end of `/run` is always `/prd` → `/spectech` → `/tasks`. `_state.json` + `_notes.md` is the **only** control-file pair — if a folder ever contains `context.json` too, that is a regression to report, not something to silently resolve. Full schema: the `bcs-ticket-workflow` project skill.
+
+---
 
 ## Orchestration hub
 
-Readonly specialists run **only** from the **orchestrator** (flat delegation). They write **bounded** output under `docs/sessions/<id>/pre-plan/` (merged MCP) and `docs/sessions/<id>/artifacts/`. Implementers get **least-privilege** slices — phase, one domain, `WORKTREE_PATHS` — not full session dumps.
+Readonly specialists run **only** from the **orchestrator** (flat delegation). They write **bounded** output under `docs/sessions/<id>/pre-plan/` (merged MCP briefs) and `docs/sessions/<id>/artifacts/`. Implementers get **least-privilege** slices — one phase, one domain, `WORKTREE_PATHS` — not full session dumps.
 
-`Task(do)` applies mechanical edits through the **allowlisted script API** (e.g. `[query-transcript.py](scripts/tools/query-transcript.py)`) after `Task(scrum)` authorizes spec updates. **Finish** uses `[pipeline-finish.sh](scripts/hooks/pipeline-finish.sh)` per [git / GitLab rules](.cursor/rules/git-gitlab-mutations.mdc) and skill **section 9**.
+`Task(do)` applies mechanical edits (spec checkboxes, `_state.json`, `_notes.md`) through the **allowlisted script API**, and only **after** `Task(scrum)` authorizes it for that gate. **Finish** runs `pipeline-finish.sh` per the git/GitLab rules in `CLAUDE.md` and run-pipeline **§9**.
 
-**Law of flat orchestration:** Nested `Task(...)` from personas is **forbidden**; only the orchestrator delegates. Mutations outside normal product work stay on **allowlisted** script and hook paths — [nested-task audit](docs/reference/nested-task-audit.md).
+**Law of flat orchestration:** nested `Task(...)` from a persona is **forbidden**; only the orchestrator delegates. A persona that needs a helper, an enterprise MCP tool, or a human decision escalates with `REQUEST_MAIN:` / `QUESTION:` / `APPROVAL_NEEDED:` and the main loop decides what runs next.
 
 ```mermaid
 flowchart TD
@@ -75,16 +110,18 @@ flowchart TD
         CE[codebase-explorer]
         SV[spec-validator]
         SS[security-scanner]
+        PR["plan-reviewer (folder mode)"]
     end
 
     subgraph SESS["Bounded paths under docs/sessions/(session-id)/"]
         PP["pre-plan/<br/>merged-brief.md, specialists/…"]
-        AR["artifacts/<br/>mcp-briefs/, explorer/, scanners/, diffs/…"]
+        AR["artifacts/<br/>explorer/, scanners/, diffs/…"]
     end
 
     subgraph LP["Least-privilege implementers — sliced prompts"]
-        IMPL["Task(plan) · Task(dev|sre|data)<br/>one phase · one domain · WORKTREE_PATHS"]
-        QA[Task(qa) · Task(summary) · gates]
+        FE["Task(prd) · Task(spectech) · Task(tasks)"]
+        IMPL["Task(dev|sre|data)<br/>one phase · one domain · WORKTREE_PATHS"]
+        QA[Task(qa) · Task(summary) · Task(scrum) gates]
     end
 
     subgraph ZT["Zero-trust allowlist — no ad-hoc shell"]
@@ -93,44 +130,33 @@ flowchart TD
     end
 
     MA -->|delegates| RO
+    MA -->|Task| FE
     MA -->|Task slice| IMPL
     MA -->|Task| QA
 
     PT & W1 & W2 --> PP
-    CE & SV & SS --> AR
+    CE & SV & SS & PR --> AR
 
-    MA -->|"Task(do) after scrum"| QTP
-    MA -->|Finish skill 9| PF
+    MA -->|"Task(do) after scrum PROCEED"| QTP
+    MA -->|"Finish — §9"| PF
 
     style MA fill:#c0392b,color:#fff
 ```
 
-
-
 ---
 
+## Pipeline state machine (`/run`)
 
+**§1** branch consent + worktrees → **§2** `pipeline-init.sh` → **Pre-plan** (optional MCP: Wave 1 Glean/ARC → merge + gate → Wave 2 Jira/Confluence/GitLab) → **§3–4** `Task(prd)` → `Task(spectech)` → `Task(tasks)`, then `plan-reviewer` (folder mode) ↔ `Task(scrum)` self-heal loop → **§5** per-phase implementation (`Task(dev|sre|data)`) → **§6** implementation review (`*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or on REWORK) → **§7.0** QA prep (`spec-validator` + `security-scanner`) → **§7** `Task(qa)` → **§7.1** final `Task(scrum)` → **§8** `Task(summary)` → **§9** `pipeline-finish.sh` (commit / push / MR prompts).
 
-## Pipeline state machine
-
-**Workspace attach:** multi-root (`attach-target.txt`, `session.code-workspace`, `[attach-project.sh](scripts/tools/attach-project.sh)`) — [setup](docs/setup.md). **§1** branch consent, then `pipeline-init.sh` (**§2**) → **Pre-plan** Wave 1 / Wave 2 MCP (triage + gate, when applicable) → **§3–4** plan loop (`Task(plan)` ↔ `plan-reviewer` ↔ `Task(scrum)`) → **§5** phase execution → **§6** implementation review (Shift-Left: `*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or rework) → **§7.0** QA prep → `Task(qa)` **(§7)** → **§7.1** final `Task(scrum)` → `Task(summary)` **(§8)** → `pipeline-finish.sh` **(§9)**.
-
-
-| Kind          | Meaning                                                     |
-| ------------- | ----------------------------------------------------------- |
-| **Human**     | Branch consent, manual gates, Finish commit/push/MR choices |
-| **Automated** | Hooks and orchestrator paths without extra confirmation     |
-
+| Kind | Meaning |
+|---|---|
+| **Human** | Branch consent, manual gates (`--manual`), Finish commit/push/MR choices |
+| **Automated** | Hooks and orchestrator paths without extra confirmation |
 
 ```mermaid
 stateDiagram-v2
-    [*] --> WorkspaceAttach : open IDE / workspace
-    WorkspaceAttach --> BranchConsent : user invokes /run
-    note right of WorkspaceAttach
-        Multi-root: attach-target.txt,
-        session.code-workspace (docs/setup.md)
-    end note
-
+    [*] --> BranchConsent : user invokes /run
     BranchConsent --> PipelineInit : §1 complete
     note right of BranchConsent
         Protected branch: approve name
@@ -140,7 +166,7 @@ stateDiagram-v2
     PipelineInit --> PreTriage : §2 Init OK
     note left of PipelineInit
         scripts/hooks/pipeline-init.sh
-        snapshot, session-memory read
+        session snapshot, memory read
     end note
 
     PreTriage --> Wave1 : Task(pre-plan-triage)
@@ -152,18 +178,18 @@ stateDiagram-v2
     end note
 
     MergeGate --> Wave2 : merge + gate
-    Wave2 --> PlanLoop : Wave 2 or skip
+    Wave2 --> PrdSpectechTasks : Wave 2 or skip
     note right of Wave2
         Wave 2: Task(mcp-jira),
         Task(mcp-confluence), Task(mcp-gitlab)
         when gated; merged-brief → §3
     end note
 
-    PlanLoop --> PhaseExec : §4 plan-reviewer pass, §4 scrum PROCEED
-    note right of PlanLoop
-        §3–4: Task(plan) ↔ plan-reviewer
-        self-heal; then Task(scrum) plan gate
-        --skip plan skips pre-plan + §3–4
+    PrdSpectechTasks --> PhaseExec : §4 plan-reviewer pass, scrum PROCEED
+    note right of PrdSpectechTasks
+        §3: Task(prd) → Task(spectech) → Task(tasks)
+        §4: plan-reviewer (folder mode) ↔ scrum
+        self-heal; --skip plan skips pre-plan + §3–4
     end note
 
     PhaseExec --> PhaseReview : §5 batch complete
@@ -176,7 +202,7 @@ stateDiagram-v2
     PhaseReview --> PhaseExec : §6 REWORK or next phase k+1
     PhaseReview --> QAPrep : §6 PROCEED, all phases done
     note right of PhaseReview
-        §6 Shift-Left: parallel *-reviewer
+        §6 shift-left: parallel *-reviewer
         + security-scanner (phase-impl-delta)
         then Task(scrum); optional Task(do)
     end note
@@ -191,7 +217,7 @@ stateDiagram-v2
     TaskQA --> FinalScrum : Task(qa) returned
     note right of TaskQA
         §7: structured QA report;
-        main session does not patch spec
+        main session does not patch the ticket folder
     end note
 
     FinalScrum --> Summary : §7.1 PROCEED
@@ -201,27 +227,18 @@ stateDiagram-v2
     end note
 
     Summary --> PipelineFinish : §8 Task(summary) done
-    note right of Summary
-        §8: minimal handoff bundle
-    end note
-
-    PipelineFinish --> [*] : completion output
+    PipelineFinish --> [*] : PIPELINE: COMPLETE
     note left of PipelineFinish
         §9: scripts/hooks/pipeline-finish.sh
-        commit / push / MR prompts;
-        session trace audit
+        commit / push / MR prompts
     end note
 ```
 
-
-
 ---
-
-
 
 ## Phase gates and shift-left security
 
-**§6** (per phase, after **§5**) runs `Task(*-reviewer)` and `Task(security-scanner)` in **parallel** — scanner scoped to `phase-impl-delta`, report at `artifacts/scanners/phase-<N>-security.md` — then `Task(scrum)` aggregates scores and security into one gate ([run-pipeline skill](.cursor/skills/run-pipeline/SKILL.md) **§6**). **§7.0** runs a separate **QA prep wave** (`Task(spec-validator)` + `Task(security-scanner)` → `artifacts/scanners/`) before `Task(qa)` and **§7.1** `Task(scrum)` — pipeline **§7**; scrum still uses **PROCEED / REWORK / ASK_USER**. See [run-pipeline reference](docs/run-pipeline-reference.md), [router invalid-completion rules](.cursor/rules/00-workspace-router.mdc).
+**§6** (per phase, after **§5**) runs `Task(*-reviewer)` and `Task(security-scanner)` in **parallel** — scanner scoped to `phase-impl-delta`, report at `artifacts/scanners/phase-<N>-security.md` — then `Task(scrum)` aggregates scores and security into one gate. **Critical/High findings force REWORK.** **§7.0** runs a separate **QA prep wave** (`Task(spec-validator)` + `Task(security-scanner)` → `artifacts/scanners/`) before `Task(qa)` (**§7**) and the final `Task(scrum)` (**§7.1**) — still **PROCEED / REWORK / ASK_USER / ESCALATE**. See the [run-pipeline skill](agentic/skills/run-pipeline/SKILL.md) **§6–§7.1**.
 
 ```mermaid
 sequenceDiagram
@@ -234,8 +251,8 @@ sequenceDiagram
 
     O->>Impl: phase k · §5 batch complete
 
-    par §6 parallel (skill §6)
-        O->>Rev: Task(dev-reviewer|sre-reviewer|...) as needed
+    par §6 parallel
+        O->>Rev: Task(dev-reviewer|sre-reviewer|data-reviewer) as needed
         Rev-->>O: scores · structured findings
     and
         O->>Sec: Task(security-scanner) · phase-impl-delta
@@ -248,28 +265,22 @@ sequenceDiagram
         Sc-->>O: REWORK · IMPL_SEGMENT_FEEDBACK
         O->>Impl: targeted §5 rework · same phase k
     else PROCEED
-        Sc-->>O: PROCEED · optional Task(do) for authorized spec updates
+        Sc-->>O: PROCEED · optional Task(do) for authorized ticket-folder updates
     end
 
-    Note over O,Sc: On REWORK, repeat §6 (parallel reviewers + scanner) until PROCEED, capped by --max-iterations. No phase k+1 until §6 PROCEED.
-
-    Note over O,Sc: §7.0 QA prep wave: Task(spec-validator) and Task(security-scanner) in parallel, then Task(qa), then Task(scrum) §7.1 (pipeline §7).
+    Note over O,Sc: On REWORK, repeat §6 until PROCEED, capped by --max-iterations. No phase k+1 until §6 PROCEED.
+    Note over O,Sc: §7.0 QA prep wave: Task(spec-validator) + Task(security-scanner) in parallel, then Task(qa) §7, then Task(scrum) §7.1.
 ```
-
-
 
 ---
 
-
-
 ## Session directory anatomy
 
-**Active session pointer:** `docs/sessions/ACTIVE_SESSION` is a **plain-text file** (one line: the `YYYY-MM-DDTHHMMSSZ` session id, optionally suffixed). Scripts resolve `docs/sessions/<session-id>/current.md` from that id — **not** via a symlink to `current.md` ([Session storage](docs/run-pipeline-reference.md#session-storage)).
+**Active session pointer:** `docs/sessions/ACTIVE_SESSION` is a **plain-text file** (one line: the session id). Scripts resolve `docs/sessions/<session-id>/current.md` from that id.
 
 ```text
 docs/sessions/
 ├── ACTIVE_SESSION             # one line: active session id (plain file, not a symlink)
-├── README.md                  # optional tracked conventions (parent dir otherwise gitignored)
 └── <session-id>/
     ├── current.md             # timeline, GATE lines, trace anchors
     ├── context-audit.log      # Finish audit (append-only)
@@ -277,271 +288,170 @@ docs/sessions/
     ├── session.code-workspace # optional: generated multi-root workspace
     ├── pre-plan/
     │   ├── merged-brief.md
-    │   └── specialists/       # glean, arc, jira, … + mid-run files
+    │   └── specialists/       # glean, arc, jira, confluence, gitlab + mid-run files
     └── artifacts/
-        ├── mcp-briefs/        # scaffold / LPP namespace
         ├── explorer/          # Task(codebase-explorer) reports
         ├── scanners/          # §7.0 spec-validator, security-scanner
         └── diffs/
             ├── dev/
             ├── sre/
-            ├── data/
-            └── plan/
+            └── data/
 ```
 
-- **no** root-level session clutter — keep `docs/sessions/<session-id>/` to the files and dirs above; put bounded handoffs under `pre-plan/` and `artifacts/` ([run-pipeline skill](.cursor/skills/run-pipeline/SKILL.md) Non-negotiables item 9).
-- **no** backward-compatibility **symlinks** under `docs/sessions/<session-id>/` (e.g. legacy alias paths pointing at renamed trees) — **hard cutover** to canonical paths only.
-
-`docs/sessions/` contents (except optional tracked `[README.md](docs/sessions/README.md)`) are **gitignored** — local scratch per clone.
+`docs/sessions/` is **gitignored** — local scratch per clone. No backward-compatibility symlinks are created when artifact paths move (hard cutover to canonical paths only).
 
 ---
-
-
-
-## Layered stack
-
-
-| Layer           | Location                                                                                                          |
-| --------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Rules           | `[.cursor/rules/*.mdc](.cursor/rules/)`                                                                           |
-| Personas        | `[.cursor/agents/](.cursor/agents/)`                                                                              |
-| Skills          | `[.cursor/skills/](.cursor/skills/)`                                                                              |
-| Scripts / hooks | `[scripts/tools/](scripts/tools/)`, `[scripts/hooks/](scripts/hooks/)` (`pipeline-init.sh`, `pipeline-finish.sh`) |
-| IDE hooks       | `[.cursor/hooks.json](.cursor/hooks.json)`, `[.cursor/hooks/](.cursor/hooks/)`                                    |
-| MCP             | `[.cursor/mcp.json](.cursor/mcp.json)` (optional)                                                                 |
-
-
----
-
-
 
 ## 30-second setup
 
-- **Framework:** clone this repo, run setup (creates runtime dirs, validates JSON including hooks/MCP when present).
-- **Multi-root target:** put app repos under `PROJECTS_ROOT`, run `attach-project.sh` — writes `docs/sessions/<id>/session.code-workspace` and `attach-target.txt` ([setup](docs/setup.md#multi-root-attach-road-48)).
-- **Single-folder target:** clone the app under `myapp/` here if you do not use attach (pass `myapp/` to `/run` / agents).
-- **Optional MCP:** committed `[.cursor/mcp.json](.cursor/mcp.json)` is the team baseline — adjust URLs / `${env:…}` per [cursor-mcp](docs/reference/cursor-mcp.md); restart Cursor and confirm **Settings → MCP**.
-
 ```bash
-git clone <repo-url> && cd agentic-workspace
-./scripts/setup.sh
+git clone <repo-url> && cd beacon
+scripts/setup-agentic.sh claude   # or: cursor | all
 ```
 
-```bash
-export PROJECTS_ROOT="${HOME}/work"
-mkdir -p "$PROJECTS_ROOT" && git clone <your-app-repo> "$PROJECTS_ROOT/myapp"
-grep -q '^PROJECTS_ROOT=' .env.local 2>/dev/null || printf 'PROJECTS_ROOT=%q\n' "$PROJECTS_ROOT" >> .env.local
-./scripts/tools/attach-project.sh
-```
+- **Prerequisites:** Node.js ≥ 18, git, and the IDE(s) you use (Claude Code and/or Cursor).
+- **Target repos:** clone the app repo(s) you'll modify as subdirectories of the workspace root (gitignored, per-developer) — or use multi-root attach (`scripts/tools/attach-project.sh`) for a separate `PROJECTS_ROOT`.
+- **Optional MCP:** see [MCP configuration](#mcp-configuration) below.
+- Re-run `scripts/setup-agentic.sh <claude|cursor|all>` any time `agentic/` changes — generated trees are overwritten, never hand-edited.
 
-```bash
-git clone <your-app-repo> myapp/
-```
-
-```bash
-# optional: after editing .cursor/mcp.json — validates JSON
-./scripts/setup.sh
-```
-
-- Open `session.code-workspace` from attach, or single-root this repo; then `/run <target>/ "goal"` or `/plan`. Details: [setup](docs/setup.md).
+Full guide: [agentic/docs/setup.md](agentic/docs/setup.md).
 
 ---
-
-
 
 ## Zero-Trust script API
 
-Orchestration and `Task(do)` call **allowlisted** scripts only—**not** raw arbitrary shell or `python3 -c` / inline one-liners for transcript parsing or other mechanical work (**Zero Trust Shell**).
+Orchestration and `Task(do)` call **allowlisted** scripts only — not raw arbitrary shell or `python3 -c` one-liners for mechanical work.
 
+| Safe entry | Path | Role |
+|---|---|---|
+| Pipeline init | `scripts/hooks/pipeline-init.sh` | Session wiring at `/run` init (§2). |
+| Pipeline commit | `scripts/hooks/pipeline-commit.sh` | Mid-pipeline commit when `_state.json.commit_policy` authorizes it. Never pushes. |
+| Pipeline finish | `scripts/hooks/pipeline-finish.sh` | Finish flow: commit, push/MR prompts, session trace audit (§9). |
+| Transcript query | `scripts/tools/query-transcript.py` | Read-only transcript slices for `Task(do)` — no hand-rolled JSONL parsing in chat. |
 
-| Safe entry       | Path                                                                     | Role                                                                             |
-| ---------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| Pipeline init    | `[scripts/hooks/pipeline-init.sh](scripts/hooks/pipeline-init.sh)`       | Session wiring at `/run` init (run-pipeline **§2**).                             |
-| Pipeline finish  | `[scripts/hooks/pipeline-finish.sh](scripts/hooks/pipeline-finish.sh)`   | Finish flow, prompts, session trace audit (skill **§9**).                        |
-| Transcript query | `[scripts/tools/query-transcript.py](scripts/tools/query-transcript.py)` | Read-only transcript slices for `Task(do)`—no hand-rolled JSONL parsing in chat. |
-
-
-**Why raw arbitrary shell and inline Python are banned for agents**
-
-- **Bounded, reviewable surface:** Only these paths (and the repo’s other vetted `scripts/` helpers) are maintained, testable, and lintable; one-off `sh -c`, `rg | …`, `awk`**/**`sed` pipelines are not—so they bypass shell encapsulation and are easy for models to get wrong.
-- **Inline Python** (`python3 -c`, pasted snippets) sidesteps `query-transcript.py`, hides behavior from `lint-check.sh` sweeps of agent/skills text, and recreates the “rogue parser” problem removed from `Task(do)`.
-- **If no script fits:** escalate (`QUESTION:` / extend tooling)—do **not** invent inline code to bridge the gap.
+**Why raw shell and inline Python are banned for agents:** only these paths (and the repo's other vetted `scripts/` helpers) are maintained, testable, and lintable. If no script fits, the agent escalates (`QUESTION:`) rather than inventing inline code.
 
 ---
-
-
 
 ## Personas and commands
 
+| Command | Role | Subagent |
+|---|---|---|
+| `/run` | **Orchestrator** — main session follows [run-pipeline](agentic/skills/run-pipeline/SKILL.md); only this session schedules `Task(...)`. | — (main loop + skill) |
+| `/prd` | Product requirements analyzer — `prd.md`. | `prd` |
+| `/spectech` | Technical spec designer — `spectech.md` (profile lean/standard/full). | `spectech` |
+| `/tasks` | Task breakdown specialist — `tasks.md`. | `tasks` |
+| `/dev` | Software engineer — `[dev]` tasks; one phase · one domain per delegation when orchestrated. | `dev` |
+| `/sre` | SRE / platform engineer — `[sre]` tasks (IaC, CI/CD, Helm). | `sre` |
+| `/data` | Data / ML engineer — `[data]` tasks (pipelines, migrations). | `data` |
+| `/qa` | QA and security lead — cross-domain review report; blocks on Critical/High. | `qa` |
+| `/scrum` | PO / SM / PM gate — PROCEED / REWORK / ASK_USER / ESCALATE at every gate. | `scrum` (read-only) |
+| `/summary` | Post-pipeline handoff narrative — `summary.md`. | `summary` |
+| `/kb` | Local knowledge-base builder (fallback when ARC MCP isn't onboarded). | `kb` |
+| `/fix` | **Escape hatch** — debugger for a target dir + symptom, outside the full pipeline. | `fix` |
+| `/do` | **Escape hatch** — ad-hoc operator; mechanical work via the Zero-Trust script API. | `do` |
+| `/clone` | Utility — register a child repo in the multi-repo inventory. | — (thin command) |
+| `/rebase` | Utility — multi-repo git-sync with safety backup branch. | — (thin command) |
+| `/kb-refresh`, `/kb-concentrator` | Utilities — incremental / cross-repo knowledge-base refresh. | — (thin commands) |
+| `/setup-workspace` | Utility — MCP tool registry probe + `docs/workspace-tools.md`. | — (main loop + skill) |
+| *Readonly specialists* | `codebase-explorer`, `spec-validator`, `security-scanner`, `plan-reviewer`, `*-reviewer`, `pre-plan-triage`, `mcp-*` — scheduled **only** by the `/run` main session; personas never nest `Task` on these. | — |
 
-| Command                | Role                                                                                                                                                                                                                                                                                               |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/run`                 | **Orchestrator** — loads [run-pipeline](.cursor/skills/run-pipeline/SKILL.md) in the **main** session; **only** this session schedules `Task(plan)`, implementing personas (`dev` / `sre` / `data`), readonly specialists, and gates ([rule](.cursor/rules/run-pipeline-trigger.mdc)).             |
-| `/plan`                | Staff architect — draft or amend specs under `docs/specs/`.                                                                                                                                                                                                                                        |
-| `/dev`                 | Software engineer — `[dev]` tasks from a spec; **one phase · one domain** per delegation when orchestrated.                                                                                                                                                                                        |
-| `/qa`                  | QA and security — structured review report (spec-validator + security-scanner feeds when applicable).                                                                                                                                                                                              |
-| `/scrum`               | Product owner / gate — **PROCEED** / **REWORK** / **ASK_USER** at plan, implementation, and post-QA scrums.                                                                                                                                                                                        |
-| `/fix`                 | **Escape hatch** — debugger for a target directory and symptom outside the full pipeline.                                                                                                                                                                                                          |
-| `/do`                  | **Escape hatch** — ad-hoc operator; mechanical work uses the [Zero-Trust script API](#zero-trust-script-api) and authorized `Task(do)` paths.                                                                                                                                                      |
-| `/sre`, `/data`        | Platform / data engineer — `[sre]` / `[data]` tasks; same slice rules as `/dev`.                                                                                                                                                                                                                   |
-| `/summary`, `/kb`      | Summary handoff, local KB build — see skills and [Extending the workspace](#extending-the-workspace).                                                                                                                                                                                              |
-| *Readonly specialists* | **Dual-mode:** user `/name` (`/codebase-explorer`, `/spec-validator`, `/security-scanner`, `/pre-plan-triage`, `/mcp-`*, `*-reviewer`) **or** the `/run` main session schedules `Task(...)` — **personas do not** nest `Task` on these ([nested-task audit](docs/reference/nested-task-audit.md)). |
-
-
----
-
-
-
-## Pipeline and flags
-
-[run-pipeline skill](.cursor/skills/run-pipeline/SKILL.md) defines branch consent, worktrees, `--resume`, `--manual` (step gates, not manual **models**), `--skip`, Finish. `--manual` ≠ optional `.cursor/models.user.yml` models table.
-
-
-| Flag              | Purpose                                      |
-| ----------------- | -------------------------------------------- |
-| `--review`        | Pause after major steps                      |
-| `--manual`        | Pause after plan and after each domain track |
-| `--confidence N`  | Review threshold                             |
-| `--skip <step>`   | Skip a named step                            |
-| `--resume`        | Continue from session memory                 |
-| `--branch [name]` | Suggested branch (you still approve)         |
-
+Utilities (`/clone`, `/rebase`, `/kb-refresh`, `/kb-concentrator`, `/setup-workspace`) share the workspace but are **not** steps of `/run`.
 
 ---
 
+## Pipeline flags
 
+[run-pipeline skill](agentic/skills/run-pipeline/SKILL.md) defines branch consent, worktrees, and every flag below.
 
-## Confidence and specs
-
-Reviewers score; `/scrum` decides PROCEED / REWORK / ASK_USER. [Confidence skill](.cursor/skills/confidence-scoring/SKILL.md), router. Specs: `docs/specs/` (local; often gitignored) — [generate-spec](.cursor/skills/generate-spec/SKILL.md), [run-pipeline reference](docs/run-pipeline-reference.md) for phases and `[domain:repo]` tags.
+| Flag | Purpose |
+|---|---|
+| `--skip plan\|impl-review\|qa\|summary` | Skip a named segment (`plan` = the whole PRD/Spectech/Tasks + pre-plan segment) |
+| `--manual` | **Manual step gates** — pause after the plan segment and after each domain track (Proceed / Force review / Add context and review). Independent of per-step model assignment. |
+| `--review` | Optional checkpoints after individual steps — orthogonal to `--manual` |
+| `--confidence N` | Override the default pass threshold (default 75) |
+| `--resume` | Continue from the last `GATE:` / `FAILURE:` in session memory |
+| `--branch [name]` | Suggests a branch name — you still approve creation on protected branches |
+| `--max-iterations N` | Cap implementation/review rework loops (default 3) |
+| `--max-plan-iterations N` | Cap the PRD/Spectech/Tasks ↔ plan-reviewer self-heal loop (default 3) |
 
 ---
 
+## Confidence scoring
 
+Reviewers emit 0–100% scores; `/scrum` decides with business judgment at every gate (plan segment, per-phase implementation, post-QA):
+
+- **≥ 75% (default)** → PROCEED
+- **50–74%** → ASK_USER
+- **< 50%** → REWORK (automatic)
+- **Max loops hit** → ESCALATE
+
+`/scrum` may override the default threshold when business context warrants it (document the override). Details: [confidence-scoring skill](agentic/skills/confidence-scoring/SKILL.md).
+
+---
 
 ## Security and hooks
 
-Hooks **fail open** except **subagent-gate** (no writes on protected branches in child repos). [cursor-hooks](docs/reference/cursor-hooks.md), router. `/sre`: [deploy-checklist](.cursor/skills/deploy-checklist/SKILL.md).
+Hooks **fail open** except the Cursor `subagent-gate` hook (no writes on protected branches in child repos — no override). `/sre` follows the [deploy-checklist skill](agentic/skills/deploy-checklist/SKILL.md) (5-tier CI/CD coverage: dev/qa/int/sbx/prd). See [cursor-hooks](docs/reference/cursor-hooks.md) and `CLAUDE.md` → **Hooks**.
 
 ---
 
-
-
 ## Session memory and metrics
-
-`[session-memory.sh](scripts/tools/session-memory.sh)`, `[metrics.sh](scripts/tools/metrics.sh)`. Conventions: [run-pipeline reference](docs/run-pipeline-reference.md), [sessions README](docs/sessions/README.md).
 
 ```bash
 scripts/tools/session-memory.sh read
 scripts/tools/metrics.sh overview
 ```
 
----
-
-
-
-## Troubleshooting and observability
-
-Use these logs and commands when a run pauses, you need traceability, or you are validating least-privilege orchestration. Authoritative detail: [run-pipeline reference — Local auditing](docs/run-pipeline-reference.md#local-auditing), [run-pipeline reference — Manual step gates](docs/run-pipeline-reference.md#manual-step-gates---manual), [run-pipeline skill — Manual step gates](.cursor/skills/run-pipeline/SKILL.md#manual-step-gates---manual), [run-pipeline skill — Pipeline steps](.cursor/skills/run-pipeline/SKILL.md#pipeline-steps-order) (§9 Finish, session trace audit).
-
-### Audit and trace logs
-
-
-| Log                 | Location                      | What it is                                                                                                                                                                                                                                                             |
-| ------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `context-audit.log` | `docs/sessions/<session-id>/` | **Finish** session-trace audit: `pipeline-finish.sh` runs `audit-session-trace.py` before `PIPELINE: COMPLETE`; **append-only** bounded sections (UTC timestamps). Do **not** invoke `audit-session-trace.py` outside `pipeline-finish.sh` for the normal Finish path. |
-| `docs/audit.log`    | **Workspace root**            | Hook / session markers appended locally — **different role** from `current.md`; used with hooks and `metrics.sh` aggregates; not a substitute for the session timeline file.                                                                                           |
-
-
-Resolve `<session-id>` from `docs/sessions/ACTIVE_SESSION`. For `audit-session-trace.py` flags and zero-match diagnostics, see `audit-session-trace.py --help` and [Local auditing](docs/run-pipeline-reference.md#local-auditing).
-
-### Session memory read
-
-
-| Action                           | Command / note                                                                                                                                                                                              |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Print active session scratch** | `scripts/tools/session-memory.sh read`                                                                                                                                                                      |
-| **Same content at Init**         | `pipeline-init.sh` stdout includes `=== session-memory-read ===` (equivalent tail) — [run-pipeline skill §2 Init](.cursor/skills/run-pipeline/SKILL.md)                                                     |
-| **Resume narrative**             | Gates and escalations live in `docs/sessions/<id>/current.md` (`GATE:`, `FAILURE:`, `MANUAL_GATE_CONTEXT:`, …) — pair with `--resume` per [run-pipeline reference — Resume](docs/run-pipeline-reference.md) |
-
-
-
-
-### `--manual` and step gates
-
-`--manual` enables **manual step gates** (orchestration pauses), **not** manual model assignment from `.cursor/models.user.yml` — [run-pipeline skill — Manual step gates](.cursor/skills/run-pipeline/SKILL.md#manual-step-gates---manual).
-
-
-| Topic                 | Behavior                                                                                                                                                                                                           |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Pause points**      | After the **plan segment** (plan ↔ plan-reviewer ↔ `Task(scrum)` **PROCEED**) **before** §5 implementation; **after each domain track** (implement → reviewer → `Task(scrum)`) **before** the next track or §7 QA. |
-| **Gate choices**      | **Proceed** / **Force review** (re-run the segment’s reviewer then scrum) / **Add context and review** (logged via `log-gate.sh`, injected into the next reviewer + scrum).                                        |
-| **vs default** `/run` | Default: parallel domains per phase when the spec allows; `--manual`: **sequential** tracks (e.g. dev → sre → data) within each phase.                                                                             |
-| `--review`            | Optional extra checkpoints — **orthogonal**; does **not** replace `--manual` gates.                                                                                                                                |
-| `--resume`            | If the run stopped **at** a manual gate, `--resume` **re-offers** that gate; otherwise continue after the last `GATE:` / `FAILURE:` in `current.md`.                                                               |
-
+Local-only; aggregates `docs/audit.log`, `docs/sessions/`, and optional `docs/usage-events.tsv`. Nothing leaves the machine.
 
 ---
-
-
 
 ## MCP configuration
 
-GitLab MCP is **stdio** `@zereight/mcp-gitlab` in **`~/.cursor/mcp.json`** (SCM API + PAT env) — [gitlab-cursor-workflow](docs/reference/gitlab-cursor-workflow.md). Other optional servers (Atlassian, Glean, ARC): [cursor-mcp](docs/reference/cursor-mcp.md), [glean](docs/reference/glean-cursor-workflow.md), [ARC](docs/reference/arc-mcp-workflow.md).
+- **Claude Code:** project-level `.mcp.json` is the shared, optional baseline (teams add/remove entries; empty by default — MCP is never required for the core flow).
+- **Cursor:** personal `~/.cursor/mcp.json` (or project `.cursor/mcp.json`) — see [cursor-mcp](docs/reference/cursor-mcp.md). GitLab MCP is typically stdio `@zereight/mcp-gitlab` — see [gitlab-cursor-workflow](docs/reference/gitlab-cursor-workflow.md).
+- Enterprise MCP access (GitLab, Atlassian, Glean, ARC) is **mediated** through the readonly `mcp-*` specialist subagents, scheduled only by the `/run` main session. Persona subagents never call enterprise MCP tools directly — they escalate with `REQUEST_MAIN: <specialist> <query>`.
+- Other integrations: [glean-cursor-workflow](docs/reference/glean-cursor-workflow.md), [ARC](docs/reference/arc-mcp-workflow.md).
 
 ---
-
-
 
 ## Models
 
-`[.cursor/models.yml](.cursor/models.yml)` vs `[.cursor/models.user.yml](.cursor/models.user.yml)` (`use_manual_models`). `[apply-models.sh](scripts/tools/apply-models.sh)`. [model-catalog](docs/model-catalog.md). Per-step swaps during `/run`: [run-pipeline reference](docs/run-pipeline-reference.md).
+**Claude Code:** the model per subagent is set in each agent's `model:` frontmatter — `inherit` (session model) for implementers/architects/debuggers, `haiku` (economy) for reviewers/validators/mechanical agents. There is no per-run model swapping under Claude Code.
+
+**Cursor:** optional dynamic per-step model overrides via `.cursor/models.yml` (team baseline) or `.cursor/models.user.yml` (`use_manual_models: true` for manual assignment) — applied by `scripts/tools/apply-models.sh`. Neither file is tracked by default; add them if your team wants per-step model control. See [model-catalog](docs/model-catalog.md).
 
 ---
 
+## Platform reference docs
 
-
-## Token efficiency
-
-Specs and session memory carry context; economy-tier models for mechanical agents — router **Model Selection**, [cost-tracking](docs/run-pipeline-reference.md#cost-tracking).
-
----
-
-
-
-## Cursor platform reference
-
-
-| Doc                                                | Topic             |
-| -------------------------------------------------- | ----------------- |
-| [cursor-agents](docs/reference/cursor-agents.md)   | Agents, Task tool |
-| [cursor-hooks](docs/reference/cursor-hooks.md)     | Hook schemas      |
-| [cursor-rules](docs/reference/cursor-rules.md)     | Rules, AGENTS.md  |
-| [cursor-skills](docs/reference/cursor-skills.md)   | SKILL.md format   |
-| [cursor-plugins](docs/reference/cursor-plugins.md) | Plugins           |
-| [cursor-mcp](docs/reference/cursor-mcp.md)         | MCP transports    |
-
+| Doc | Topic |
+|---|---|
+| [cursor-agents](docs/reference/cursor-agents.md) | Agents, Task tool, nested-chain caveats |
+| [cursor-hooks](docs/reference/cursor-hooks.md) | Hook schemas |
+| [cursor-rules](docs/reference/cursor-rules.md) | Rules, AGENTS.md |
+| [cursor-skills](docs/reference/cursor-skills.md) | SKILL.md format |
+| [cursor-plugins](docs/reference/cursor-plugins.md) | Plugins |
+| [cursor-mcp](docs/reference/cursor-mcp.md) | MCP transports |
+| [nested-task-audit](docs/reference/nested-task-audit.md) | Flat-orchestration audit, per-agent remediation |
 
 ---
-
-
 
 ## Rules of engagement
 
-1. Pass a **target directory** or **spec path** to agents.
-2. **Specs first** for planned work (except `/fix` / `/do`).
-3. Use **feature branches**; protected branches are guarded.
-4. **MCP is optional** — core flows use Cursor built-in tools.
-5. **Amend the spec** when scope grows (`/plan` on existing spec).
-6. Prefer **linked** skills and reference docs over duplicating procedure here.
+1. Pass a **ticket-folder path** or **Jira key** to `/run` (or a target directory to `/fix` / `/do`).
+2. **Ticket folder first** for planned work — `/prd` → `/spectech` → `/tasks` before implementation, except `/fix` / `/do`.
+3. Use **feature branches**; protected branches require explicit branch-name approval.
+4. **MCP is optional** — every persona works with local tools only.
+5. **Amend the ticket folder** when scope grows — re-run `/prd` (or `/spectech`/`/tasks`) over the existing folder with "changes," rather than starting a new one.
+6. Prefer **linked skills and reference docs** over duplicating procedure here.
 
 ---
 
-
-
 ## Extending the workspace
 
-Add agents under `.cursor/agents/`, skills under `.cursor/skills/`, hooks + `hooks.json`, rules under `.cursor/rules/`. [CONTRIBUTING](CONTRIBUTING.md), [upgrade](scripts/upgrade.sh).
+Add agents under `agentic/agents/`, skills under `agentic/skills/`, commands under `agentic/commands/`, hooks under `agentic/hooks/` (or the per-IDE `agentic/adapters/<ide>/hooks/`) — then reinstall with `scripts/setup-agentic.sh <claude|cursor|all>`. Project-specific overlays that should **not** become part of the shared framework stay directly in the IDE runtime dirs. See [CONTRIBUTING.md](CONTRIBUTING.md) and `scripts/upgrade.sh`.
 
 ---
 

@@ -11,7 +11,7 @@ alwaysApply: true
 
 ## Workspace Identity
 
-Company-wide Agentic Workspace for BMAD+SDD+GSD with self-healing review loops.
+Company-wide Agentic Workspace for spec-driven (SDD) development with self-healing review loops — staged and gated, not free-form chat. GSD (thin vertical slices) keeps each implementation phase small and independently testable.
 
 **Core principle:** Agents write code and configuration. Agents never deploy. Deployments are CI/CD only. Code ships through GitLab MRs.
 

@@ -1,6 +1,6 @@
 ---
 name: run-pipeline
-description: "Orchestrates the full BMAD+SDD pipeline when the user invokes /run — branch consent, worktrees, Task delegations to personas, gates, QA, summary. Use when the user runs /run with target dirs or a spec and optional flags."
+description: "Orchestrates the full SDD pipeline when the user invokes /run — branch consent, worktrees, Task delegations to personas, gates, QA, summary. Use when the user runs /run with target dirs or a spec and optional flags."
 disable-model-invocation: true
 ---
 

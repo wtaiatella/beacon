@@ -11,9 +11,9 @@
 
 ## Workspace Identity
 
-This is a company-wide Agentic Workspace for BMAD+SDD+GSD development with self-healing review loops. Spec-driven, token-efficient, dynamically gated.
+This is a company-wide Agentic Workspace for spec-driven (SDD) development with self-healing review loops: staged, gated, and token-efficient instead of free-form chat.
 
-BMAD frames delivery; SDD keeps specs authoritative; GSD ships thin vertical slices. Reviewers and `/scrum` close the loop at each gate.
+SDD keeps `prd.md` / `spectech.md` / `tasks.md` authoritative over scope, architecture, and acceptance — not chat history. GSD (thin vertical slices) keeps each implementation phase small and independently testable instead of one monolithic change. Reviewers and `/scrum` close the loop at every gate (plan segment, per-phase implementation, post-QA).
 
 **Core principle:** Agents write code and configuration. Agents never deploy. All deployments are handled by CI/CD. All code produced here is committed, pushed, and merged through GitLab MRs.
 
