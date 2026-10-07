@@ -10,7 +10,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SM="$ROOT/scripts/tools/session-memory.sh"
 AM="$ROOT/scripts/tools/apply-models.sh"
-MCP_JSON="$ROOT/.cursor/mcp.json"
 
 usage() {
   cat <<'EOF'
@@ -120,12 +119,10 @@ section "session-memory-lines: $LINE_COUNT"
 printf '%s\n' "$READ_OUT" | tail -n 80 || true
 
 section "=== knowledge-sources ==="
-ARC_PRESENT=0
-if [ -f "$MCP_JSON" ] && grep -q '"avatax-release-central"' "$MCP_JSON" 2>/dev/null; then
-  ARC_PRESENT=1
-fi
-section "arc-declared-in-mcp-json: $ARC_PRESENT"
-
+# ARC (AvaTax Release Central) was removed as a framework-level knowledge
+# source — generic pre-plan grounding now comes from the domain specialists
+# (system-design-specialist, etc.), and /kb's local knowledge/<dir>/ tree is
+# the only fallback this check still considers.
 KB_HIT=0
 # Bash 3.2 + set -u: "${TARGETS[@]}" is "unbound" when the array is empty — guard the loop.
 if [ "${#TARGETS[@]}" -gt 0 ]; then
@@ -143,14 +140,14 @@ elif [ "$KB_HIT" -eq 0 ]; then
   section "local-knowledge-index: none of the listed targets have knowledge/<dir>/_index.md"
 fi
 
-if [ "$ARC_PRESENT" -eq 0 ] && [ "${#TARGETS[@]}" -gt 0 ] && [ "$KB_HIT" -eq 0 ]; then
-  WARN_MSG="KNOWLEDGE_SOURCES: ARC not declared in .cursor/mcp.json and no knowledge/<dir>/_index.md for checked targets — configure ARC (see docs/reference/arc-mcp-workflow.md) or add a local knowledge tree."
+if [ "${#TARGETS[@]}" -gt 0 ] && [ "$KB_HIT" -eq 0 ]; then
+  WARN_MSG="KNOWLEDGE_SOURCES: no knowledge/<dir>/_index.md for checked targets — run /kb to build one, or rely on pre-plan domain specialists for per-ticket grounding instead."
   "$SM" write "$WARN_MSG" || exit 1
   section "session-memory-write: KNOWLEDGE_SOURCES (warning line appended)"
-elif [ "$ARC_PRESENT" -eq 0 ] && [ "${#TARGETS[@]}" -eq 0 ]; then
+elif [ "${#TARGETS[@]}" -eq 0 ]; then
   section "knowledge-warning: not emitted (no --targets to evaluate local KB)"
 else
-  section "knowledge-warning: not emitted (ARC or local KB satisfied)"
+  section "knowledge-warning: not emitted (local KB satisfied)"
 fi
 
 section "=== pipeline-init-status ==="

@@ -113,8 +113,9 @@ flowchart TD
 
     subgraph RO["Readonly specialists — only the orchestrator schedules Task(...)"]
         PT[pre-plan-triage]
-        W1["Wave 1: Task(mcp-glean) · Task(mcp-arc)"]
-        W2["Wave 2: Task(mcp-jira) · Task(mcp-confluence) · Task(mcp-gitlab)"]
+        DS["Domain specialists: system-design · database ·<br/>frontend · security · testing-observability"]
+        RP["repro-specialist (bug: always; else agent's judgment)"]
+        W2["Optional, gated: Task(mcp-jira) · Task(mcp-confluence) · Task(mcp-glean)"]
         CE[codebase-explorer]
         SV[spec-validator]
         SS[security-scanner]
@@ -142,7 +143,7 @@ flowchart TD
     MA -->|Task slice| IMPL
     MA -->|Task| QA
 
-    PT & W1 & W2 --> PP
+    PT & DS & RP & W2 --> PP
     CE & SV & SS & PR --> AR
 
     MA -->|"Task(do) after scrum PROCEED"| QTP
@@ -155,7 +156,7 @@ flowchart TD
 
 ## Pipeline state machine (`/run`)
 
-**§1** repo/branch awareness (read-only; soft "switch for analysis or stay?" prompt — **not** a hard gate) → **§2** `pipeline-init.sh` → **Pre-plan** (optional MCP: Wave 1 Glean/ARC → merge + gate → Wave 2 Jira/Confluence/GitLab) → **§3–4** `Task(prd)` → `Task(spectech)` → `Task(tasks)`, then `plan-reviewer` (folder mode) ↔ `Task(scrum)` self-heal loop → **§5 pre-check** (hard branch gate: protected branch? stop — abort / stay / create + approve a name; default **no worktree**, plain checkout) → **§5** per-phase implementation (`Task(dev|sre|data)`) → **§6** implementation review (`*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or on REWORK) → **§7.0** QA prep (`spec-validator` + `security-scanner`) → **§7** `Task(qa)` → **§7.1** final `Task(scrum)` → **§8** `Task(summary)` → **§9** `pipeline-finish.sh` (commit / push / MR prompts).
+**§1** repo/branch awareness (read-only; soft "switch for analysis or stay?" prompt — **not** a hard gate) → **§2** `pipeline-init.sh` → **Pre-plan** (domain specialists + repro, always; optional Jira/Confluence/Glean only if registered + signaled) → **§3–4** `Task(prd)` → `Task(spectech)` → `Task(tasks)`, then `plan-reviewer` (folder mode) ↔ `Task(scrum)` self-heal loop → **§5 pre-check** (hard branch gate: protected branch? stop — abort / stay / create + approve a name; default **no worktree**, plain checkout) → **§5** per-phase implementation (`Task(dev|sre|data)`) → **§6** implementation review (`*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or on REWORK) → **§7.0** QA prep (`spec-validator` + `security-scanner`) → **§7** `Task(qa)` → **§7.1** final `Task(scrum)` → **§8** `Task(summary)` → **§9** `pipeline-finish.sh` (commit / push / MR prompts).
 
 **Why the branch gate sits at §5, not §1:** `/prd` → `/spectech` → `/tasks` only write the ticket folder (`docs/specs/<ticket>/…`, gitignored) — there's no risk in drafting the spec while the working repo is on its protected/default branch, and that's often the *correct* branch to analyze from. The first actual write to the working repo is §5, so that's where the hard gate (and branch-name approval) belongs. Worktrees are **opt-in only** — the default is a single checkout on whichever branch the §5 gate resolves.
 
@@ -181,20 +182,22 @@ stateDiagram-v2
         session snapshot, memory read
     end note
 
-    PreTriage --> Wave1 : Task(pre-plan-triage)
-    Wave1 --> MergeGate : Wave 1 or skip
-    note right of Wave1
-        Pre-plan context (optional MCP)
-        Wave 1: Task(mcp-glean), Task(mcp-arc)
-        only if triage lists them
+    PreTriage --> DomainWave : Task(pre-plan-triage)
+    DomainWave --> EnterpriseWave : domain specialists + repro (parallel)
+    note right of DomainWave
+        Pre-plan (domain specialists +
+        optional MCP) — always: system-design,
+        database, frontend, security,
+        testing-observability (as relevant),
+        repro-specialist (bug: always)
     end note
 
-    MergeGate --> Wave2 : merge + gate
-    Wave2 --> PrdSpectechTasks : Wave 2 or skip
-    note right of Wave2
-        Wave 2: Task(mcp-jira),
-        Task(mcp-confluence), Task(mcp-gitlab)
-        when gated; merged-brief → §3
+    EnterpriseWave --> PrdSpectechTasks : merged-brief → §3
+    note right of EnterpriseWave
+        Jira/Confluence/Glean — ONLY if
+        registered in docs/workspace-tools.md
+        (via /setup-workspace) AND signaled
+        by the ticket. Empty is the default.
     end note
 
     PrdSpectechTasks --> BranchGate : §4 plan-reviewer pass, scrum PROCEED
@@ -309,7 +312,8 @@ docs/sessions/
     ├── session.code-workspace # optional: generated multi-root workspace
     ├── pre-plan/
     │   ├── merged-brief.md
-    │   └── specialists/       # glean, arc, jira, confluence, gitlab + mid-run files
+    │   └── specialists/       # system-design, database, frontend, security,
+    │                          # testing-observability, repro + optional jira/confluence/glean
     └── artifacts/
         ├── explorer/          # Task(codebase-explorer) reports
         ├── scanners/          # §7.0 spec-validator, security-scanner
@@ -368,7 +372,7 @@ Orchestration and `Task(do)` call **allowlisted** scripts only — not raw arbit
 | `/qa` | QA and security lead — cross-domain review report; blocks on Critical/High. | `qa` |
 | `/scrum` | PO / SM / PM gate — PROCEED / REWORK / ASK_USER / ESCALATE at every gate. | `scrum` (read-only) |
 | `/summary` | Post-pipeline handoff narrative — `summary.md`. | `summary` |
-| `/kb` | Local knowledge-base builder (fallback when ARC MCP isn't onboarded). | `kb` |
+| `/kb` | Optional, persistent cross-ticket knowledge-base builder (complements the per-ticket pre-plan domain specialists). | `kb` |
 | `/fix` | **Escape hatch** — debugger for a target dir + symptom, outside the full pipeline. | `fix` |
 | `/do` | **Escape hatch** — ad-hoc operator; mechanical work via the Zero-Trust script API. | `do` |
 | `/clone` | Utility — register a child repo in the multi-repo inventory. | — (thin command) |
@@ -432,8 +436,8 @@ Local-only; aggregates `docs/audit.log`, `docs/sessions/`, and optional `docs/us
 
 - **Claude Code:** project-level `.mcp.json` is the shared, optional baseline (teams add/remove entries; empty by default — MCP is never required for the core flow).
 - **Cursor:** personal `~/.cursor/mcp.json` (or project `.cursor/mcp.json`) — see [cursor-mcp](docs/reference/cursor-mcp.md). GitLab MCP is typically stdio `@zereight/mcp-gitlab` — see [gitlab-cursor-workflow](docs/reference/gitlab-cursor-workflow.md).
-- Enterprise MCP access (GitLab, Atlassian, Glean, ARC) is **mediated** through the readonly `mcp-*` specialist subagents, scheduled only by the `/run` main session. Persona subagents never call enterprise MCP tools directly — they escalate with `REQUEST_MAIN: <specialist> <query>`.
-- Other integrations: [glean-cursor-workflow](docs/reference/glean-cursor-workflow.md), [ARC](docs/reference/arc-mcp-workflow.md).
+- Enterprise MCP access (GitLab, Jira, Confluence, Glean) is **mediated** through the readonly `mcp-*` specialist subagents, scheduled only by the `/run` main session. Persona subagents never call enterprise MCP tools directly — they escalate with `REQUEST_MAIN: <specialist> <query>`. Jira/Confluence/Glean are **optional, opt-in** pre-plan sources — register them via `/setup-workspace`; the default, always-available pre-plan grounding comes from the local domain specialists instead (no MCP required).
+- Other integrations: [glean-cursor-workflow](docs/reference/glean-cursor-workflow.md).
 
 ---
 

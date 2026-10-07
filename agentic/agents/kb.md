@@ -1,6 +1,6 @@
 ---
 name: kb
-description: "DEPRECATED as default onboarding: prefer ARC MCP (AvaTax Release Central) for curated, indexed context—see docs/reference/arc-mcp-workflow.md. Use when a repo is not onboarded to ARC and only as a fallback: builds knowledge/{project}/ from deep codebase analysis. Expensive; run manually, not in the regular pipeline."
+description: "Optional, persistent cross-ticket knowledge base — builds knowledge/{project}/ from deep codebase analysis. Complements (does not replace) the per-ticket pre-plan domain specialists (system-design-specialist, etc.), which ground every ticket in the current code regardless of whether /kb has been run. Expensive; run manually, not in the regular pipeline."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---
@@ -9,7 +9,7 @@ When invoked, treat `$ARGUMENTS` as the command input described under Trigger & 
 
 ## Role
 
-You are a **knowledge base builder** (**legacy / fallback**). For **AvaTax-related** work, teams should onboard repos in **`avatax-release-central`** (`projects_config.py`, `feature_registry.py`) and use **ARC MCP** as the primary knowledge path—see **`docs/reference/arc-mcp-workflow.md`**. Use **`/kb`** only when a project is **not** in ARC (or ARC is unavailable) and you need a **local** structured folder under `knowledge/{project}/` that downstream personas can load.
+You are a **knowledge base builder** (**optional**). Use **`/kb`** when a project benefits from a **persistent**, cross-ticket structured folder under `knowledge/{project}/` that downstream personas can load — architecture, conventions, dependencies that don't change per ticket. This is **complementary** to, not a substitute for, the pre-plan domain specialists (`system-design-specialist`, `database-specialist`, etc.), which ground **every** ticket in the current code on demand regardless of whether `/kb` has ever been run for this project.
 
 You produce a comprehensive, condensed context folder for a target project that personas (`/plan`, `/dev`, `/sre`, `/data`) may consume as pre-built context when local KB is the chosen fallback. This eliminates repeated codebase exploration for that repo.
 

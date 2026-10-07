@@ -1,6 +1,6 @@
 ---
 name: setup-workspace
-description: "Interactive workspace tool registry builder. Probes each MCP server declared in .mcp.json, discovers workspace-relevant context through AI-driven exploration, asks the user only what matters, and writes docs/workspace-tools.md. Consumed by pre-plan-triage to enhance wave routing automatically."
+description: "Interactive workspace tool registry builder. Probes each MCP server declared in .mcp.json, discovers workspace-relevant context through AI-driven exploration, asks the user only what matters, and writes docs/workspace-tools.md. Also lets the user register custom domain specialists (beyond the 5 built-ins) for the pre-plan wave. Consumed by pre-plan-triage to enhance wave routing automatically."
 ---
 
 # Workspace Tool Registry — Setup Skill
@@ -9,8 +9,11 @@ description: "Interactive workspace tool registry builder. Probes each MCP serve
 
 Build or incrementally update `docs/workspace-tools.md` — the workspace-level registry of
 available MCP tools, their access status, and workspace-specific context (e.g. which Figma
-project, which Confluence space). Once registered, `pre-plan-triage` uses this context to route
-pre-plan waves with specificity, without the user having to repeat it in every prompt.
+project, which Confluence space) **plus** any custom **domain specialists** the team wants
+available to the pre-plan wave beyond the 5 built-ins (`system-design`, `database`, `frontend`,
+`security`, `testing-observability`) — e.g. a "payments-domain" or "tax-compliance" specialist
+specific to this project. Once registered, `pre-plan-triage` uses this context to route pre-plan
+waves with specificity, without the user having to repeat it in every prompt.
 
 ## Execution context
 
@@ -22,10 +25,11 @@ and remind them to re-run `/setup-workspace <name>` when a tool's config changes
 
 ## Trigger & Input
 
-- **Trigger:** `/setup-workspace [server-name ...]` — arrives as `$ARGUMENTS`.
+- **Trigger:** `/setup-workspace [server-name ... | --specialist <name>] [--reset]` — arrives as `$ARGUMENTS`.
 - **No args:** run setup for **all** servers declared in `.mcp.json`.
-- **With names:** re-run only the listed servers (incremental update).
-- **`--reset`:** wipe the registry and start fresh for all servers.
+- **With server names:** re-run only the listed servers (incremental update).
+- **`--specialist <name>`:** register or update **one** custom domain specialist instead of an MCP server — see **Step 2 — Domain specialists**. May be combined with server names in the same invocation; each is handled by its own step.
+- **`--reset`:** wipe the registry and start fresh for all servers **and** registered specialists.
 
 ## Toolbox
 
@@ -142,29 +146,49 @@ Print a one-line confirmation: "✓ [server-name] registered."
 
 ---
 
-### Step 2 — Final report
+### Step 2 — Domain specialists (optional, `--specialist <name>`)
 
-After all servers, print a summary table:
+Only runs when the user passes `--specialist <name>` (or asks, in conversation, to add a
+project-specific pre-plan specialist). This has nothing to do with MCP servers — it registers a
+**custom** agent the team wants available to the pre-plan wave alongside the 5 built-ins
+(`system-design`, `database`, `frontend`, `security`, `testing-observability`).
+
+1. **Ask what it's for**, in plain language: "What should the `<name>` specialist ground tickets
+   in? (e.g. 'payments domain rules', 'tax compliance constraints')" — one short sentence is
+   enough; this becomes `Suggested use`.
+2. **Ask whether an agent file already exists** for it under `agentic/agents/<name>-specialist.md`
+   (or a project overlay path). If not, tell the user this registry entry alone does **not**
+   create the agent — it only tells `pre-plan-triage` to consider it; the agent file itself must
+   exist (point them at an existing domain specialist, e.g. `system-design-specialist.md`, as a
+   template: read-only, never proposes a solution, same bounded-output contract).
+3. **Write the entry** — see **Registry format** below (`## specialist: <name>`).
+4. Print: "✓ specialist `<name>` registered. `pre-plan-triage` will consider it starting next `/run`."
+
+### Step 3 — Final report
+
+After all servers and specialists, print a summary table:
 
 ```
-| Tool           | Status      | Key config                        |
-|----------------|-------------|-----------------------------------|
-| figma          | verified ✓  | Project: "BR Tax UI Design"       |
-| confluence     | verified ✓  | Space: BR-TAX                     |
-| glean          | verified ✓  | No workspace config needed        |
-| arc            | not accessible ✗ | Auth error — check .mcp.json |
+| Tool / specialist | Kind       | Status      | Key config                  |
+|--------------------|-----------|-------------|------------------------------|
+| figma              | mcp       | verified ✓  | Project: "BR Tax UI Design"  |
+| confluence         | mcp       | verified ✓  | Space: BR-TAX                |
+| glean              | mcp       | verified ✓  | No workspace config needed   |
+| payments-domain    | specialist| registered  | Grounds tickets in payments  |
 ```
 
 Then remind:
 > "Registry saved to `docs/workspace-tools.md`. Re-run `/setup-workspace <name>` anytime to
-> update a specific tool. The registry is read automatically by pre-plan-triage on every `/run`."
+> update a specific tool, or `/setup-workspace --specialist <name>` to update a specialist entry.
+> The registry is read automatically by pre-plan-triage on every `/run`."
 
 ---
 
 ## Registry format (`docs/workspace-tools.md`)
 
-Free-form Markdown. The file starts with a header block, then one `## <server-name>` section
-per registered server. Required fields per section; everything else is free-form.
+Free-form Markdown. The file starts with a header block, then one section per registered
+**MCP server** (`## <server-name>`) or registered **domain specialist**
+(`## specialist: <name>`). Required fields per section; everything else is free-form.
 
 ```markdown
 # Workspace Tools Registry
@@ -182,9 +206,16 @@ _Last updated: <YYYY-MM-DD> · Updated by: /setup-workspace_
 - Discovered files / projects / spaces (list only what's relevant)
 - User's selected primary resource (name + URL/key if applicable)
 - Any notes about scope or limitations
+
+---
+
+## specialist: <name>
+
+- **Agent file:** agentic/agents/<name>-specialist.md   ← or a project overlay path
+- **Suggested use:** <one sentence: when pre-plan-triage should include this specialist>
 ```
 
-**Required field semantics:**
+**Required field semantics (MCP server sections):**
 
 | Field | Values | Purpose |
 |---|---|---|
@@ -192,10 +223,21 @@ _Last updated: <YYYY-MM-DD> · Updated by: /setup-workspace_
 | `Access` | `yes` / `no` | Whether the tool responded |
 | `Suggested use` | one sentence | Consumed by pre-plan-triage to decide if wave applies |
 
+**Required field semantics (specialist sections):**
+
+| Field | Values | Purpose |
+|---|---|---|
+| `Agent file` | path | Where `pre-plan-triage` / the orchestrator finds the agent to delegate `Task(...)` to |
+| `Suggested use` | one sentence | Consumed by `pre-plan-triage` to decide if this ticket needs it |
+
+There is no `Status`/`Access` for a specialist entry — unlike MCP servers, there's nothing to
+health-check; the entry either exists (and its agent file is assumed to exist) or it doesn't.
+
 **Suggested use examples (adapt to what was discovered):**
 - "Activate when PRD involves UI, screens, or component design in br-tax-ui."
 - "Activate when ticket involves Migrate Standard integration or ISS retention rules."
 - "Activate for broad enterprise knowledge search when ticket context is ambiguous."
+- *(specialist)* "Activate when the ticket touches payment processing or billing cycles."
 
 ---
 
@@ -212,3 +254,4 @@ _Last updated: <YYYY-MM-DD> · Updated by: /setup-workspace_
   leave others unchanged.
 - **If `docs/` does not exist**, create it before writing.
 - **Source annotation** — in each registry entry, note whether the server came from `global` or `project` config. This helps the user know where to edit if they want to remove a server.
+- **Specialist entries never fabricate an agent.** Registering `## specialist: <name>` only tells `pre-plan-triage` to consider it; this skill does **not** create `agentic/agents/<name>-specialist.md` for the user. If the file doesn't exist yet, say so plainly and point at an existing domain specialist as a template.

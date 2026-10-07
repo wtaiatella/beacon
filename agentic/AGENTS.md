@@ -153,6 +153,17 @@ and responsibilities below are shared.)
 | data-reviewer | Data quality reviewer | /run (after /data) |
 | pre-plan-triage | Pre-plan context router | /run (before the PRD/Spectech/Tasks segment) |
 
+**Pre-plan domain specialists (read-only; the default, always-available pre-plan grounding — no MCP/config required):**
+
+| Name | Role | Used By |
+|------|------|---------|
+| system-design-specialist | Architecture grounding (modules/boundaries touched; root-cause for bugs) | /run pre-plan wave |
+| database-specialist | Persistence grounding (tables/migrations/constraints) | /run pre-plan wave, when ticket touches data |
+| frontend-specialist | UI grounding (framework/state/components) | /run pre-plan wave, when ticket touches UI |
+| security-specialist | Threat-surface grounding (auth/input/sensitive data) | /run pre-plan wave, when ticket crosses a security boundary |
+| testing-observability-specialist | Test/log/metric **gap** finding for planning (distinct from QA's verification role) | /run pre-plan wave |
+| repro-specialist | Empirical reproduction (always for bug tickets; agent's own judgment otherwise); shares its procedure with `/fix` via the `repro` skill | /run pre-plan wave |
+
 **Front-end personas (write-capable):**
 
 | Name | Role | Used By |
@@ -161,10 +172,14 @@ and responsibilities below are shared.)
 | spectech | Technical specification designer | /spectech command |
 | tasks | Task breakdown specialist | /tasks command |
 
-**Enterprise MCP specialists (read-only):** `mcp-arc`, `mcp-confluence`, `mcp-gitlab`, `mcp-jira`,
-`mcp-glean`. Persona subagents must **not** call enterprise MCP tools directly; they emit a
-`REQUEST_MAIN:` escalation with a specialist label and query, and the main loop runs the matching
-`mcp-*` subagent and feeds the bounded result back.
+**Enterprise MCP specialists (read-only, optional/opt-in — not default pre-plan sources):**
+`mcp-confluence`, `mcp-jira`, `mcp-glean` are only scheduled by `pre-plan-triage` when **both**
+registered with `Access: yes` in `docs/workspace-tools.md` (via `/setup-workspace`) **and**
+signaled by the ticket text — a fresh workspace schedules none of them by default, which is
+correct, not degraded. `mcp-gitlab` is not a pre-plan source at all; it's invoked mid-run for
+branch/MR metadata. Persona subagents must **not** call enterprise MCP tools directly; they emit
+a `REQUEST_MAIN:` escalation with a specialist label and query, and the main loop runs the
+matching `mcp-*` subagent and feeds the bounded result back.
 
 > **Flat orchestration (a runtime constraint, not just a convention):** subagents cannot spawn
 > further subagents. Only the **main conversation loop** schedules the next delegation — it invokes
@@ -258,16 +273,16 @@ See the `bcs-ticket-workflow` skill for the full `_state.json` schema, `_notes.m
 
 ## Knowledge Base
 
-**Preferred source of curated context is ARC MCP (AvaTax Release Central)** — see `docs/reference/arc-mcp-workflow.md`. `/prd` uses ARC first when configured (in-session, standalone use — see the `run-pipeline` skill's ARC lanes). The local `/kb` knowledge base below is the **fallback** for repos not onboarded to ARC.
-
-> **Note:** ARC is Avalara-specific and is being phased out of the core pre-plan flow in favor of
-> generic, codebase-grounded pre-plan specialists — see
-> `myDocs/specs/2026-10-06-generic-pre-plan-specialists.md` if that migration has landed yet in
-> your checkout. Until then, this section reflects current behavior.
+**Per-ticket grounding comes from the pre-plan domain specialists** (`system-design-specialist`,
+`database-specialist`, `frontend-specialist`, `security-specialist`,
+`testing-observability-specialist`) — always available, no MCP, no setup, read the current code
+on demand for every ticket. The local `/kb` knowledge base below is a **separate, optional**
+mechanism for **persistent, cross-ticket** context (architecture overview, conventions) that
+doesn't change per ticket — it complements, not replaces, the domain specialists.
 
 Structured project context at `knowledge/{project-name}/` (tracked in git, shared across the team).
 - Folder per project: `_index.md` (always loaded, ~50 lines) + section files loaded on demand (architecture, api, data-models, dependencies, infrastructure, conventions)
-- Built by `/kb <target-dir>` — expensive, manual, full-rebuild-per-project. Run on first onboarding or after major restructuring.
+- Built by `/kb <target-dir>` — optional, somewhat expensive, manual, full-rebuild-per-project. Run on first onboarding or after major restructuring.
 - **Incremental, multi-repo-aware refresh:** `/kb-refresh` (standalone) — for every child repo, pulls the main branch and diff-classifies what changed to decide which `knowledge/{project}/` need updating; distinct from `/kb`'s manual full rebuild.
 - **Cross-repo, system-level view:** `/kb-concentrator` (standalone) — maintains `knowledge/global-kb/`, the aggregated view of how projects call into each other (end-to-end flows, integration boundaries). Typically chained after `/kb-refresh`.
 - Consumed by `/prd` (loads index + relevant sections, falls back to codebase-explorer if KB absent)
@@ -283,6 +298,8 @@ paths). Project overlay skills are named `bcs-*` and kept outside `agentic/`.
 - **generate-prd** / **generate-spectech** / **generate-tasks** — the `/prd`/`/spectech`/`/tasks` personas' normative document templates, adapted to read/write `_state.json`+`_notes.md`
 - **prd-validator** / **prd-discovery** — supporting skills for `/prd` (implicit-requirements/scope validation; brainstorm phase), adapted to the same control-file contract
 - **generate-spec** — retained only as a reference for `plan-reviewer.md`'s single-file-mode completeness check (unchanged persona, FR-7); nothing in this repo produces single-file specs anymore
+- **spectech-analyzer** — /spectech (reuses pre-plan domain specialist briefs before re-scanning the codebase; combines test-harness-analyzer + architecture-detailer)
+- **repro** — shared reproduce-the-symptom procedure, used by both `/fix` and the pre-plan `repro-specialist` so there is one implementation, not two
 - **review-report** — /qa (structured QA + security narrative)
 - **deploy-checklist** — /sre (CI/CD coverage checklist, 5-tier: dev/qa/int/sbx/prd)
 - **confidence-scoring** — reviewers + /scrum (per-domain weights, sub-scores, trend analysis, calibration)
@@ -333,7 +350,7 @@ Aggregates data from `docs/audit.log`, `docs/sessions/`, and optional `docs/usag
 
 Servers are configured per-IDE (see your adapter file); teams add or remove them as needed. All personas work without MCP — it is never required for the core flow.
 
-Enterprise MCP access is **mediated through the read-only `mcp-*` specialist subagents** (`mcp-arc`, `mcp-confluence`, `mcp-gitlab`, `mcp-jira`, `mcp-glean`), scheduled only by the main loop. Persona subagents never call enterprise MCP tools directly; they escalate with `REQUEST_MAIN: <specialist> <query>` and the main loop runs the matching specialist. When ARC MCP is configured, `/prd` prefers it for AvaTax/project/schema context.
+Enterprise MCP access is **mediated through the read-only `mcp-*` specialist subagents** (`mcp-confluence`, `mcp-gitlab`, `mcp-jira`, `mcp-glean`), scheduled only by the main loop. Persona subagents never call enterprise MCP tools directly; they escalate with `REQUEST_MAIN: <specialist> <query>` and the main loop runs the matching specialist. `mcp-confluence`/`mcp-jira`/`mcp-glean` are **optional, opt-in** pre-plan sources (registered via `/setup-workspace`, gated by `pre-plan-triage` — see **Pipeline**); `mcp-gitlab` is used mid-run for branch/MR metadata, not as a pre-plan source.
 
 ## Error Protocol
 

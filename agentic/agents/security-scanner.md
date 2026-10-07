@@ -30,7 +30,7 @@ If the security pass **requires** **external** evidence (e.g. org incident write
 
 **Main agent: run `Task(mcp-…)` for the needed specialist output, attach it to the next `Task(security-scanner)` prompt, then retry.**
 
-Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`**, or **`Task(mcp-arc)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
+Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
 
 ## Guardrails
 

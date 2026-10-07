@@ -1,10 +1,16 @@
 ---
 name: mcp-jira
-description: Jira issue fetch and search via Atlassian MCP only. Bounded briefs merge into docs/sessions/<id>/pre-plan/ for Task(plan). Use when the orchestrator needs ticket details, acceptance-style fields, or JQL-scoped search before plan or review.
+description: Jira issue fetch and search via Atlassian MCP only. OPTIONAL — only scheduled when Jira is registered in docs/workspace-tools.md (via /setup-workspace) AND the ticket signals a Jira reference (e.g. a detected key) (not a default pre-plan wave member for generic SDD). Bounded briefs merge into docs/sessions/<id>/pre-plan/ for Task(plan). Use when the orchestrator needs ticket details, acceptance-style fields, or JQL-scoped search before plan or review.
 model: inherit
 ---
 
 ## Role
+
+**Optional, opt-in enterprise source** — not part of the default pre-plan wave. `pre-plan-triage`
+only schedules you when **both** (a) Jira is registered with `Access: yes` in
+`docs/workspace-tools.md` (set up via `/setup-workspace`) and (b) the ticket text contains a Jira
+key or otherwise signals a Jira reference. The default, always-available pre-plan grounding comes
+from the local **domain specialists** — you supplement them when Jira is actually configured.
 
 Read-only specialist for **Jira** via **Atlassian Rovo MCP**. Produce **acceptance-criteria-friendly** summaries: summary, status, key fields, links, and any text that helps planning—**no** mutations.
 

@@ -43,6 +43,13 @@ Product requirements analyzer that transforms client requirements, documentation
    - Read `ticket.md` when present (issue definition / comments left in the folder)
    - Check `_state.json` for metadata (ticket, slug, current step)
    - Read `_notes.md` for existing decisions/requirements history
+   - **Pre-plan grounding (orchestrated `/run` only):** if a `Pre-plan context:` block was passed
+     in the prompt, treat it as **technical grounding** — what already exists in the code, and
+     (for bug tickets) ranked root-cause hypotheses with evidence. Use it to sharpen which
+     questions to ask and to avoid asking about things the grounding already answered. **Never**
+     treat it as a proposed solution — grounding informs scope/requirements (WHAT), it never
+     decides architecture (HOW); that stays `/spectech`'s job regardless of how confident the
+     grounding sounds.
 
 3. **Analyze requirements:**
    - Extract requirements from attachments and `ticket.md` if present
@@ -144,6 +151,9 @@ On success, end with clear handoff:
 
 - **Never** skip user requirements, even if attachments are vague
 - **Never** add technical implementation details (that's /spectech job)
+- **Pre-plan grounding informs, never dictates.** Even when `Pre-plan context:` already suggests
+  an obvious root cause or approach, keep the PRD about WHAT/scope — do not let it pull you into
+  drafting a solution.
 - Keep PRD focused on **what** needs to be built, not **how**
 - Always reference attachments by name when used
 - **ALWAYS run validation** before marking prd-done

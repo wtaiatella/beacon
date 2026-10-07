@@ -1,19 +1,23 @@
 ---
 name: knowledge-base
-description: "DEPRECATED for new projects in favor of ARC MCP (AvaTax Release Central)—see docs/reference/arc-mcp-workflow.md. Retained for output structure when /kb is used as a fallback for repos not onboarded to ARC. Defines knowledge/{project}/ layout and conventions."
+description: "Optional, persistent cross-ticket knowledge base. Defines knowledge/{project}/ layout and conventions. Complements (does not replace) the per-ticket pre-plan domain specialists, which ground every ticket in the current code regardless of whether this has been built."
 ---
 
 # Knowledge Base
 
-**Status:** For **new** AvaTax-related projects, prefer **ARC MCP** and Release Central onboarding over building a local tree. This skill documents the **legacy local** format for **fallback** maintenance and for repos outside ARC.
+**Status:** Optional. Build this when a project benefits from a **persistent**, cross-ticket
+structured tree (architecture, conventions, dependencies) — not required for day-to-day ticket
+work, since the pre-plan **domain specialists** (`system-design-specialist`, `database-specialist`,
+etc.) already ground every ticket in the current code on demand, with or without this tree.
 
 ## When to Use
 
-- When running **`/kb`** for a repo **not** onboarded to ARC (or as an explicit local fallback)
+- When running **`/kb`** on first onboarding of a project, or after major restructuring
 - When refreshing an existing **local** knowledge base after major restructuring (rare)
-- When **`/summary`** runs with **`KNOWLEDGE_LOCAL_PATCH=1`** or explicit user request to patch local section files (legacy only—not the default)
+- When **`/summary`** runs with **`KNOWLEDGE_LOCAL_PATCH=1`** or explicit user request to patch local section files (not the default)
 
-The output is a set of structured markdown files that downstream agents (`/plan`, `/dev`, `/sre`, `/data`, `/qa`) may load selectively when **local** `knowledge/{project}/` is in use alongside or instead of ARC.
+The output is a set of structured markdown files that downstream agents (`/spectech`, `/dev`,
+`/sre`, `/data`, `/qa`) may load selectively when **local** `knowledge/{project}/` is in use.
 
 ## Output location and naming
 
@@ -80,8 +84,9 @@ Each section follows the structure described below. Keep them focused:
 
 ## Update model
 
-1. **Primary (AvaTax / Release Central):** Onboard repos in **`avatax-release-central`** and use **ARC MCP** for curated search—see **`docs/reference/arc-mcp-workflow.md`**. No local folder required for that path.
-2. **Full local build (`/kb`):** Expensive fallback when ARC is not used. Run manually on first onboarding or after major restructuring. Not part of the regular pipeline.
+**Full local build (`/kb`):** Optional, somewhat expensive. Run manually on first onboarding or
+after major restructuring. Not part of the regular pipeline — per-ticket grounding comes from the
+pre-plan domain specialists regardless of whether this tree exists.
 3. **Incremental local patch (`/summary`, legacy):** Only when **`KNOWLEDGE_LOCAL_PATCH=1`** or the user explicitly asks; otherwise **`/summary`** does **not** patch local KB by default.
 
 ## Quality guidelines

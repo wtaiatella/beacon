@@ -13,6 +13,18 @@ description: "Codebase analyzer that proposes testing patterns and architecture 
 
 Output: Analysis report with recommended patterns + guidelines
 
+## Reuse pre-plan grounding before re-scanning
+
+Under orchestrated `/run`, the pre-plan wave already produced domain specialist briefs
+(`docs/sessions/<session-id>/pre-plan/specialists/{system-design,database,frontend,security,
+testing-observability}.md`, merged into `pre-plan/merged-brief.md`) **before** `/spectech` ever
+runs — they contain the architectural map, data-model touchpoints, existing conventions, and
+test/observability gaps for this ticket's area, gathered read-only, WHAT-before-HOW. **Read these
+first.** They typically cover most of Phase 1 and Phase 2 below already. Run the scans in Phase 1/
+Phase 2 only to **fill gaps** the briefs didn't cover, or in full when no pre-plan briefs exist
+(standalone `/spectech`, or `--skip plan` was used). Never discard available grounding and
+re-derive everything from zero — that duplicates work the ticket already paid for in pre-plan.
+
 ## Two-Phase Analysis
 
 ### Phase 1: Test Harness Analysis

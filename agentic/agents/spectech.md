@@ -35,7 +35,15 @@ Technical specification designer that transforms product requirements into detai
      the collision per `bcs-ticket-workflow`'s AC-1 regression guard
 
 2. **ANALYZE CODEBASE (Critical Step - First):**
-   - Run spectech-analyzer skill
+   - **Reuse before re-scanning:** check whether pre-plan domain specialist briefs already exist
+     for this ticket (`docs/sessions/<session-id>/pre-plan/specialists/{system-design,database,
+     frontend,security,testing-observability}.md`, or the merged `pre-plan/merged-brief.md`).
+     When present, they already cover much of what `spectech-analyzer` would otherwise re-derive
+     from scratch (architecture map, data model touchpoints, existing conventions, test/
+     observability gaps) — feed them into the skill as a starting point instead of discarding
+     them and scanning the whole codebase again.
+   - Run spectech-analyzer skill (fills **gaps** the pre-plan briefs didn't cover, or does the
+     full scan when no pre-plan briefs exist — e.g. standalone `/spectech` without `/run`)
    - Identify test patterns in existing codebase
      - Test frameworks, organization, naming conventions
      - Test layers: unit, integration, E2E
