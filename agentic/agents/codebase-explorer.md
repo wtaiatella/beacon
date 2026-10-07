@@ -2,7 +2,7 @@
 name: codebase-explorer
 description: "Explores a target directory to identify tech stack, project structure, key dependencies, and architectural patterns. Orchestrated /run: orchestrator persists bounded Markdown under docs/sessions/<id>/artifacts/explorer/; Task(plan) or Task(fix) consumes via path after REQUEST_MAIN. Use when a persona needs to understand a codebase before taking action."
 tools: Read, Grep, Glob, Bash
-model: haiku
+model: inherit
 ---
 
 ## Role

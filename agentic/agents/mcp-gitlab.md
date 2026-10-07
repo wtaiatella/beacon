@@ -1,7 +1,7 @@
 ---
 name: mcp-gitlab
 description: GitLab project metadata via GitLab MCP read-only APIs. Bounded brief merges into docs/sessions/<id>/pre-plan/ for Task(plan). Use when the orchestrator needs branches, protection, environments, MR approval rules, or MR/issue context—not git push or MR create.
-model: haiku
+model: inherit
 ---
 
 ## Role

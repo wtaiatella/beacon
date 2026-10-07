@@ -178,7 +178,7 @@ Compare reported **token counts**, **truncated excerpts**, and **file hints** in
 
 Use this checklist when validating **orchestrator docs** and **live `/run`** behavior (no CI substitute for branch UX and **`Pre-plan context:`** shape). Short pointer list: **`docs/sessions/README.md`**.
 
-- **(a) Protected branch halt** — Start **`/run`** on a **protected** branch (`main`, `master`, `develop`, `release/*`). Expect a **hard stop** at **§1** until the user chooses abort, switch, or an **approved** new branch name — **no** Init, pre-plan **`Task(mcp-*)`**, or **`Task(plan)`** before that consent (see skill **§1 Ordering (gate)**).
+- **(a) Protected branch — soft prompt at §1, hard gate at §5** — Start **`/run`** on a **protected** branch (`main`, `master`, `develop`, `release/*`). Expect **§1** to only ask a **soft, informational** question (switch for analysis, or continue on the current branch) — **not** a hard stop — and Init, pre-plan **`Task(mcp-*)`**, and **`Task(prd)`**/`Task(spectech)`/`Task(tasks)` proceed regardless (they only write the gitignored ticket folder). The **hard stop** (abort, switch, or an **approved** new branch name) fires later, immediately **before the first § 5** `Task(dev|sre|data)` — see skill **§1 Ordering** and **§5 Pre-check — branch gate**.
 - **(b) Jira-only / Wave 2-only (no Wave 1)** — Use a goal where **`Task(pre-plan-triage)`** lists **no** Wave 1 sources (**neither** **`glean`** nor **`arc`**) but **may** need **`jira`** / **`confluence`** / **`gitlab`**. Expect **no** **`Task(mcp-glean)`** or **`Task(mcp-arc)`** — **merge + gate** after triage (or an empty Wave 1 merge), then Wave 2 only as gated.
 - **(c) `Pre-plan context:` vs raw MCP JSON** — After pre-plan, inspect the **`Task(plan)`** prompt or orchestrator log: **`Pre-plan context:`** must be a **short, summarized** brief (bullets / pointers), **not** a paste of full MCP tool JSON or unbounded dumps. On disk, **`pre-plan/merged-brief.md`** is the **bounded** merged artifact; **`pre-plan/specialists/*.md`** are **capped** snapshots — see **Local auditing** above and **Persistence contract** in **Session storage**.
 
@@ -212,16 +212,17 @@ Pre-MR local check: **`./scripts/tools/verify-qa-git-boundaries.sh`** (same as *
 
 ## Delegation chain
 
-Order matches **`.cursor/skills/run-pipeline/SKILL.md`** (**§1** Preconditions → **§2** Init → optional pre-plan → Plan segment → …). **§1** must finish (branch consent on protected branches resolved or run aborted) **before** **§2 Init**, **Pre-plan context**, or **`Task(plan)`**.
+Order matches **`.cursor/skills/run-pipeline/SKILL.md`** (**§1** Preconditions → **§2** Init → optional pre-plan → Plan segment → …). **§1** is informational only (read-only branch detection + a soft switch-or-continue prompt) and does **not** block **§2 Init**, **Pre-plan context**, or **`Task(prd)`**/`Task(spectech)`/`Task(tasks)`. The hard protected-branch gate (consent resolved or run aborted) sits at **§5 Pre-check**, immediately before the first implementation `Task`.
 
 ```
 User → Main session agent (reads run-pipeline skill)
-     → §1: branch / worktree preconditions (git-inspect.sh; protected branch → user consent before anything below)
+     → §1: repo/branch awareness (git-inspect.sh; soft "switch for analysis or continue?" prompt — no hard gate yet)
      → §2 Init (pipeline-init.sh: begin-run if not --resume; write-trace-anchors; apply-models snapshot; session-memory read; optional knowledge-source note)
      → [optional] Task(pre-plan-triage)
      → Wave 1: parallel Task(mcp-glean) + Task(mcp-arc) (each only if triage lists it; omit whole wave if neither) → merge
      → Gate → Wave 2: Task(mcp-jira) | Task(mcp-confluence) | Task(mcp-gitlab) (each only if triage or merged brief needs it) → final merge (summarized; merged-brief.md on disk)
      → Task(plan) (condensed **Pre-plan context:**) ↔ Task(plan-reviewer) self-heal (max iterations) → Task(scrum) plan gate
+     → §5 Pre-check — branch gate: protected branch? stop (abort / stay / create + approve a name); default no worktree
      → Task(dev|sre|data) per phase ↔ *-reviewer + Task(scrum) per § 6
      → § 7.0: parallel Task(spec-validator) + Task(security-scanner) → artifacts/scanners/ → Task(qa)
      → Task(scrum) § 7.1 → Task(summary) → Finish (pipeline-finish.sh: commit/push + audit …)

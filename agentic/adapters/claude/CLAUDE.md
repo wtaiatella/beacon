@@ -9,310 +9,61 @@
 > `.agents/` and are linked into `.claude/` so Claude Code can see them. Cursor installs the
 > same framework under `.cursor/`, including skills, and reads overlay skills from `.agents/skills/`.
 
-## Workspace Identity
+@AGENTS.md
 
-This is a company-wide Agentic Workspace for spec-driven (SDD) development with self-healing review loops: staged, gated, and token-efficient instead of free-form chat.
+The import above pulls in the **shared, IDE-agnostic** SDD contract (workspace identity, ticket
+folder, personas, pipeline, confidence scoring, multi-repo, knowledge base, skills, hooks
+(purpose), session memory, metrics, MCP, error protocol) — see `agentic/AGENTS.md` for the source.
+Everything below is **specific to Claude Code** and intentionally lives only here.
 
-SDD keeps `prd.md` / `spectech.md` / `tasks.md` authoritative over scope, architecture, and acceptance — not chat history. GSD (thin vertical slices) keeps each implementation phase small and independently testable instead of one monolithic change. Reviewers and `/scrum` close the loop at every gate (plan segment, per-phase implementation, post-QA).
+## Personas — Claude Code invocation
 
-**Core principle:** Agents write code and configuration. Agents never deploy. All deployments are handled by CI/CD. All code produced here is committed, pushed, and merged through GitLab MRs.
+Personas are invoked as plugin slash commands (`/bcs-sdd:<name>`). Each command is a **thin
+delegator**: typing `/bcs-sdd:prd …` hands the invocation to the matching persona **subagent** in
+the `bcs-sdd` plugin via the Task tool. The subagent does the work and returns a structured result;
+when it needs a read-only helper or a human decision it escalates back to the main loop (see
+**Flat orchestration** in `AGENTS.md`).
 
-**One control-file convention, one orchestrator front end:** every ticket folder carries exactly
-one machine-readable control file, `_state.json`, plus a human-readable `_notes.md` — never
-`context.json`. The required orchestrator (`/run`) always starts at `/prd` → `/spectech` → `/tasks`;
-there is no `/plan` and no single-`spec.md`-producing mode in this repo. See the `bcs-ticket-workflow`
-skill for the full folder/schema contract.
+Three commands are not persona subagents: **`/run`** is main-loop orchestration driven by the
+`run-pipeline` skill (there is no `run` subagent); **`/clone`**, **`/rebase`**, **`/kb-refresh`**,
+and **`/kb-concentrator`** are thin utility commands that follow their matching `SKILL.md` directly
+(no dedicated subagent).
 
-**Canonical framework source:** edit SDD agents/skills/commands/hooks under `agentic/` (not scanned
-by IDEs). Install into a runtime with `scripts/setup-agentic.sh claude|cursor|antigravity|all`.
-Project overlays stay in the IDE runtime dirs (outside `agentic/`) and are never pruned by setup
-unless they appear on that runtime’s `.agentic-managed` manifest.
-
-## Personas (slash commands)
-
-Personas are invoked as plugin slash commands (`/bcs-sdd:<name>`). Each command is a **thin delegator**: typing `/bcs-sdd:prd …` hands the invocation to the matching persona **subagent** in the `bcs-sdd` plugin via the Task tool. The subagent does the work and returns a structured result; when it needs a read-only helper or a human decision it escalates back to the main loop (see **Flat Orchestration** below).
-
-Three commands are not persona subagents: **`/run`** is main-loop orchestration driven by the `run-pipeline` skill (there is no `run` subagent); **`/clone`**, **`/rebase`**, **`/kb-refresh`**, and **`/kb-concentrator`** are thin utility commands that follow their matching `SKILL.md` directly (no dedicated subagent).
-
-| Trigger | Role | Subagent | Input |
-|---------|------|----------|-------|
-| /prd | Product Requirements | `prd` | `<ticket-folder-path> [idea]` |
-| /spectech | Technical Designer | `spectech` | `<ticket-folder-path>` |
-| /tasks | Task Specialist | `tasks` | `<ticket-folder-path>` |
-| /dev | Software Engineer | `dev` | `<ticket-folder-path>` |
-| /sre | SRE & Platform Engineer | `sre` | `<ticket-folder-path>` |
-| /data | Data & ML Engineer | `data` | `<ticket-folder-path>` |
-| /qa | QA & Security Auditor | `qa` | `<ticket-folder-path>` |
-| /fix | Debugger | `fix` | `<target-dir> [symptom]` |
-| /do | Ad-Hoc Operator | `do` | `<target-dir> [task]` |
-| /summary | Summary Writer | `summary` | `<ticket-folder-path>` |
-| /scrum | PO / SM / PM | `scrum` | `<ticket-folder-path>` or reviewer report |
-| /kb | Knowledge Base Builder | `kb` | `<target-dirs>` |
-| /run | Pipeline Orchestrator | — (main loop + `run-pipeline` skill) | `<ticket-folder-path-or-jira-key> [idea] [flags]` |
-| /clone | Repo Cloner (utility) | — | `<git-url> [target-dir]` |
-| /rebase | Multi-repo git-sync (utility) | — (thin command) | `[repo ...] [ticket-key]` (empty args: infer one conversation ticket and its repo — `_state.json` fallback — else all child repos) |
-| /kb-refresh | Standalone: incremental multi-repo KB refresh | — (thin command) | `[repo ...]` |
-| /kb-concentrator | Standalone: global cross-repo KB concentrator | — (thin command) | `[flow-or-topic hint]` |
-| /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --reset]` |
-
-Project overlays are optional and **outside** the SDD required path — keep them in the IDE
-runtime dirs; SDD personas must not depend on them.
-
-The persona subagents are write-capable (tools: Read, Write, Edit, Bash, Grep, Glob) except **`scrum`**, which is read-only (Read, Grep, Glob, Bash). Most run on `inherit`; `do` and `summary` run on `haiku`.
-
-## Ticket-Folder Workflow (the only workflow)
-
-Every unit of work — a support ticket or a feature — lives in one **ticket working folder**:
-
-```
-docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with Jira key (e.g. BG-10965)
-docs/specs/{YYYY-MM-DD}-{slug}/                   # without ticket key
-├── _state.json      # machine state — the ONLY control file (see bcs-ticket-workflow skill)
-├── _notes.md        # human/agent notes: decisions + "where to resume" per step
-├── ticket.md        # optional issue definition + comments (when present)
-├── attachments/      # optional attachments
-├── prd.md            # product requirements (/prd)
-├── spectech.md        # technical design, profile: lean|standard|full (/spectech)
-├── tasks.md           # task list derived from prd.md + spectech.md (/tasks)
-├── spec-review.md      # plan-segment (folder-mode) review outcome (plan-reviewer)
-├── qa-report.md        # QA findings written by /qa (both standalone and orchestrated)
-└── summary.md            # post-pipeline handoff narrative (/summary)
-```
-
-**Required orchestrator (A) — the only orchestrator this repo builds:**
-
-```
-/run docs/specs/{slug}/           (or /run <JIRA-KEY> — scaffolds/finds the folder)
-  → Task(prd) → Task(spectech) → Task(tasks) → Task(plan-reviewer, folder mode) → Task(scrum)
-  → Task(dev)/Task(sre)/Task(data) as applicable, one or more phases
-  → dev-reviewer/sre-reviewer/data-reviewer + security-scanner + Task(scrum) per phase
-  → Task(qa) → Task(scrum) → Task(summary) → Finish
-```
-
-This is **exactly** today's implementation/review/QA/summary pipeline, with `/prd`→`/spectech`→
-`/tasks` replacing the old single-`spec.md` front end. `/dev`, `/sre`, `/data`, `/qa`, `/scrum`,
-`/summary` and their read-only helpers are carried over with **zero** change to their internal
-prompts, gates, or confidence scoring — the only adaptation is that their input resolves from a
-ticket-folder path (`prd.md`+`spectech.md`+`tasks.md`) instead of a single `spec.md`.
-
-**Manual (equivalent, step by step):**
-
-```
-/prd docs/specs/{slug}/
-/spectech docs/specs/{slug}/
-/tasks docs/specs/{slug}/
-/dev docs/specs/{slug}/   ← reads tasks.md directly
-/sre docs/specs/{slug}/   ← reads tasks.md directly
-/data docs/specs/{slug}/  ← reads tasks.md directly
-/qa docs/specs/{slug}/
-/summary docs/specs/{slug}/
-```
-
-`prd.md`, `spectech.md`, and `tasks.md` stay three separate, right-sized files — never merged into
-one `spec.md`. `spectech.md`'s Lean/Standard/Full profile mechanism is the token/generality
-control, reused unchanged.
-
-**Framework utilities (not pipeline-wired):** `/clone` (register a child repo), `/rebase`
-(multi-repo git-sync), `/kb-refresh` / `/kb-concentrator` (knowledge), `/setup-workspace`
-(tool registry). These share the workspace but are not steps of `/run`.
-
-**Project overlays (optional, outside SDD):** project-specific commands/agents/skills kept in the
-IDE runtime dirs (not under `agentic/`). They may write extra files into a ticket folder when used,
-but **SDD personas and the required orchestrator must not require them**.
-
-## Supporting Subagents
-
-Framework subagents ship in the `bcs-sdd` plugin and are invoked via the Task tool (auto-delegated by description, or explicitly: "use the codebase-explorer agent"). Project overlay agents live in `.agents/agents/bcs-*` (linked into `.claude/agents/`). Besides the persona subagents above, three families of **read-only** helpers support the pipeline — they never mutate repo state and return structured findings to the invoking persona, orchestrator, or user.
-
-**Reviewers, scanners, and scouts (read-only):**
-
-| Name | Role | Model | Tools | Used By |
-|------|------|-------|-------|---------|
-| codebase-explorer | Target directory scout | haiku | Read, Grep, Glob, Bash | /fix, /kb |
-| spec-validator | Spec compliance checker | haiku | Read, Grep, Bash | /qa |
-| security-scanner | Security vulnerability scanner | inherit | Read, Grep, Bash | /qa, /run phase gate |
-| plan-reviewer | Spec quality reviewer | haiku | Read, Grep, Glob | /run — folder mode (after prd/spectech/tasks) |
-| dev-reviewer | Code quality reviewer | haiku | Read, Grep, Glob | /run (after /dev) |
-| sre-reviewer | Infra quality reviewer | haiku | Read, Grep, Glob | /run (after /sre) |
-| data-reviewer | Data quality reviewer | haiku | Read, Grep, Glob | /run (after /data) |
-| pre-plan-triage | Pre-plan context router | haiku | Read | /run (before the PRD/Spectech/Tasks segment) |
-
-**Front-end personas (write-capable):**
-
-| Name | Role | Model | Tools | Used By |
-|------|------|-------|-------|---------|
-| prd | Product requirements analyzer | inherit | Read, Write, Edit, Bash, Grep, Glob | /prd command |
-| spectech | Technical specification designer | inherit | Read, Write, Edit, Bash, Grep, Glob | /spectech command |
-| tasks | Task breakdown specialist | inherit | Read, Write, Edit, Bash, Grep, Glob | /tasks command |
-
-**Enterprise MCP specialists (read-only, `haiku`):** `mcp-arc`, `mcp-confluence`, `mcp-gitlab`, `mcp-jira`, `mcp-glean`. Persona subagents must **not** call enterprise MCP tools directly; they emit a `REQUEST_MAIN:` escalation with a specialist label and query, and the main loop runs the matching `mcp-*` subagent via Task and feeds the bounded result back.
-
-> **Flat orchestration (Claude Code execution model):** subagents cannot spawn further
-> subagents. Only the **main conversation loop** schedules `Task(...)` — it invokes both
-> persona subagents and the read-only helpers. A persona subagent that needs a helper,
-> an MCP specialist, or a human decision returns an escalation line the main loop honors:
-> `REQUEST_MAIN:` (run the named helper/`mcp-*` subagent), `QUESTION:` / `ASK_USER`
-> (ask the user), or `APPROVAL_NEEDED:` (stop-for-approval). `/run` is likewise pure
-> main-loop orchestration driven by the `run-pipeline` skill. See
-> the `bcs-sdd` plugin skill `run-pipeline` (`/bcs-sdd:run-pipeline`) and command `/bcs-sdd:run`.
-
-## Pipeline
-
-- **Manual:** /prd → /spectech → /tasks → /dev+/sre+/data → /qa → /summary → merge
-- **Parallel tracks:** /dev, /sre, /data run in parallel when the spec allows; otherwise order by phases
-- **Phased specs:** the §6 implementation gate (`*-reviewer` + `Task(scrum)`) is **required between** implementation phases — never chain `Task(dev|sre|data)` for phase k+1 before §6 completes for phase k
-- **Orchestrated:** /run — main loop follows the `run-pipeline` skill; full pipeline end-to-end (PRD/Spectech/Tasks → implement → review → QA → summary), auto by default
-- **Auto:** pauses only for genuine questions or low confidence
-- **`--review`:** opt-in checkpoints after each step
-- **`--manual`:** manual step gates (pause after the plan segment and each domain track: Proceed / Force review / Add context and review) — not manual models
-- **`--confidence N`:** overrides default pass threshold (see Confidence)
-- **`--skip <step>`:** skip plan (the PRD/Spectech/Tasks segment), plan-review, `impl-review`, qa, or summary
-- **`--branch [name]`:** **suggests** a branch; the user must still confirm creation on protected branches — no silent auto-create
-- **`--resume`:** resume from last successful step after a failure
-- **`--max-iterations N`:** override implementation/review rework caps
-- **`--max-plan-iterations N`:** override the PRD/Spectech/Tasks ↔ plan-reviewer loop caps (default 3)
-- **Escape hatches:** /fix (bugs), /do (quick tasks) — **Ticket-folder amendment:** re-run `/prd`/`/spectech`/`/tasks` over the existing folder with "changes"
-
-**Reject invalid orchestration:** treat a `/run` as failed (do not report success) if you see `ORCHESTRATION_ABORTED`, single-agent implementation instead of `Task` delegations, `Skipped:` of the PRD/Spectech/Tasks segment/qa/summary/reviews without the matching `--skip`, a single `Task(dev|sre|data)` spanning multiple `### Phase N:` blocks, or a persona editing `tasks.md` checkboxes/`_state.json`/`status` before `Task(scrum)` PROCEED. Full list in the `run-pipeline` skill.
-
-## Git and GitLab mutations (paramount)
-
-- **Persona subagents must never** run `git commit`, `git push`, or mutating GitLab actions.
-- **The orchestrator (main loop) must never** *silently* auto-push, auto-create/open an MR, or invoke mutating GitLab APIs — except the `/rebase` push below. It **may** perform these via the GitLab MCP (`mcp__GitLab__*`) after **explicit user confirmation** at that step (see below).
-- **Exception — Finish / mid-pipeline commit:** the main loop may run commits **only** via
-  **`scripts/hooks/pipeline-finish.sh`** (§ 9, after the user selects an offered message) and/or
-  **`scripts/hooks/pipeline-commit.sh`** (mid-pipeline when ticket **`_state.json.commit_policy`**
-  authorizes — see run-pipeline **Commit policy**). If the user chooses "do not commit" /
-  "other-manual" at Finish, pass **`--no-commit`**. Never raw `git commit`. Mid-pipeline never pushes.
-- **Push:** the main loop may run `git push` (including `--force-with-lease` when a confirmed history rewrite requires it) after an explicit user "Yes" to a push prompt. Never auto-push silently — except `/rebase`.
-- **Exception — `/rebase`:** invoking `/rebase` **is** that consent. When a ticket key is given, checkout (or create a local tracking branch from an existing `origin` ref) without a second Yes — never invent a branch that does not exist on origin. After a clean rebase of a non-protected working branch, push with `git push --force-with-lease` (or `git push -u` when there is no upstream). Do not ask for a second Yes. Do not push on conflict, dirty-tree skip, failed pull, or when the current branch is the main/default. Never `--force` / `-f` without lease. Never push to `main` / `master` / `develop` / `development` / `release/*`.
-- Each branch creation and each mutating GitLab action (MR create/update, write API) requires **explicit user confirmation at that step** — except `/rebase` creating a local branch that already exists on `origin`. Once confirmed, the main loop performs MR create/update **via the GitLab MCP** (`mcp__GitLab__*`), always presenting the MR title/body for review first. See the `bcs-gitlab-mr-from-spec` skill and `scripts/tools/mr-description-from-spec.sh` for body content. `/rebase` (multi-repo git-sync) never creates or updates an MR via GitLab API and never transitions a Jira ticket.
-- GitLab operations use the **GitLab MCP** (`mcp__GitLab__*`) as the primary tool, run only after the user confirms. `glab` is **not** used in this workspace (not authenticated); do not suggest it.
-
-## Confidence Scoring
-
-- Per-persona reviewers emit 0–100% scores including spec alignment
-- /scrum (PO/SM/PM) evaluates at each gate with business judgment
-- **≥ threshold (default 75%):** PROCEED
-- **50–74%:** ASK_USER
-- **< 50%:** REWORK (automatic)
-- **Max loops hit:** ESCALATE
-- /scrum may override defaults when business context warrants
-- Threshold is per-gate; document overrides in the ticket folder or session notes when non-default
-- If domains differ in risk, define per-domain weights or minimums in `spectech.md`
-
-## Spec Format (ticket-folder contract)
-
-- Path: `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — one folder per ticket
-- Control file: `_state.json` (machine-readable — schema below) + `_notes.md` (human-readable running log). **`context.json` is never created** — see the `bcs-ticket-workflow` skill's AC-1 regression guard: any step that finds both files in the same folder must stop and surface the collision.
-- `_state.json.steps` is an **open** string-keyed map: the required orchestrator's six keys (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`), or a standalone piece's own key (e.g. `ticket_intake`, `impact_analysis`, `repro`, `flowchart_check`, `build_test`, `proof`). Values: `pending | in_progress | done | blocked | skipped`.
-- `prd.md`, `spectech.md`, `tasks.md` — three separate files (never merged); `spectech.md`'s frontmatter declares `profile: lean|standard|full`.
-- Domain tags on `tasks.md` checkboxes: `[dev]`, `[sre]`, `[data]`; multi-repo: `[dev:repo]`
-- Phases for cross-repo dependencies
-- Shorthand: full folder path, slug match, `latest`, or a Jira key that resolves to/creates a folder
-
-See the `bcs-ticket-workflow` skill for the full `_state.json` schema, `_notes.md` convention, and stop-gate/HITL rules — every piece that touches a ticket folder's control file reads this one skill instead of re-describing the schema.
-
-## Multi-Repo
-
-- Target repos are cloned as subdirectories of the workspace root and are gitignored (per-developer, not tracked)
-- Add one with **`/clone <git-url> [target-dir]`** — clones into the root and registers it in the inventory
-- The inventory (repo name + current branch) is detected dynamically and injected into context on session start by the `session-init` hook — no need to list repos manually
-- Scope tables in specs list involved repos
-- `[domain:repo]` task tags
-- Phases order dependencies
-- Within phases: parallel. Between phases: sequential.
-- Single-repo work: omit `:repo` tags; scope table may list one repo only
-- `/rebase` (standalone skill): empty `/rebase` infers at most one ticket from **this conversation**,
-  then rebases the child repo(s) that ticket actually changed (fallback: that ticket's
-  `_state.json` `repo`/`branch`). Otherwise it iterates every child repo (current branch).
-  `/kb-refresh` iterates every child repo directly, independent of any ticket folder.
-
-## Knowledge Base
-
-**Preferred source of curated context is ARC MCP (AvaTax Release Central)** — see `docs/reference/arc-mcp-workflow.md`. `/prd` uses ARC first when configured (in-session, standalone use — see the `run-pipeline` skill's ARC lanes). The local `/kb` knowledge base below is the **fallback** for repos not onboarded to ARC.
-
-Structured project context at `knowledge/{project-name}/` (tracked in git, shared across the team).
-- Folder per project: `_index.md` (always loaded, ~50 lines) + section files loaded on demand (architecture, api, data-models, dependencies, infrastructure, conventions)
-- Built by `/kb <target-dir>` — expensive, manual, full-rebuild-per-project. Run on first onboarding or after major restructuring.
-- **Incremental, multi-repo-aware refresh:** `/kb-refresh` (standalone) — for every child repo, pulls the main branch and diff-classifies what changed to decide which `knowledge/{project}/` need updating; distinct from `/kb`'s manual full rebuild.
-- **Cross-repo, system-level view:** `/kb-concentrator` (standalone) — maintains `knowledge/global-kb/`, the aggregated view of how projects call into each other (end-to-end flows, integration boundaries). Typically chained after `/kb-refresh`.
-- Consumed by `/prd` (loads index + relevant sections, falls back to codebase-explorer if KB absent)
-- `/run` warns if KB is missing but does **not** auto-invoke `/kb`
-
-## Skills
-
-Framework skills ship in the `bcs-sdd` plugin (`/bcs-sdd:<skill>`). Project overlay skills live in `.agents/skills/bcs-*` (linked into `.claude/skills/`).
-- **bcs-ticket-workflow** — *(project overlay)* single source of truth for the `_state.json` schema, `_notes.md` convention, and stop-gate/HITL rules; every piece that touches a ticket folder reads this instead of re-describing the schema
-- **run-pipeline** — /run (the authoritative end-to-end orchestration workflow the main loop follows — PRD/Spectech/Tasks segment → implement → review → QA → summary)
-- **generate-prd** / **generate-spectech** / **generate-tasks** — the `/prd`/`/spectech`/`/tasks` personas' normative document templates, adapted to read/write `_state.json`+`_notes.md`
-- **prd-validator** / **prd-discovery** — supporting skills for `/prd` (implicit-requirements/scope validation; brainstorm phase), adapted to the same control-file contract
-- **generate-spec** — retained only as a reference for `plan-reviewer.md`'s single-file-mode completeness check (unchanged persona, FR-7); nothing in this repo produces single-file specs anymore
-- **review-report** — /qa (structured QA + security narrative)
-- **deploy-checklist** — /sre (CI/CD coverage checklist, 5-tier: dev/qa/int/sbx/prd)
-- **confidence-scoring** — reviewers + /scrum (per-domain weights, sub-scores, trend analysis, calibration)
-- **knowledge-base** — /kb (output structure; DEPRECATED for new projects in favor of ARC MCP — fallback only)
-- **bcs-gitlab-mr-from-spec** — *(project overlay)* /summary + finish (spec-driven MR body text for user-run GitLab actions; no autonomous commit/push/MR)
-- **kb-refresh** / **kb-concentrator** — standalone, incremental multi-repo KB tooling (see Knowledge Base above); thin utility commands, same shape as `/clone`
-- **clone** / **rebase** / **setup-workspace** — workspace utilities (child-repo clone; multi-repo git-sync; MCP tool registry)
+The persona subagents are write-capable (tools: Read, Write, Edit, Bash, Grep, Glob) except
+**`scrum`**, which is read-only (Read, Grep, Glob, Bash).
 
 ## Model Selection
 
-**Claude Code sets the model per-subagent** in each agent's `model:` frontmatter:
+**Claude Code sets the model per-subagent** in each agent's `model:` frontmatter. **Every agent's
+canonical frontmatter is `model: inherit`** (uses whatever model the current session runs) —
+available AI subscriptions/model tiers vary a lot per environment (home vs. work, which IDE,
+which plan), so the framework no longer hardcodes an economy tier for any agent.
 
-- **`inherit`** (session model) — implementers, architects, debuggers: prd, spectech, tasks, dev, sre, data, qa, fix, kb, security-scanner.
-- **`haiku`** (economy) — reviewers, validators, and mechanical/short-context agents: do, summary, scrum, codebase-explorer, spec-validator, plan-reviewer, dev-reviewer, sre-reviewer, data-reviewer, pre-plan-triage, mcp-*.
+**Per-install override (optional):** copy `agentic/models.local.yml.example` to
+`agentic/models.local.yml` (gitignored — local to this checkout) and list `<agent>: <model>` for
+any agent you want on a different tier than `inherit` (e.g. `do: haiku`). `scripts/setup-agentic.sh
+claude` applies it by rewriting the **installed** plugin copy's `model:` line for listed agents —
+the canonical source under `agentic/agents/` is never touched. Re-run `setup-agentic.sh claude`
+after editing the override file to apply changes; an unknown agent name in it prints a warning and
+is otherwise ignored.
 
-There is no Claude Code equivalent of per-run model swapping; pick the session model by workflow (standard for routine `/run`, premium for a complex `/fix`). The `run-pipeline` skill's `--model-strategy` / `--budget` guidance is retained as guidance; automatic mid-run swaps are not performed under Claude Code.
+There is no Claude Code equivalent of per-run (mid-pipeline) model swapping; this override is
+fixed per installation, not dynamic per step. The `run-pipeline` skill's `--model-strategy` /
+`--budget` guidance is retained as guidance; automatic mid-run swaps are not performed under
+Claude Code.
 
-## Hooks
+## Hooks (Claude Code wiring)
 
-Registered in the `bcs-sdd` plugin `hooks/hooks.json`. Scripts live in that plugin and use `${CLAUDE_PLUGIN_ROOT}`.
+Registered in the `bcs-sdd` plugin `hooks/hooks.json`. Scripts live in that plugin and use
+`${CLAUDE_PLUGIN_ROOT}`. See `AGENTS.md` — **Hooks** for what each one does; this table is the
+Claude Code-specific event wiring:
 
-| Script | Claude Code event | Matcher | Purpose |
-|--------|-------------------|---------|---------|
-| format-on-edit | PostToolUse | `Write\|Edit\|MultiEdit` | Auto-format edited file with the project formatter |
-| session-init | SessionStart | — | Inject child-repo inventory (name + branch) + active session id + spec status + session memory |
-| audit-log | SessionEnd | — | Append session record (6-col TSV) to local audit log |
-| session-verify | SessionEnd | — | Verify no uncommitted secrets, hook health, spec inconsistencies, session status summary |
-| before-shell | PreToolUse | `Bash` | Block dangerous commands (rm -rf, DROP TABLE, force-push to protected branches) |
-| before-read | PreToolUse | `Read` | Block reading .env, credentials, private keys, secrets files |
-| subagent-gate | PreToolUse | `Write\|Edit\|MultiEdit` | Block writes when the target's child repo is on a protected branch (main, master, develop, release/*); workspace root is excluded |
-
-Hooks fail-open: failures log but don't block. `subagent-gate` has no override — writes to protected branches are always refused.
-
-## Session Memory
-
-Ephemeral scratch per session at `docs/sessions/<session-id>/current.md` (gitignored). The active `session-id` is stored in `docs/sessions/ACTIVE_SESSION`.
-- Read: `scripts/tools/session-memory.sh read`
-- Write: `scripts/tools/session-memory.sh write "DECISION: chose PostgreSQL for sessions"`
-- Clear: `scripts/tools/session-memory.sh clear`
-- Categories: DECISION, QUESTION, GATE, or free-form context. Optional post-`/run` audit lines (human only): `COMMIT_SUGGESTIONS:`, `PUSH_CONFIRMED:`, `MR_TARGET_BRANCH:`, `MR_CONFIRMED:`.
-- Injected into context on session start via the `session-init` hook (includes the active session id + path).
-- **Cleanup:** stale session files (untouched >24h) are deleted at next session start; empty session dirs may be removed afterward. Not a timer — only pruned when a new session begins.
-- **Two-layer state:** this is the ephemeral, cross-session-agnostic **orchestration-run** checkpoint (crash-resume for one `/run`). It is separate from — and does not replace — each ticket's own persistent `_state.json`/`_notes.md`, which is the per-ticket, cross-session audit trail (see the `bcs-ticket-workflow` skill). Not a database. Not a replacement for the ticket folder.
-
-## Metrics
-
-Local-only pipeline and agent metrics: `scripts/tools/metrics.sh [overview|agents|specs|gates|sessions|models|cost|export|budget-check]`.
-Aggregates data from `docs/audit.log`, `docs/sessions/`, and optional `docs/usage-events.tsv`. Nothing leaves the machine.
-
-## MCP
-
-Servers are configured in `.mcp.json`; teams add or remove them as needed. All personas work without MCP — it is never required for the core flow.
-
-Enterprise MCP access is **mediated through the read-only `mcp-*` specialist subagents** (`mcp-arc`, `mcp-confluence`, `mcp-gitlab`, `mcp-jira`, `mcp-glean`), scheduled only by the main loop. Persona subagents never call enterprise MCP tools directly; they escalate with `REQUEST_MAIN: <specialist> <query>` and the main loop runs the matching specialist via Task. When ARC MCP is configured, `/prd` prefers it for AvaTax/project/schema context.
-
-## Error Protocol
-
-1. **Missing arguments:** ask user; show expected syntax
-2. **Ticket folder not found:** search `docs/specs/` for matches; suggest `/prd <new-folder>` or `/run <JIRA-KEY>`
-3. **Target dir not found:** list dirs; ask confirmation
-4. **Tool failure (non-zero exit):** show error, explain, suggest fix; never silently proceed
-5. **MCP unavailable:** warn; continue; degrade gracefully
-6. **Ambiguous intent:** one clarifying question
-7. **Scope creep:** stop; recommend a `/prd` amendment (re-run `/prd` over the existing ticket folder)
-8. **Hook failure:** fail-open; log; do not block
-9. **Orchestration failure:** /run stops and reports; QA loops capped at 3; review loops at 2; surface last step and suggested next action
-10. **Reviewer override:** log actor, reason, and prior score for audit trail
-11. **Two control files detected (`context.json` + `_state.json`):** stop and surface the collision — never silently prefer one (AC-1 regression guard, per the `bcs-ticket-workflow` skill)
+| Script | Claude Code event | Matcher |
+|--------|-------------------|---------|
+| format-on-edit | PostToolUse | `Write\|Edit\|MultiEdit` |
+| session-init | SessionStart | — |
+| audit-log | SessionEnd | — |
+| session-verify | SessionEnd | — |
+| before-shell | PreToolUse | `Bash` |
+| before-read | PreToolUse | `Read` |
+| subagent-gate | PreToolUse | `Write\|Edit\|MultiEdit` |

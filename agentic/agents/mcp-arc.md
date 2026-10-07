@@ -1,7 +1,7 @@
 ---
 name: mcp-arc
 description: AvaTax Release Central (ARC) MCP only — curated knowledge, SQL schema search, project/feature indexes, release context. Bounded ARC brief merges into docs/sessions/<id>/pre-plan/ for Task(plan) Pre-plan context. Use when the orchestrator needs bounded AvaTax/RC/catalog/schema context before plan; read-only; bounded brief output.
-model: haiku
+model: inherit
 ---
 
 ## Role

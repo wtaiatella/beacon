@@ -1,7 +1,7 @@
 ---
 name: mcp-confluence
 description: Confluence search and page read via Atlassian MCP only. Bounded briefs merge into docs/sessions/<id>/pre-plan/ for Task(plan). Use when the orchestrator needs wiki/runbook or design pages—not primary Jira issue work—before plan or review.
-model: haiku
+model: inherit
 ---
 
 ## Role

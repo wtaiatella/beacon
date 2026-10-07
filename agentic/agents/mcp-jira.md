@@ -1,7 +1,7 @@
 ---
 name: mcp-jira
 description: Jira issue fetch and search via Atlassian MCP only. Bounded briefs merge into docs/sessions/<id>/pre-plan/ for Task(plan). Use when the orchestrator needs ticket details, acceptance-style fields, or JQL-scoped search before plan or review.
-model: haiku
+model: inherit
 ---
 
 ## Role

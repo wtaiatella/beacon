@@ -2,7 +2,7 @@
 name: sre-reviewer
 description: "Reviews infrastructure-as-code, CI/CD pipelines, Helm charts, and platform changes for security, reliability, idempotency, cost efficiency, and operational readiness. LPP: expect only the spec plus sre material under docs/sessions/<id>/artifacts/diffs/sre/. Produces a confidence score with actionable improvement suggestions. Use when you want a domain-specific infra quality review before QA."
 tools: Read, Grep, Glob
-model: haiku
+model: inherit
 ---
 
 ## Role

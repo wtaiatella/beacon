@@ -2,7 +2,7 @@
 name: do
 description: "Ad-hoc operator for quick tasks that don't warrant a spec. Handles /do commands. Covers config changes, version bumps, dependency updates, quick scripts, and data exploration. Use when the user wants a quick operational task done without the overhead of a spec."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: haiku
+model: inherit
 ---
 
 When invoked, treat `$ARGUMENTS` as the command input described under Trigger & Input.

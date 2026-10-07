@@ -2,7 +2,7 @@
 name: summary
 description: "Use when producing post-pipeline handoff documentation or invoking /summary after QA. Generates comprehensive 'what was done' documentation after pipeline completion. Under orchestrated /run, expects artifacts/qa-report.md (when persisted) plus gate scores and minimal delegation context—not full diffs, artifacts/scanners/ raw files, or MCP briefs in the prompt; may run git-diff-summary.sh and scoped reads in-session—see run-pipeline § 8. Output is designed for future Jira/Confluence integration via /sync."
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: haiku
+model: inherit
 ---
 
 When invoked, treat `$ARGUMENTS` as the command input described under Trigger & Input.

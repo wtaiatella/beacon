@@ -8,14 +8,12 @@ alwaysApply: true
 > Cursor always-on project context (equivalent role to root `CLAUDE.md` for Claude Code).
 > Canonical SDD source lives under `agentic/`; install with `scripts/setup-agentic.sh cursor`.
 > Project overlays (`bcs-*`) stay in IDE runtime dirs and are **outside** the required orchestrator.
-
-## Workspace Identity
-
-Company-wide Agentic Workspace for spec-driven (SDD) development with self-healing review loops — staged and gated, not free-form chat. GSD (thin vertical slices) keeps each implementation phase small and independently testable.
-
-**Core principle:** Agents write code and configuration. Agents never deploy. Deployments are CI/CD only. Code ships through GitLab MRs.
-
-**One control-file convention:** every ticket folder has exactly `_state.json` + `_notes.md` — never `context.json`. Required orchestrator `/run` starts at `/prd` → `/spectech` → `/tasks` (no `/plan`, no single-`spec.md` mode). Folder/schema contract: project skill `bcs-ticket-workflow` (`.agents/skills/bcs-ticket-workflow/`).
+>
+> The **shared, IDE-agnostic** SDD contract (workspace identity, ticket folder, personas, pipeline,
+> confidence scoring, multi-repo, knowledge base, skills, hooks (purpose), session memory, metrics,
+> MCP, error protocol) lives in root `AGENTS.md` (source: `agentic/AGENTS.md`) — Cursor reads it
+> natively alongside this rule file; it is **not** repeated here. Everything below is specific to
+> Cursor and intentionally lives only here.
 
 ## Where things live (Cursor)
 
@@ -27,51 +25,34 @@ Company-wide Agentic Workspace for spec-driven (SDD) development with self-heali
 | Hooks | `.cursor/hooks.json` + `.cursor/hooks/` |
 | Canonical source | `agentic/` (edit here, then re-run setup) |
 
-## Personas
+## Personas — Cursor invocation
 
-Invoke via Task / agent defs under `.cursor/agents/`, or slash skills where present (e.g. `/run` → `.cursor/skills/run`).
-
-| Trigger | Role | Agent |
-|---------|------|-------|
-| /prd | Product Requirements | `prd` |
-| /spectech | Technical Designer | `spectech` |
-| /tasks | Task Specialist | `tasks` |
-| /dev /sre /data | Implementers | `dev` / `sre` / `data` |
-| /qa | QA & Security | `qa` |
-| /fix /do | Debugger / Ad-hoc | `fix` / `do` |
-| /summary /scrum /kb | Summary / PO-SM-PM / KB | `summary` / `scrum` / `kb` |
-| /run | Pipeline orchestrator | *(no agent — main loop + `run-pipeline` skill)* |
-| /clone /rebase /kb-refresh /kb-concentrator /setup-workspace | Utilities | skill |
-
-`scrum` is read-only. Personas escalate helpers/MCP with `REQUEST_MAIN:` / `QUESTION:` / `APPROVAL_NEEDED:` — only the **main loop** schedules `Task(...)`.
-
-## Ticket folder
-
-```
-docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/   # or without ticket key
-├── _state.json   # ONLY machine control file
-├── _notes.md
-├── prd.md / spectech.md / tasks.md
-├── qa-report.md / summary.md / …
-```
-
-**Orchestrated `/run`:**  
-`Task(prd)` → `Task(spectech)` → `Task(tasks)` → plan-reviewer → scrum → implement phases → reviewers + security-scanner + scrum → qa → scrum → summary → Finish.
-
-Never merge `prd`/`spectech`/`tasks` into one `spec.md`.
+Invoke via Task / agent defs under `.cursor/agents/`, or slash skills where present (e.g. `/run` →
+`.cursor/skills/run`). See `AGENTS.md` for the full persona table (roles, inputs).
 
 ## Flat orchestration
 
-Subagents must not nest Task. Main session only. `/run` follows `.cursor/skills/run-pipeline/SKILL.md`.
+Subagents must not nest Task. Main session only. `/run` follows
+`.cursor/skills/run-pipeline/SKILL.md`.
 
-## Multi-repo
+## Model Selection (Cursor)
 
-Child repos are subdirs of the workspace root (gitignored). Add with `/clone`. Inventory is injected by `session-init`. Use `[domain:repo]` tags and phases for cross-repo work. `subagent-gate` blocks writes when a child repo is on `main`/`master`/`develop`/`release/*`.
+Every agent's canonical frontmatter is `model: inherit` (see `AGENTS.md`'s general note — no
+hardcoded economy tier, since available model tiers vary per environment). Two independent
+override mechanisms exist here:
 
-## Knowledge / MCP
+- **Per-install (shared with Claude Code):** `agentic/models.local.yml` (copy from
+  `agentic/models.local.yml.example`, gitignored) — `scripts/setup-agentic.sh cursor` rewrites the
+  installed `.cursor/agents/*.md` copy's `model:` line for any agent listed.
+- **Dynamic per-step (Cursor-only, pre-existing):** `.cursor/models.yml` (team baseline) or
+  `.cursor/models.user.yml` (`use_manual_models: true` for manual assignment), applied at runtime
+  by `scripts/tools/apply-models.sh` during `/run`. Neither file is tracked by default.
 
-Prefer ARC MCP when configured; else `knowledge/{project}/`. Enterprise MCP only via main-loop `Task(mcp-*)` after `REQUEST_MAIN:` — personas never call enterprise MCP directly.
+The per-install file sets the static default; the dynamic mechanism can still override per pipeline
+step on top of it.
 
 ## Error highlights
 
-Missing ticket folder → search `docs/specs/`. Two control files (`context.json` + `_state.json`) → stop (AC-1). Hook failures fail-open except protected-branch writes (always refused).
+Missing ticket folder → search `docs/specs/`. Two control files (`context.json` + `_state.json`) →
+stop (AC-1). Hook failures fail-open except protected-branch writes (always refused). Full error
+protocol: `AGENTS.md`.

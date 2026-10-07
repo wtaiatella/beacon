@@ -2,7 +2,7 @@
 name: spec-validator
 description: "Validates that code implementation matches its architecture spec. Dual-mode input: a single-file spec OR a multi-file spec folder (uses tasks.md + prd.md as the source of truth). Post-implementation / QA-stage check (needs code) — not the /tasks gate. Compares code changes against the spec's domain-tagged task list and acceptance criteria. Orchestrated /run: main session persists bounded output under docs/sessions/<id>/artifacts/scanners/ (canonical spec-validator filename); Task(qa) consumes paths/summaries per LPP—not nested Task from qa. Output is bounded Markdown (section/table caps, top gaps first) for orchestrator injection into Task(qa). Use when reviewing code for spec compliance."
 tools: Read, Grep, Bash
-model: haiku
+model: inherit
 ---
 
 ## Role

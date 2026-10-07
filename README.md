@@ -64,8 +64,16 @@ scripts/setup-agentic.sh all      # claude + cursor (+ antigravity stub)
 | Commands | `agentic/commands/` | `/bcs-sdd:<name>` slash commands | — (Cursor does not mirror commands as skills) |
 | Skills | `agentic/skills/` | `bcs-sdd` plugin skills | `.cursor/skills/` |
 | Hooks | `agentic/hooks/` + `agentic/adapters/<ide>/hooks/` | `bcs-sdd` plugin `hooks/hooks.json` | `.cursor/hooks.json` + `.cursor/hooks/` |
-| Always-on identity | `agentic/adapters/claude/CLAUDE.md` | root `CLAUDE.md` (generated — do not edit) | — |
-| Always-on identity | `agentic/adapters/cursor/rules/00-workspace-router.mdc` | — | `.cursor/rules/00-workspace-router.mdc` (generated) |
+| **Shared SDD contract** | `agentic/AGENTS.md` | root `AGENTS.md` (generated; imported via `@AGENTS.md` in `CLAUDE.md`) | root `AGENTS.md` (generated; read natively) |
+| Always-on identity (IDE-specific wiring only) | `agentic/adapters/claude/CLAUDE.md` | root `CLAUDE.md` (generated — do not edit) | — |
+| Always-on identity (IDE-specific wiring only) | `agentic/adapters/cursor/rules/00-workspace-router.mdc` | — | `.cursor/rules/00-workspace-router.mdc` (generated) |
+
+**`agentic/AGENTS.md`** is the single normative source for workspace identity, the ticket-folder
+contract, personas, the `/run` pipeline, confidence scoring, multi-repo rules, and the error
+protocol — written once, read by both IDEs, so it can't drift between a Claude-flavored and a
+Cursor-flavored copy of the same rules. `CLAUDE.md` and `00-workspace-router.mdc` now hold **only**
+what genuinely differs per tool: exact invocation mechanics, model-selection tables, and hook
+event/matcher names.
 
 **Project overlays** (`bcs-*`, optional, team- or repo-specific) live outside `agentic/` in the IDE runtime dirs (`.claude/`, `.cursor/`, or the shared `.agents/` tree that both read from) and are **never required** by the core SDD personas or the `/run` orchestrator. Full setup details: [agentic/docs/setup.md](agentic/docs/setup.md).
 
@@ -147,7 +155,9 @@ flowchart TD
 
 ## Pipeline state machine (`/run`)
 
-**§1** branch consent + worktrees → **§2** `pipeline-init.sh` → **Pre-plan** (optional MCP: Wave 1 Glean/ARC → merge + gate → Wave 2 Jira/Confluence/GitLab) → **§3–4** `Task(prd)` → `Task(spectech)` → `Task(tasks)`, then `plan-reviewer` (folder mode) ↔ `Task(scrum)` self-heal loop → **§5** per-phase implementation (`Task(dev|sre|data)`) → **§6** implementation review (`*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or on REWORK) → **§7.0** QA prep (`spec-validator` + `security-scanner`) → **§7** `Task(qa)` → **§7.1** final `Task(scrum)` → **§8** `Task(summary)` → **§9** `pipeline-finish.sh` (commit / push / MR prompts).
+**§1** repo/branch awareness (read-only; soft "switch for analysis or stay?" prompt — **not** a hard gate) → **§2** `pipeline-init.sh` → **Pre-plan** (optional MCP: Wave 1 Glean/ARC → merge + gate → Wave 2 Jira/Confluence/GitLab) → **§3–4** `Task(prd)` → `Task(spectech)` → `Task(tasks)`, then `plan-reviewer` (folder mode) ↔ `Task(scrum)` self-heal loop → **§5 pre-check** (hard branch gate: protected branch? stop — abort / stay / create + approve a name; default **no worktree**, plain checkout) → **§5** per-phase implementation (`Task(dev|sre|data)`) → **§6** implementation review (`*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or on REWORK) → **§7.0** QA prep (`spec-validator` + `security-scanner`) → **§7** `Task(qa)` → **§7.1** final `Task(scrum)` → **§8** `Task(summary)` → **§9** `pipeline-finish.sh` (commit / push / MR prompts).
+
+**Why the branch gate sits at §5, not §1:** `/prd` → `/spectech` → `/tasks` only write the ticket folder (`docs/specs/<ticket>/…`, gitignored) — there's no risk in drafting the spec while the working repo is on its protected/default branch, and that's often the *correct* branch to analyze from. The first actual write to the working repo is §5, so that's where the hard gate (and branch-name approval) belongs. Worktrees are **opt-in only** — the default is a single checkout on whichever branch the §5 gate resolves.
 
 | Kind | Meaning |
 |---|---|
@@ -156,11 +166,13 @@ flowchart TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> BranchConsent : user invokes /run
-    BranchConsent --> PipelineInit : §1 complete
-    note right of BranchConsent
-        Protected branch: approve name
-        or switch (skill §1)
+    [*] --> RepoAwareness : user invokes /run
+    RepoAwareness --> PipelineInit : §1 complete (informational only)
+    note right of RepoAwareness
+        Read-only branch detection +
+        soft prompt: not on the protected
+        branch? switch for analysis, or
+        stay. No hard gate yet (skill §1)
     end note
 
     PipelineInit --> PreTriage : §2 Init OK
@@ -185,11 +197,20 @@ stateDiagram-v2
         when gated; merged-brief → §3
     end note
 
-    PrdSpectechTasks --> PhaseExec : §4 plan-reviewer pass, scrum PROCEED
+    PrdSpectechTasks --> BranchGate : §4 plan-reviewer pass, scrum PROCEED
     note right of PrdSpectechTasks
         §3: Task(prd) → Task(spectech) → Task(tasks)
         §4: plan-reviewer (folder mode) ↔ scrum
         self-heal; --skip plan skips pre-plan + §3–4
+    end note
+
+    BranchGate --> PhaseExec : branch resolved
+    note left of BranchGate
+        §5 pre-check — hard gate, once per run:
+        protected branch? stop — abort / stay
+        on current / create + approve a new
+        name. Default: no worktree, plain
+        checkout (skill §5 Pre-check)
     end note
 
     PhaseExec --> PhaseReview : §5 batch complete
@@ -362,7 +383,7 @@ Utilities (`/clone`, `/rebase`, `/kb-refresh`, `/kb-concentrator`, `/setup-works
 
 ## Pipeline flags
 
-[run-pipeline skill](agentic/skills/run-pipeline/SKILL.md) defines branch consent, worktrees, and every flag below.
+[run-pipeline skill](agentic/skills/run-pipeline/SKILL.md) defines the branch gate (hard consent at §5, right before implementation — not at session start), the opt-in-only worktree, and every flag below.
 
 | Flag | Purpose |
 |---|---|
@@ -418,9 +439,19 @@ Local-only; aggregates `docs/audit.log`, `docs/sessions/`, and optional `docs/us
 
 ## Models
 
-**Claude Code:** the model per subagent is set in each agent's `model:` frontmatter — `inherit` (session model) for implementers/architects/debuggers, `haiku` (economy) for reviewers/validators/mechanical agents. There is no per-run model swapping under Claude Code.
+Every agent's canonical frontmatter is **`model: inherit`** — no hardcoded economy tier, since
+available model tiers vary per environment (home vs. work, which IDE, which plan).
 
-**Cursor:** optional dynamic per-step model overrides via `.cursor/models.yml` (team baseline) or `.cursor/models.user.yml` (`use_manual_models: true` for manual assignment) — applied by `scripts/tools/apply-models.sh`. Neither file is tracked by default; add them if your team wants per-step model control. See [model-catalog](docs/model-catalog.md).
+**Per-install override (shared, optional):** copy `agentic/models.local.yml.example` to
+`agentic/models.local.yml` (gitignored) and list `<agent>: <model>` for whichever agents you want
+on a different tier. `scripts/setup-agentic.sh <claude|cursor>` rewrites the **installed** copy's
+`model:` line for listed agents at install time — the canonical source is never touched. Re-run
+setup after editing it.
+
+**Cursor only, additionally:** a **dynamic** per-step override on top of that, via
+`.cursor/models.yml` (team baseline) or `.cursor/models.user.yml` (`use_manual_models: true`),
+applied at runtime by `scripts/tools/apply-models.sh` during `/run`. Neither file is tracked by
+default. See [model-catalog](docs/model-catalog.md).
 
 ---
 
@@ -442,7 +473,7 @@ Local-only; aggregates `docs/audit.log`, `docs/sessions/`, and optional `docs/us
 
 1. Pass a **ticket-folder path** or **Jira key** to `/run` (or a target directory to `/fix` / `/do`).
 2. **Ticket folder first** for planned work — `/prd` → `/spectech` → `/tasks` before implementation, except `/fix` / `/do`.
-3. Use **feature branches**; protected branches require explicit branch-name approval.
+3. Analysis (`/prd` → `/spectech` → `/tasks`) is fine on the protected branch — it only writes the ticket folder. Before implementation (§5), use a **feature branch**; protected branches require explicit branch-name approval at that point, and the default is a plain checkout (no worktree) unless you ask for isolation.
 4. **MCP is optional** — every persona works with local tools only.
 5. **Amend the ticket folder** when scope grows — re-run `/prd` (or `/spectech`/`/tasks`) over the existing folder with "changes," rather than starting a new one.
 6. Prefer **linked skills and reference docs** over duplicating procedure here.

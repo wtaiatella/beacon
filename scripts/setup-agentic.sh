@@ -383,10 +383,16 @@ claude_plugin_market_root() {
 }
 
 claude_plugin_source_stamp() {
-  tar -cf - \
-    -C "$SRC" agents skills commands hooks \
-    -C "$SRC/adapters/claude" settings.json \
-    | shasum -a 256 | awk '{print $1}'
+  {
+    tar -cf - \
+      -C "$SRC" agents skills commands hooks \
+      -C "$SRC/adapters/claude" settings.json
+    # Fold in the optional per-install model override so editing it alone
+    # (without touching agentic/ itself) still invalidates the cached stamp.
+    if [[ -f "$SRC/models.local.yml" ]]; then
+      cat "$SRC/models.local.yml"
+    fi
+  } | shasum -a 256 | awk '{print $1}'
 }
 
 claude_plugin_installed() {
@@ -424,6 +430,7 @@ install_claude_plugin() {
   cp -R "$SRC/skills" "$plugin/skills"
   cp -R "$SRC/commands" "$plugin/commands"
   cp -R "$SRC/hooks" "$plugin/hooks"
+  apply_model_overrides "$plugin/agents"
   chmod +x "$plugin/hooks/"*.sh 2>/dev/null || true
   sed 's|$CLAUDE_PROJECT_DIR/.claude/hooks/|${CLAUDE_PLUGIN_ROOT}/hooks/|g' \
     "$SRC/adapters/claude/settings.json" > "$plugin/hooks/hooks.json"
@@ -461,8 +468,58 @@ EOF
   echo "    installed ${CLAUDE_PLUGIN_NAME}@${CLAUDE_MARKET_NAME} (slash prefix /${CLAUDE_PLUGIN_NAME}:)"
 }
 
+# Per-install model override (optional, gitignored). Every agent's canonical
+# frontmatter is `model: inherit` — this is the only place a different tier
+# is applied, and only for agents listed in agentic/models.local.yml. See
+# agentic/models.local.yml.example for the format. No-op if the file is
+# absent (the common case — inherit everywhere).
+apply_model_overrides() {
+  local agents_dir="$1"
+  local overrides="$SRC/models.local.yml"
+  [[ -f "$overrides" ]] || return 0
+  [[ -d "$agents_dir" ]] || return 0
+
+  local line key value file
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%#*}"
+    [[ -z "${line//[[:space:]]/}" ]] && continue
+    key="$(echo "${line%%:*}" | xargs)"
+    value="$(echo "${line#*:}" | xargs)"
+    [[ -z "$key" || -z "$value" ]] && continue
+    file="$agents_dir/$key.md"
+    if [[ ! -f "$file" ]]; then
+      echo "    warning: models.local.yml overrides unknown agent '$key' (no $file)" >&2
+      continue
+    fi
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      echo "DRY: model override $key -> $value ($file)"
+    else
+      sed -i '' "s/^model: .*/model: $value/" "$file"
+    fi
+  done < "$overrides"
+}
+
+# Shared, IDE-agnostic SDD contract. Cursor reads it natively; Claude Code's
+# CLAUDE.md imports it via `@AGENTS.md`. Installed regardless of which
+# adapter target is chosen.
+install_agents_md() {
+  local agents_md_src="$SRC/AGENTS.md"
+  if [[ ! -f "$agents_md_src" ]]; then
+    echo "error: missing $agents_md_src" >&2
+    exit 1
+  fi
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "DRY: cp $agents_md_src → $ROOT/AGENTS.md"
+  else
+    cp "$agents_md_src" "$ROOT/AGENTS.md"
+    echo "    wrote AGENTS.md (from agentic/AGENTS.md)"
+  fi
+}
+
 install_claude() {
   echo "==> Installing Claude adapter → user plugin + workspace control files"
+
+  install_agents_md
 
   local claude_md_src="$SRC/adapters/claude/CLAUDE.md"
   if [[ ! -f "$claude_md_src" ]]; then
@@ -492,6 +549,8 @@ install_claude() {
 install_cursor() {
   echo "==> Installing Cursor adapter → .cursor/ (agents, hooks, rules, skills)"
 
+  install_agents_md
+
   local rules_src="$SRC/adapters/cursor/rules"
   if [[ ! -d "$rules_src" ]]; then
     echo "error: missing $rules_src (Cursor always-on rules)" >&2
@@ -505,6 +564,7 @@ install_cursor() {
   overlay_adapter_hooks "cursor" "$ROOT/.cursor/hooks" "hooks"
   sync_dir_managed "$rules_src" "$ROOT/.cursor/rules" "rules"
   sync_dir_managed "$SRC/skills" "$ROOT/.cursor/skills" "skills"
+  apply_model_overrides "$ROOT/.cursor/agents"
   adapt_cursor_paths "$ROOT/.cursor/agents"
   adapt_cursor_paths "$ROOT/.cursor/hooks"
   adapt_cursor_paths "$ROOT/.cursor/skills"
@@ -556,6 +616,7 @@ install_cursor() {
 
 install_antigravity() {
   echo "==> Installing Antigravity stub → .agent/"
+  install_agents_md
   managed_begin "$ROOT/.agent"
   sync_dir_managed "$SRC/skills" "$ROOT/.agent/skills" "skills"
   sync_dir_managed "$SRC/commands" "$ROOT/.agent/workflows" "workflows"

@@ -1,7 +1,7 @@
 ---
 name: mcp-glean
 description: Enterprise-wide search and document retrieval via Glean MCP only. Orchestrator merges bounded Glean briefs into docs/sessions/<id>/pre-plan/ (merged-brief / specialists); Task(plan) consumes Pre-plan context. Use when the orchestrator needs organization-wide context (design docs, incidents, policies) before plan or review, bounded to a short brief.
-model: haiku
+model: inherit
 ---
 
 ## Role

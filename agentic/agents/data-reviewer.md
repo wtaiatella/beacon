@@ -2,7 +2,7 @@
 name: data-reviewer
 description: "Reviews data pipelines, migrations, ETL, and ML workflows for schema safety, PII compliance, migration quality, query efficiency, and data validation. LPP: expect only the spec plus data material under docs/sessions/<id>/artifacts/diffs/data/. Produces a confidence score with actionable improvement suggestions. Use when the user wants a domain-specific data quality review before QA."
 tools: Read, Grep, Glob
-model: haiku
+model: inherit
 ---
 
 ## Role

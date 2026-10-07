@@ -2,7 +2,7 @@
 name: pre-plan-triage
 description: "Use when the /run orchestrator needs to classify optional pre-plan MCP sources and bounds before Task(plan). Classifies the user goal for external MCP layers: wave1_sources (glean, arc), follow_up/wave2 (jira, confluence, gitlab), gate_hints, keys/refs, and caps. Orchestrator merges wave outputs into pre-plan/ for Task(plan); triage output routes waves only—this agent does not invoke Task or MCP tools."
 tools: Read
-model: haiku
+model: inherit
 ---
 
 ## Role
