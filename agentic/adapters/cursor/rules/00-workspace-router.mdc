@@ -41,9 +41,10 @@ Every agent's canonical frontmatter is `model: inherit` (see `AGENTS.md`'s gener
 hardcoded economy tier, since available model tiers vary per environment). Two independent
 override mechanisms exist here:
 
-- **Per-install (shared with Claude Code):** `agentic/models.local.yml` (copy from
-  `agentic/models.local.yml.example`, gitignored) — `scripts/setup-agentic.sh cursor` rewrites the
-  installed `.cursor/agents/*.md` copy's `model:` line for any agent listed.
+- **Per-install (own file, same mechanism as Claude Code):** `agentic/models/cursor.yml` (copy from
+  `agentic/models/example.yml`, gitignored) — `scripts/setup-agentic.sh cursor` rewrites the
+  installed `.cursor/agents/*.md` copy's `model:` line for any agent listed. Claude Code reads its
+  **own** `agentic/models/claude.yml` — same checkout, independent overrides per IDE.
 - **Dynamic per-step (Cursor-only, pre-existing):** `.cursor/models.yml` (team baseline) or
   `.cursor/models.user.yml` (`use_manual_models: true` for manual assignment), applied at runtime
   by `scripts/tools/apply-models.sh` during `/run`. Neither file is tracked by default.

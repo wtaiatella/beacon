@@ -39,13 +39,15 @@ canonical frontmatter is `model: inherit`** (uses whatever model the current ses
 available AI subscriptions/model tiers vary a lot per environment (home vs. work, which IDE,
 which plan), so the framework no longer hardcodes an economy tier for any agent.
 
-**Per-install override (optional):** copy `agentic/models.local.yml.example` to
-`agentic/models.local.yml` (gitignored — local to this checkout) and list `<agent>: <model>` for
+**Per-install override (optional, per adapter):** copy `agentic/models/example.yml` to
+`agentic/models/claude.yml` (gitignored — local to this checkout) and list `<agent>: <model>` for
 any agent you want on a different tier than `inherit` (e.g. `do: haiku`). `scripts/setup-agentic.sh
 claude` applies it by rewriting the **installed** plugin copy's `model:` line for listed agents —
 the canonical source under `agentic/agents/` is never touched. Re-run `setup-agentic.sh claude`
 after editing the override file to apply changes; an unknown agent name in it prints a warning and
-is otherwise ignored.
+is otherwise ignored. Cursor reads its **own** `agentic/models/cursor.yml` — if you use both IDEs
+in the same checkout (e.g. terminal vs. editor at the same job), each gets its own override file;
+editing one never affects the other.
 
 There is no Claude Code equivalent of per-run (mid-pipeline) model swapping; this override is
 fixed per installation, not dynamic per step. The `run-pipeline` skill's `--model-strategy` /

@@ -387,10 +387,11 @@ claude_plugin_source_stamp() {
     tar -cf - \
       -C "$SRC" agents skills commands hooks \
       -C "$SRC/adapters/claude" settings.json
-    # Fold in the optional per-install model override so editing it alone
-    # (without touching agentic/ itself) still invalidates the cached stamp.
-    if [[ -f "$SRC/models.local.yml" ]]; then
-      cat "$SRC/models.local.yml"
+    # Fold in the optional per-install model override (Claude-specific file)
+    # so editing it alone (without touching agentic/ itself) still
+    # invalidates the cached stamp.
+    if [[ -f "$SRC/models/claude.yml" ]]; then
+      cat "$SRC/models/claude.yml"
     fi
   } | shasum -a 256 | awk '{print $1}'
 }
@@ -430,7 +431,7 @@ install_claude_plugin() {
   cp -R "$SRC/skills" "$plugin/skills"
   cp -R "$SRC/commands" "$plugin/commands"
   cp -R "$SRC/hooks" "$plugin/hooks"
-  apply_model_overrides "$plugin/agents"
+  apply_model_overrides "$plugin/agents" "claude"
   chmod +x "$plugin/hooks/"*.sh 2>/dev/null || true
   sed 's|$CLAUDE_PROJECT_DIR/.claude/hooks/|${CLAUDE_PLUGIN_ROOT}/hooks/|g' \
     "$SRC/adapters/claude/settings.json" > "$plugin/hooks/hooks.json"
@@ -468,14 +469,16 @@ EOF
   echo "    installed ${CLAUDE_PLUGIN_NAME}@${CLAUDE_MARKET_NAME} (slash prefix /${CLAUDE_PLUGIN_NAME}:)"
 }
 
-# Per-install model override (optional, gitignored). Every agent's canonical
-# frontmatter is `model: inherit` — this is the only place a different tier
-# is applied, and only for agents listed in agentic/models.local.yml. See
-# agentic/models.local.yml.example for the format. No-op if the file is
-# absent (the common case — inherit everywhere).
+# Per-install, per-adapter model override (optional, gitignored). Every
+# agent's canonical frontmatter is `model: inherit` — this is the only place
+# a different tier is applied, and only for agents listed in the matching
+# agentic/models/<target>.yml (one file per adapter — see
+# agentic/models/example.yml for the format). No-op if that file is absent
+# (the common case — inherit everywhere).
 apply_model_overrides() {
   local agents_dir="$1"
-  local overrides="$SRC/models.local.yml"
+  local target="$2"
+  local overrides="$SRC/models/$target.yml"
   [[ -f "$overrides" ]] || return 0
   [[ -d "$agents_dir" ]] || return 0
 
@@ -488,7 +491,7 @@ apply_model_overrides() {
     [[ -z "$key" || -z "$value" ]] && continue
     file="$agents_dir/$key.md"
     if [[ ! -f "$file" ]]; then
-      echo "    warning: models.local.yml overrides unknown agent '$key' (no $file)" >&2
+      echo "    warning: models/$target.yml overrides unknown agent '$key' (no $file)" >&2
       continue
     fi
     if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -564,7 +567,7 @@ install_cursor() {
   overlay_adapter_hooks "cursor" "$ROOT/.cursor/hooks" "hooks"
   sync_dir_managed "$rules_src" "$ROOT/.cursor/rules" "rules"
   sync_dir_managed "$SRC/skills" "$ROOT/.cursor/skills" "skills"
-  apply_model_overrides "$ROOT/.cursor/agents"
+  apply_model_overrides "$ROOT/.cursor/agents" "cursor"
   adapt_cursor_paths "$ROOT/.cursor/agents"
   adapt_cursor_paths "$ROOT/.cursor/hooks"
   adapt_cursor_paths "$ROOT/.cursor/skills"

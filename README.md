@@ -442,11 +442,14 @@ Local-only; aggregates `docs/audit.log`, `docs/sessions/`, and optional `docs/us
 Every agent's canonical frontmatter is **`model: inherit`** — no hardcoded economy tier, since
 available model tiers vary per environment (home vs. work, which IDE, which plan).
 
-**Per-install override (shared, optional):** copy `agentic/models.local.yml.example` to
-`agentic/models.local.yml` (gitignored) and list `<agent>: <model>` for whichever agents you want
-on a different tier. `scripts/setup-agentic.sh <claude|cursor>` rewrites the **installed** copy's
-`model:` line for listed agents at install time — the canonical source is never touched. Re-run
-setup after editing it.
+**Per-install override (optional, one file per adapter):** copy `agentic/models/example.yml` to
+`agentic/models/claude.yml` and/or `agentic/models/cursor.yml` (both gitignored) and list
+`<agent>: <model>` for whichever agents you want on a different tier. `scripts/setup-agentic.sh
+<claude|cursor>` rewrites that adapter's **installed** copy's `model:` line for listed agents at
+install time — the canonical source is never touched, and each adapter only ever reads its own
+file, so the same checkout can carry different overrides for Claude Code vs. Cursor (e.g. you use
+both at the same job but have different tiers available in each). Re-run setup for that adapter
+after editing its file.
 
 **Cursor only, additionally:** a **dynamic** per-step override on top of that, via
 `.cursor/models.yml` (team baseline) or `.cursor/models.user.yml` (`use_manual_models: true`),

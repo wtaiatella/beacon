@@ -1,0 +1,44 @@
+# Per-install, per-IDE model override (optional).
+#
+# Copy this file to `agentic/models/<target>.yml` (gitignored — local to this
+# checkout/machine), where <target> is the adapter you're installing:
+#
+#   agentic/models/claude.yml   -> applied by `scripts/setup-agentic.sh claude`
+#   agentic/models/cursor.yml   -> applied by `scripts/setup-agentic.sh cursor`
+#
+# Each adapter reads only its own file, so the SAME checkout can have
+# different overrides per tool (e.g. different tiers available in Cursor vs.
+# Claude Code at work, or neither set at all at home). Any agent NOT listed
+# stays `model: inherit` (the canonical default for every agent in
+# agentic/agents/*.md) — i.e. it uses whatever model your current session
+# is running.
+#
+# Applied at install time: setup-agentic.sh rewrites the INSTALLED copy's
+# `model:` frontmatter for each agent listed here, leaving the canonical
+# source under agentic/agents/ untouched. Re-run setup-agentic.sh for that
+# target after editing its file to apply changes.
+#
+# One line per override: <agent-name>: <model>
+# <agent-name> is the agent's filename without `.md` (e.g. agentic/agents/do.md -> do).
+# <model> is whatever your IDE/session accepts there (e.g. "haiku", "sonnet",
+# "opus", or any model id/alias your Claude Code or Cursor setup recognizes).
+#
+# Example — if this adapter/environment has a cheap/fast tier available and
+# you want the mechanical, low-reasoning agents to use it instead of
+# inheriting the session model:
+#
+# do: haiku
+# summary: haiku
+# scrum: haiku
+# codebase-explorer: haiku
+# spec-validator: haiku
+# plan-reviewer: haiku
+# dev-reviewer: haiku
+# sre-reviewer: haiku
+# data-reviewer: haiku
+# pre-plan-triage: haiku
+# mcp-arc: haiku
+# mcp-confluence: haiku
+# mcp-gitlab: haiku
+# mcp-jira: haiku
+# mcp-glean: haiku
