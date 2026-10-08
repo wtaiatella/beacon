@@ -152,6 +152,7 @@ and responsibilities below are shared.)
 | sre-reviewer | Infra quality reviewer | /run (after /sre) |
 | data-reviewer | Data quality reviewer | /run (after /data) |
 | pre-plan-triage | Pre-plan context router | /run (before the PRD/Spectech/Tasks segment) |
+| pre-plan-reviewer | Pre-plan grounding critic (gaps/inconsistency/ambiguity, before `/prd` ever runs) | /run (after the pre-plan merge, before `Task(prd)`) |
 
 **Pre-plan domain specialists (read-only; the default, always-available pre-plan grounding — no MCP/config required):**
 
@@ -204,6 +205,7 @@ matching `mcp-*` subagent and feeds the bounded result back.
 - **`--resume`:** resume from last successful step after a failure
 - **`--max-iterations N`:** override implementation/review rework caps
 - **`--max-plan-iterations N`:** override the PRD/Spectech/Tasks ↔ plan-reviewer loop caps (default 3)
+- **`--max-preplan-iterations N`:** override the pre-plan merge ↔ pre-plan-reviewer self-heal loop caps, before `Task(prd)` ever runs (default 3; independent of `--max-plan-iterations`)
 - **Escape hatches:** /fix (bugs), /do (quick tasks) — **Ticket-folder amendment:** re-run `/prd`/`/spectech`/`/tasks` over the existing folder with "changes"
 
 **Branch gate timing (important, non-default from a naive reading):** branch awareness at the
