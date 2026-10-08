@@ -399,6 +399,8 @@ Utilities (`/clone`, `/rebase`, `/kb-refresh`, `/kb-concentrator`, `/setup-works
 | `--branch [name]` | Suggests a branch name — you still approve creation on protected branches |
 | `--max-iterations N` | Cap implementation/review rework loops (default 3) |
 | `--max-plan-iterations N` | Cap the PRD/Spectech/Tasks ↔ plan-reviewer self-heal loop (default 3) |
+| `--max-preplan-iterations N` | Cap the pre-plan merge ↔ pre-plan-reviewer self-heal loop, before `Task(prd)` ever runs (default 3) |
+| `--pre-plan` / `--plan` / `--dev` / `--finish` | Mutually exclusive **checkpoint** flags — run through the end of that stage, then stop (`STAGE COMPLETE: <name>`) instead of continuing. Pass `--resume` on every staged call after the first. |
 
 ---
 

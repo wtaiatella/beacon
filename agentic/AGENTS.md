@@ -206,6 +206,7 @@ matching `mcp-*` subagent and feeds the bounded result back.
 - **`--max-iterations N`:** override implementation/review rework caps
 - **`--max-plan-iterations N`:** override the PRD/Spectech/Tasks ↔ plan-reviewer loop caps (default 3)
 - **`--max-preplan-iterations N`:** override the pre-plan merge ↔ pre-plan-reviewer self-heal loop caps, before `Task(prd)` ever runs (default 3; independent of `--max-plan-iterations`)
+- **`--pre-plan` / `--plan` / `--dev` / `--finish`:** mutually exclusive **checkpoint** flags — run normally (from the start, or `--resume`d) through the end of the named stage, then stop with `STAGE COMPLETE: <name>` instead of continuing (`--finish` is the non-early-stop case, ending in the normal `PIPELINE: COMPLETE`). Pass `--resume` on every staged invocation after the first for a ticket. See the `run-pipeline` skill — **Staged execution (checkpoint flags)**.
 - **Escape hatches:** /fix (bugs), /do (quick tasks) — **Ticket-folder amendment:** re-run `/prd`/`/spectech`/`/tasks` over the existing folder with "changes"
 
 **Branch gate timing (important, non-default from a naive reading):** branch awareness at the

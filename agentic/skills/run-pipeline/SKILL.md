@@ -62,7 +62,7 @@ From the user’s `/run` line, extract:
   - **Shorthand:** slug match (finds the folder), `latest` (most recent).
   - Single-file `spec.md` paths and bare target-directory discovery for a spec-authoring persona are **not** accepted — the required orchestrator's front end is always **`Task(prd)`**→**`Task(spectech)`**→**`Task(tasks)`** (FR-3); there is no `Task(plan)` and no `/plan` in this orchestrator (FR-4).
 - **Goal text:** remainder after targets/flags.
-- **Flags:** `--confidence N` (default 75), `--review`, `--manual` (**manual step gates** — orchestration pauses after plan and after each domain track; **not** **manual model assignment** from **`.claude/models.user.yml`**), `--resume`, `--skip <step>`, **`--skip impl-review`** (optional **escape hatch** — skips **§ 6** implementation review; see below), `--branch [name]` (optional hint only; see **Branch naming** below), **`--max-iterations N`** (caps **§ 6** / implementation rework loops and similar — default **3** when unset), **`--max-plan-iterations N`** (caps **§ 4** plan ↔ plan-reviewer self-heal only — default **3** when unset; independent of **`--max-iterations`**), **`--max-preplan-iterations N`** (caps the pre-plan merge ↔ pre-plan-reviewer self-heal loop, before **`Task(prd)`** ever runs — default **3** when unset; independent of **`--max-plan-iterations`** and **`--max-iterations`**), `--model-strategy conservative|balanced|quality`, `--budget $N`.
+- **Flags:** `--confidence N` (default 75), `--review`, `--manual` (**manual step gates** — orchestration pauses after plan and after each domain track; **not** **manual model assignment** from **`.claude/models.user.yml`**), `--resume`, `--skip <step>`, **`--skip impl-review`** (optional **escape hatch** — skips **§ 6** implementation review; see below), `--branch [name]` (optional hint only; see **Branch naming** below), **`--max-iterations N`** (caps **§ 6** / implementation rework loops and similar — default **3** when unset), **`--max-plan-iterations N`** (caps **§ 4** plan ↔ plan-reviewer self-heal only — default **3** when unset; independent of **`--max-iterations`**), **`--max-preplan-iterations N`** (caps the pre-plan merge ↔ pre-plan-reviewer self-heal loop, before **`Task(prd)`** ever runs — default **3** when unset; independent of **`--max-plan-iterations`** and **`--max-iterations`**), **`--pre-plan` / `--plan` / `--dev` / `--finish`** (mutually exclusive **checkpoint** flags — stop after a named stage instead of running to completion; see **Staged execution (checkpoint flags)** below), `--model-strategy conservative|balanced|quality`, `--budget $N`.
 ### Ticket-folder resolution (Jira-key primary argument)
 
 Implements spectech's **D8**. When the primary argument matches a Jira-key pattern (`[A-Z]+-[0-9]+`) rather than an existing folder path:
@@ -101,6 +101,66 @@ When suggesting a new branch name (especially after **branch consent** on a prot
 | Hotfix | `hotfix/{spec-slug}` | `hotfix/acme-auth-timeout` |
 
 Derive **`{spec-slug}`** from the ticket-folder name: strip `docs/specs/`, the date prefix `YYYY-MM-DD-`, and the ticket-key prefix `{TICKET-KEY}-` when present (or use the folder's shorthand slug). If **`--branch foo`** is present, treat **`foo`** as the primary suggestion but still obtain **explicit user approval** before any `git checkout -b` / branch create — same as today.
+
+## Staged execution (checkpoint flags: `--pre-plan` / `--plan` / `--dev` / `--finish`)
+
+**What these are, precisely:** each is a **checkpoint**, not an isolated-segment executor. Passing
+one means "run the pipeline normally — from the start, or resumed — **through the end of this
+named stage, then stop**," not "run only this stage in isolation." This matters for `--dev` and
+`--finish`: on a brand-new ticket with nothing done yet, `--dev` alone still runs **everything**
+from **§1** through **§6** (pre-plan, plan segment, implementation+review for every phase) before
+stopping — it does not skip the earlier stages. The four flags are **mutually exclusive** — if the
+user passes more than one, that is **ambiguous intent** (**Error Protocol** item 6): ask which one
+they meant rather than picking silently.
+
+**Naming note (avoid confusion with `§9 Finish`):** `--finish` here is a **broader** checkpoint —
+it runs **§7.0 → §7 → §7.1 → §8 → §9** to actual completion. It is not a synonym for the skill's
+own "**§9 Finish**" terminology (`pipeline-finish.sh`, commit/push/MR prompts) — it is the flag
+that gets you *to* and *through* that step, named for symmetry with the other three checkpoints.
+
+| Flag | Stops immediately after | Does **not** run |
+|---|---|---|
+| **`--pre-plan`** | The pre-plan review gate (**`Task(scrum)`** PROCEED on the pre-plan gate) — i.e. right before **`Task(prd)`** would run | §3 onward |
+| **`--plan`** | The **§4** plan-segment gate (**`Task(scrum)`** PROCEED on `prd`/`spectech`/`tasks`) — i.e. right before the **§5 pre-check — branch gate** | §5 onward |
+| **`--dev`** | **§6** for the **last** phase (all phases' implementation + review gates done) — i.e. right before **§7.0** QA prep | §7 onward |
+| **`--finish`** | Normal completion — **`PIPELINE: COMPLETE`** after **§9** | *(nothing — this is the non-early-stop case, named explicitly)* |
+
+**Stopping message (not `PIPELINE: COMPLETE` for the first three):** when a checkpoint causes an
+early stop, emit **`STAGE COMPLETE: <pre-plan|plan|dev>`** instead — summarize what ran, the gate
+score/decision that authorized stopping, and the **exact next command**, e.g.:
+
+```
+STAGE COMPLETE: plan
+prd.md, spectech.md, tasks.md written and reviewed (plan-reviewer: 86%, scrum: PROCEED).
+Next: /run docs/specs/2026-04-10-BG-123-example/ --dev --resume
+```
+
+This is **not** a failure or a partial run to apologize for — treat it as a normal, successful
+stop. The **Invalid completion** / anti-fake-completion guardrails elsewhere in this skill are
+about claiming `PIPELINE: COMPLETE` without having done the work; they do not apply to an
+intentional `STAGE COMPLETE` halt requested by the user's flag.
+
+**Chaining across separate `/run` invocations — pass `--resume` every time after the first:**
+these flags do **not** introduce new session-matching logic. Resuming into the next stage in a
+**later**, separate `/run` command uses the **existing** `--resume` mechanism exactly as it already
+works (continue from the last `GATE:` / `FAILURE:` line) — so the **first** invocation for a ticket
+omits `--resume` (nothing to resume yet), and **every subsequent** staged invocation includes it:
+
+```
+/run docs/specs/{slug}/ --pre-plan
+/run docs/specs/{slug}/ --plan    --resume
+/run docs/specs/{slug}/ --dev     --resume
+/run docs/specs/{slug}/ --finish  --resume
+```
+
+Omitting `--resume` on a later invocation starts a **new** session per the normal (non-staged)
+behavior — the orchestrator does not infer intent from the presence of a checkpoint flag alone.
+
+**Interaction with other flags:** orthogonal to `--skip`, `--manual`, `--review`, and the
+`--max-*-iterations` flags — all apply normally within whichever stages actually run. A
+combination that is **self-contradictory** (e.g. `--pre-plan --skip plan` — the pre-plan segment
+cannot both run to completion and be skipped) is a **configuration error**: surface it and ask,
+per **Error Protocol**, rather than silently resolving the conflict one way.
 
 ## Manual step gates (`--manual`)
 
@@ -303,7 +363,7 @@ Runs **after** **Init** and **before** the **PRD/Spectech/Tasks segment (`Task(p
 6. **Pre-plan review gate (self-heal, before `Task(prd)` ever runs)** — Run **`Task(pre-plan-reviewer)`** on the merged brief, **then** **`Task(scrum)`** (pre-plan gate — see `scrum.md`) to decide **PROCEED** / **REWORK** / **ASK_USER** / **ESCALATE**. This is the **same self-heal shape** as the **§4** plan-segment loop, one stage earlier:
    - **REWORK:** the reviewer's report names the specific specialist(s) to re-run (never a blind re-run of the whole wave) and, for a **triage gap** (a domain that should have been scheduled and wasn't), the orchestrator additionally schedules that specialist for the first time. Re-invoke the named `Task(<specialist>-specialist)` call(s) with a condensed **`Pre-plan review feedback:`** block (the reviewer's specific finding for that specialist — not the full report, not prior attempts' transcripts), then **re-merge** (step 5 again) and **re-review** (this step again).
    - **Loop cap:** **`--max-preplan-iterations`** (default **3**, independent of **`--max-plan-iterations`**). At the cap without PROCEED, **`AskQuestion`** (or chat fallback: Proceed anyway / Abort / Provide guidance) and record **`ESCALATION: pre-plan | max iterations`** in session memory — same pattern as the plan-segment cap.
-   - **PROCEED / ASK_USER:** continue to step 7. An explicit user override at **ASK_USER** counts as PROCEED for sequencing purposes.
+   - **PROCEED / ASK_USER:** if **`--pre-plan`** was passed, **stop here** — emit **`STAGE COMPLETE: pre-plan`** (see **Staged execution (checkpoint flags)**) instead of continuing. Otherwise continue to step 7. An explicit user override at **ASK_USER** counts as PROCEED for sequencing purposes.
    - **Context slicing (non-negotiable, same as the plan segment):** the re-invoked specialist's prompt carries **only** its own slice of the reviewer's finding — not the full `## Pre-plan Review Report`, not other specialists' feedback, not prior iteration transcripts.
 
 7. **`Task(prd)`** — Append a **`Pre-plan context:`** block: **summarized**, **reviewed** merged brief (bullet-style pointers are OK) plus the ticket type from triage. Include the user goal as today. **Do not** pass full pipeline history, nested subagent logs, or **raw** specialist dumps as the primary payload — condense to a bounded brief (see **`merged-brief.md`** on disk in **`docs/run-pipeline-reference.md`** — **Session storage**).
@@ -353,6 +413,8 @@ Skip **`Task(plan-reviewer)`** only if a future **`--skip plan-review`** flag ex
 
 Persist: **`scripts/tools/log-gate.sh plan-review-gate <score> <decision> <attempts>`** and **`scripts/tools/log-gate.sh plan-done <folder-path>`** when the plan segment is fully accepted.
 
+**Checkpoint:** if **`--plan`** was passed, **stop here** (after step 5's **`Task(scrum)`** PROCEED/accepted override) — emit **`STAGE COMPLETE: plan`** instead of continuing to **§5**. See **Staged execution (checkpoint flags)**.
+
 ### 5. Implementation
 
 #### Pre-check — branch gate (before phase 1's § 5; the hard gate deferred from § 1)
@@ -385,7 +447,7 @@ For each spec **phase** *k* (or the single implicit phase if there are no **`###
    - **`--manual`:** Emit **`impl-start`** / **`write-raw` `impl | DONE`** **per domain track** (each **`Task(dev|sre|data)`** → **START**; **`impl | DONE`** after that track’s implementation **`Task`** returns, before **§ 6** for that segment; include **`phase: k`** in the **`impl | DONE`** line when the spec has phase headings).
 2. **§ 6** — After the § 5 batch, run **in parallel** domain **`*-reviewer`** (as needed) **and** **`Task(security-scanner)`** scoped to **`phase-impl-delta`**; persist **`phase-<N>-security.md`** (see **§ 6 Implementation review**); **then** **`Task(scrum)`** for phase *k* (batched or per-track per **`--manual`**).
 3. **Optional rework loop** — If **`Task(scrum)`** returns **REWORK** / **ASK_USER**, persist **`IMPL_SEGMENT_FEEDBACK:`** (phase, domain, reviewer + scrum rationale) to session memory, then re-run the needed **§ 5** / **§ 6** steps for that phase subject to **`--max-iterations`** (default **3**) for that gate family; do **not** start phase *k+1* until scrum **PROCEED** (or explicit user override) for phase *k*. At the cap → **`ESCALATE`** / **`AskQuestion`** per **Error handling**. Mid-pipeline commits during / after a REWORK loop use conventional type **`fix`** (honor **`commit_policy.rework_prefix`**, default **`fix`**) — see **Commit policy**.
-4. **Only then** — Proceed to **§ 5** for phase *k+1* (if any), or to **§ 7 QA** when all phases have passed **§ 6**.
+4. **Only then** — Proceed to **§ 5** for phase *k+1* (if any), or to **§ 7 QA** when all phases have passed **§ 6**. **Checkpoint:** if **`--dev`** was passed and this was the **last** phase (all phases now past **§ 6**), **stop here** — emit **`STAGE COMPLETE: dev`** instead of continuing to **§ 7.0**. See **Staged execution (checkpoint flags)**.
 
 #### Mid-run enterprise context (`REQUEST_MAIN:` / enterprise `QUESTION:`)
 
@@ -669,6 +731,7 @@ Follow **`references/model-plan.md`** and **`docs/run-pipeline-reference.md`** f
 - **Persona edited spec progress** (checkboxes **`[x]`**, **`status`**, **`last-updated`**) under **`[DELEGATION MODE: orchestrated]`** **without** going through **`Task(scrum)`** authorization — invalid; **`Task(do)`** applies spec updates **after** scrum **PROCEED** (main session **must not** patch specs directly).
 - **Mostly `N/A`** for scores, models, and strategy together.
 - **`PIPELINE: COMPLETE`** with “self-checked QA” / skipped real **`Task(qa)`** / **`Task(summary)`**.
+- **Checkpoint-flag violations:** emitting **`PIPELINE: COMPLETE`** when **`--pre-plan`**/`--plan`/`--dev` was passed and the pipeline ran **past** that stage's checkpoint instead of stopping; or emitting **`STAGE COMPLETE: <name>`** for a stage that did **not** actually finish its gate with PROCEED/accepted override. (Conversely, an honest **`STAGE COMPLETE: <name>`** halt **is** a valid, non-degraded outcome when the matching checkpoint flag was passed — see **Staged execution (checkpoint flags)** — do not treat it as a failure.)
 
 If invalid: tell the user the pipeline was not valid; suggest re‑running from the failed step or restarting at **`/prd`**; do not “verify” the repo yourself as proof.
 
@@ -690,6 +753,15 @@ Models used: <brief table>
 Estimated cost: <optional>
 QUESTION: <none or list>
 APPROVAL_NEEDED: <none — user should review worktree / MR before merge>
+```
+
+**Checkpoint-flag variant** — when **`--pre-plan`**/`--plan`/`--dev` caused an early, intentional stop (see **Staged execution (checkpoint flags)**), emit this instead of the template above:
+
+```text
+STAGE COMPLETE: <pre-plan|plan|dev>
+Spec: <path>
+Gates passed this stage: <e.g. "pre-plan-reviewer 88%, scrum PROCEED">
+Next: /run <path> --<next-stage> --resume
 ```
 
 ## Error handling
