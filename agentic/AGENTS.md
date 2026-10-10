@@ -151,7 +151,7 @@ and responsibilities below are shared.)
 | dev-reviewer | Code quality reviewer | /run (after /dev) |
 | sre-reviewer | Infra quality reviewer | /run (after /sre) |
 | data-reviewer | Data quality reviewer | /run (after /data) |
-| pre-plan-triage | Pre-plan context router | /run (before the PRD/Spectech/Tasks segment) |
+| pre-plan-triage | Pre-plan context router (also classifies `project_maturity`: greenfield/brownfield) | /run (before the PRD/Spectech/Tasks segment) |
 | pre-plan-reviewer | Pre-plan grounding critic (gaps/inconsistency/ambiguity, before `/prd` ever runs) | /run (after the pre-plan merge, before `Task(prd)`) |
 
 **Pre-plan domain specialists (read-only; the default, always-available pre-plan grounding — no MCP/config required):**
@@ -164,6 +164,14 @@ and responsibilities below are shared.)
 | security-specialist | Threat-surface grounding (auth/input/sensitive data) | /run pre-plan wave, when ticket crosses a security boundary |
 | testing-observability-specialist | Test/log/metric **gap** finding for planning (distinct from QA's verification role) | /run pre-plan wave |
 | repro-specialist | Empirical reproduction (always for bug tickets; agent's own judgment otherwise); shares its procedure with `/fix` via the `repro` skill | /run pre-plan wave |
+
+**Project maturity (`greenfield` vs. `brownfield`):** `pre-plan-triage` also classifies
+`project_maturity` per ticket area — `brownfield` (default) when this area has existing
+code/conventions to ground in, `greenfield` when it genuinely has none. This is a **second,
+orthogonal axis** to which specialists are routed: it does not add agents, it switches each
+routed specialist's **mode** between "ground in what exists" (brownfield) and "propose the
+baseline convention for this area" (greenfield, a one-time bootstrap, not the ticket's full
+solution). Keeps the specialist catalog small instead of multiplying agents per project phase.
 
 **Front-end personas (write-capable):**
 

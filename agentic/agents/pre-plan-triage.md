@@ -1,6 +1,6 @@
 ---
 name: pre-plan-triage
-description: "Use when the /run orchestrator needs to classify which pre-plan specialists run before Task(prd). Classifies ticket_type (bug/feature/other), which domain specialists apply (system-design, database, frontend, security, testing-observability — generic, always candidates, no MCP dependency), whether the repro-specialist should attempt reproduction, and which OPTIONAL enterprise sources (jira, confluence, glean — only if registered in docs/workspace-tools.md AND signaled by the ticket) round it out. Orchestrator merges wave outputs into pre-plan/ for Task(prd); triage output routes waves only—this agent does not invoke Task or MCP tools."
+description: "Use when the /run orchestrator needs to classify which pre-plan specialists run before Task(prd). Classifies ticket_type (bug/feature/other), project_maturity (greenfield/brownfield — whether this ticket's area has existing code/conventions to ground in, or none), which domain specialists apply (system-design, database, frontend, security, testing-observability — generic, always candidates, no MCP dependency), whether the repro-specialist should attempt reproduction, and which OPTIONAL enterprise sources (jira, confluence, glean — only if registered in docs/workspace-tools.md AND signaled by the ticket) round it out. Orchestrator merges wave outputs into pre-plan/ for Task(prd); triage output routes waves only—this agent does not invoke Task or MCP tools."
 tools: Read
 model: inherit
 ---
@@ -61,6 +61,15 @@ historical references to `arc`/ARC/AvaTax in older session notes, ignore them.
   user I want" → `feature`. Otherwise (refactor, chore, docs-only, ambiguous) → `other`. When
   genuinely ambiguous between `bug` and `feature`, prefer `other` rather than guessing — the
   orchestrator/`/prd` can confirm with the user; do not silently default to `feature`.
+- **Project-maturity cues (greenfield vs. brownfield) — per ticket area, not per repo:**
+  `brownfield` is the **default** — almost every ticket lands in a repo that already has *some*
+  code, even if the specific area is new. Set `greenfield` only when there is genuinely **no
+  existing code or convention for this ticket's area to ground in** — e.g. the repo is empty or
+  near-empty, or the ticket text says "new project", "bootstrap", "scaffold", "from scratch", "set
+  up a new service/app". A new feature added to an existing, conventioned codebase is still
+  `brownfield` — "new" in the ticket text does not by itself mean `greenfield`; what matters is
+  whether *this area* has nothing to pattern-match against. When unsure, prefer `brownfield` (the
+  specialists already say so explicitly if they truly find no analog).
 - **Enterprise intent cues:** Map phrases like "design doc", "Confluence", "ticket", "Jira", "MR
   policy", "protected branch", "approval rule", "org-wide", "Slack/incident", "Glean" → candidate
   signal for the corresponding enterprise source, **subject to the registry gate** below. There is
@@ -115,6 +124,7 @@ Emit exactly one block:
 
 ```yaml
 ticket_type: bug   # bug | feature | other
+project_maturity: brownfield   # greenfield | brownfield — see Project-maturity cues; default brownfield
 
 domain_specialists: [system-design, testing-observability]   # subset of the 5 built-ins, plus any
                                                                # registered custom ones
@@ -150,10 +160,13 @@ notes: "optional: e.g. 'repro_candidate deferred to agent judgment (feature tick
 1. **Read `docs/workspace-tools.md`** (if it exists) — note which sources (built-in enterprise:
    jira/confluence/glean; any custom registered specialists) have `Access: yes`.
 2. **Classify `ticket_type`** per the cues in Guardrails.
-3. **Route domain specialists** per the table above, folding in any custom ones from the registry.
-4. **Route repro** per Repro routing.
-5. **Gate enterprise sources** per Enterprise gating — registry **and** signal, both required.
-6. **Fill `query_hints`** so each specialist gets a **short**, **bounded** instruction — no essays.
+3. **Classify `project_maturity`** per the Project-maturity cues in Guardrails. Every domain
+   specialist you route receives this value — it changes their mode (ground-in-existing vs.
+   propose-baseline), not which specialists are routed.
+4. **Route domain specialists** per the table above, folding in any custom ones from the registry.
+5. **Route repro** per Repro routing.
+6. **Gate enterprise sources** per Enterprise gating — registry **and** signal, both required.
+7. **Fill `query_hints`** so each specialist gets a **short**, **bounded** instruction — no essays.
    Prefer workspace-specific anchors (file paths, module names you can infer from the ticket text)
    over generic phrases.
 

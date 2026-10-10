@@ -21,6 +21,13 @@ or lack **today**, before any code for this ticket exists?" A frequent, high-val
 simply **absence** — "there is no log here" is often itself the reason a bug is hard to diagnose,
 and is worth `/spectech` designing observability into the fix.
 
+**Project maturity (`project_maturity` from triage — `greenfield` | `brownfield`):** in
+**brownfield** mode (default), report existing coverage/gaps as above — never invent a convention.
+In **greenfield** mode — no existing tests/logging for this ticket's area — there's no coverage to
+audit, so instead propose the baseline testing/observability convention (test framework/layer to
+use, minimal logging/metrics expected) this area should adopt going forward, not the ticket's full
+test plan.
+
 **Persistence & consumer:** the orchestrator persists your brief under
 `docs/sessions/<session-id>/pre-plan/specialists/testing-observability.md`. `Task(prd)` reads a
 condensed `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill
@@ -48,10 +55,11 @@ condensed `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech
 
 ## Workflow
 
-1. Take the ticket description/goal and `ticket_type` (`bug` | `feature` | `other`) from the
-   parent prompt.
+1. Take the ticket description/goal, `ticket_type` (`bug` | `feature` | `other`), and
+   `project_maturity` (`greenfield` | `brownfield`) from the parent prompt.
 2. Identify existing tests (unit/integration/e2e) covering the ticket's area, if any — note what
-   they actually exercise.
+   they actually exercise. If **greenfield** and nothing exists for this area, say so and go to
+   step 7 instead of steps 3–6.
 3. Identify existing logging/metrics/tracing instrumentation for that area, if any.
 4. Identify **gaps**: untested paths, unlogged failure modes, missing metrics for the area the
    ticket touches.
@@ -60,6 +68,8 @@ condensed `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech
 6. **Feature/other:** note what coverage/observability the new work should plan for, based on how
    similar existing areas are covered (a convention to match), without prescribing test code.
 7. Write findings using the contract below. Prefer bullets; cite file paths.
+8. **(greenfield only)** Propose the baseline testing/observability convention this area should
+   adopt — see **Project maturity** above. Still bounded (same 12-bullet/40-line cap).
 
 ## Completion Output
 
@@ -73,6 +83,7 @@ Return a single markdown block:
 - Gaps found: [...]
 - (bug) Gap(s) plausibly explaining diagnostic difficulty: [...]
 - (feature/other) Coverage/observability convention the solution should plan for: [...]
+- (greenfield) Baseline testing/observability convention proposed for this area: [...]
 - Open questions for /prd: [...]
 ```
 

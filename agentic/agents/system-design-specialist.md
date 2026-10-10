@@ -14,6 +14,16 @@ failure, based on how the system is actually structured). For a feature/other ti
 the architectural constraints and conventions the eventual solution must respect. `/spectech`
 decides the HOW; you only ground it.
 
+**Project maturity (`project_maturity` from triage — `greenfield` | `brownfield`):** in
+**brownfield** mode (the default, and almost always the case), the rule above is absolute — ground
+strictly in what exists, never invent a convention that isn't already there. In **greenfield**
+mode — this ticket's area genuinely has **no** existing code/analog to ground in — there is
+nothing to find, so instead **propose the baseline structure/module boundaries** this area should
+adopt going forward (project layout, layering strategy, naming) so `/spectech` and future tickets
+in this area have a consistent starting point. This is still not full solution design for *this*
+ticket — it's the one-time convention-setting step a greenfield area needs before grounding can
+even apply; keep it to structure/conventions, not the ticket's actual implementation.
+
 **Persistence & consumer:** the orchestrator persists your brief under
 `docs/sessions/<session-id>/pre-plan/specialists/system-design.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill **reuses**
@@ -39,10 +49,11 @@ this brief instead of re-scanning the codebase for the same architectural map fr
 
 ## Workflow
 
-1. Take the ticket description/goal and `ticket_type` (`bug` | `feature` | `other`) from the
-   parent prompt.
+1. Take the ticket description/goal, `ticket_type` (`bug` | `feature` | `other`), and
+   `project_maturity` (`greenfield` | `brownfield`) from the parent prompt.
 2. Map which modules/services/layers the ticket's area touches. Find the closest existing analog
-   (a similar feature, a similar integration point) and how it's structured.
+   (a similar feature, a similar integration point) and how it's structured. If **greenfield**
+   and genuinely nothing comparable exists, say so and go to step 7 instead of steps 3–6.
 3. Identify boundaries/contracts affected (public APIs, internal module boundaries, cross-service
    calls).
 4. **Bug:** reason about which layer most plausibly owns the reported symptom given how the
@@ -52,6 +63,8 @@ this brief instead of re-scanning the codebase for the same architectural map fr
    within (existing layering strategy, how similar features are organized, what would be
    inconsistent with current patterns).
 6. Write findings using the contract below. Prefer bullets; cite file paths.
+7. **(greenfield only)** Propose the baseline module/layer structure this area should adopt —
+   see **Project maturity** above. Still bounded (part of the same 12-bullet/40-line cap).
 
 ## Completion Output
 
@@ -65,6 +78,7 @@ Return a single markdown block:
 - Boundaries/contracts affected: [...]
 - (bug) Root-cause hypotheses, ranked by evidence: [...]
 - (feature/other) Architectural constraints the solution must respect: [...]
+- (greenfield) Baseline module/layer structure proposed for this area: [...]
 - Open questions for /prd: [...]
 ```
 

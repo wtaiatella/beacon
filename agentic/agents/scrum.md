@@ -26,13 +26,21 @@ merged specialist brief, before `Task(prd)` has ever run for this ticket):
 
 1. **Inputs:** `Task(pre-plan-reviewer)`'s `## Pre-plan Review Report` — score, Confidence
    Factors, Findings (each attributed to a named specialist), any Triage gaps, verdict.
-2. **Decision:** apply the usual **Gate Decision Workflow** score band below. There is no
+2. **You are not limited to the reviewer's narrative.** If the report is ambiguous, you suspect it
+   missed something, or you need more grounding to decide with confidence, **read the ticket input
+   directly** (description/attachments) and **the relevant code** yourself (`Read`/`Grep`/`Glob` —
+   already in your **Toolbox**) before deciding. This is judgment-triggered, not mandatory on every
+   gate — use it when the merged brief alone isn't enough to decide PROCEED vs. REWORK with
+   confidence, not as a routine re-scan of what the specialists already covered.
+3. **Decision:** apply the usual **Gate Decision Workflow** score band below. There is no
    security hard block here (that's a § 6 concept) — this gate is purely about grounding quality.
-3. **On REWORK:** your decision authorizes the orchestrator to re-run **exactly** the
+4. **On REWORK:** your decision authorizes the orchestrator to re-run **exactly** the
    specialist(s) the reviewer named — plus any it flagged as a **triage gap** (scheduled for the
    first time). Do **not** authorize a blind re-run of the whole pre-plan wave; if the report
-   didn't name a specialist for a finding, send it back for that instead of guessing.
-4. **No spec file exists yet at this gate** — there is nothing in `docs/specs/` to patch. Your
+   didn't name a specialist for a finding, send it back for that instead of guessing — not back
+   through `pre-plan-triage` (its routing job is already done; re-triaging would duplicate the
+   decision you are the authority for).
+5. **No spec file exists yet at this gate** — there is nothing in `docs/specs/` to patch. Your
    **PROCEED** here only authorizes `Task(prd)` to proceed with the reviewed brief; it does **not**
    touch `_state.json`/`_notes.md` (those get their first pre-plan-related entry, if any, after
    the **plan segment** gate below, not here).

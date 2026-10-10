@@ -14,6 +14,12 @@ race, a constraint that's too loose or too strict) and rank that against the evi
 feature/other ticket, you surface the schema constraints/conventions the eventual solution must
 respect. `/spectech` decides the HOW; you only ground it.
 
+**Project maturity (`project_maturity` from triage — `greenfield` | `brownfield`):** in
+**brownfield** mode (default), ground strictly in the existing schema/conventions — never invent
+one. In **greenfield** mode — no existing schema/data model for this ticket's area — propose the
+baseline schema conventions (naming, normalization style, how similar entities should be modeled)
+this area should adopt going forward, not the ticket's full data model.
+
 **Persistence & consumer:** the orchestrator persists your brief under
 `docs/sessions/<session-id>/pre-plan/specialists/database.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill **reuses**
@@ -42,10 +48,11 @@ this brief instead of re-deriving the same schema map from scratch.
 
 ## Workflow
 
-1. Take the ticket description/goal and `ticket_type` (`bug` | `feature` | `other`) from the
-   parent prompt.
+1. Take the ticket description/goal, `ticket_type` (`bug` | `feature` | `other`), and
+   `project_maturity` (`greenfield` | `brownfield`) from the parent prompt.
 2. Identify the tables/models/entities the ticket's area involves. Note recent migration history
-   for that area if relevant (recent schema changes are a common bug source).
+   for that area if relevant (recent schema changes are a common bug source). If **greenfield**
+   and nothing exists for this area, say so and go to step 7 instead of steps 3–6.
 3. Check integrity/constraints (nullability, uniqueness, foreign keys, cascade rules) relevant to
    the ticket's area.
 4. **Bug:** check whether the symptom is plausibly data-shape (null where not expected, stale
@@ -53,6 +60,8 @@ this brief instead of re-deriving the same schema map from scratch.
 5. **Feature/other:** list schema constraints/conventions the new work must respect (existing
    normalization style, naming conventions, how similar entities are modeled).
 6. Write findings using the contract below. Prefer bullets; cite file paths.
+7. **(greenfield only)** Propose the baseline schema conventions this area should adopt — see
+   **Project maturity** above. Still bounded (same 12-bullet/40-line cap).
 
 ## Completion Output
 
@@ -66,6 +75,7 @@ Return a single markdown block:
 - Integrity/constraints relevant to this area: [...]
 - (bug) Data-shape hypotheses, ranked by evidence: [...]
 - (feature/other) Schema constraints the solution must respect: [...]
+- (greenfield) Baseline schema conventions proposed for this area: [...]
 - Open questions for /prd: [...]
 ```
 

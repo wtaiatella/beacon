@@ -14,6 +14,12 @@ lifecycle issue, a known browser/compat gap) and rank that against the evidence.
 feature/other ticket, you surface the component/UX conventions the eventual solution must respect.
 `/spectech` decides the HOW; you only ground it.
 
+**Project maturity (`project_maturity` from triage — `greenfield` | `brownfield`):** in
+**brownfield** mode (default), ground strictly in the existing framework/component conventions —
+never invent one. In **greenfield** mode — no existing frontend stack/conventions for this area —
+propose the baseline conventions (component composition style, state-management approach,
+accessibility baseline) this area should adopt going forward, not the ticket's full UI design.
+
 **Persistence & consumer:** the orchestrator persists your brief under
 `docs/sessions/<session-id>/pre-plan/specialists/frontend.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill **reuses**
@@ -42,10 +48,11 @@ this brief instead of re-deriving the same frontend map from scratch.
 
 ## Workflow
 
-1. Take the ticket description/goal and `ticket_type` (`bug` | `feature` | `other`) from the
-   parent prompt.
+1. Take the ticket description/goal, `ticket_type` (`bug` | `feature` | `other`), and
+   `project_maturity` (`greenfield` | `brownfield`) from the parent prompt.
 2. Identify the framework/state-management library in use and the component(s)/area the ticket
-   touches.
+   touches. If **greenfield** and no frontend stack exists yet for this area, say so and go to
+   step 7 instead of steps 3–6.
 3. Note component conventions (composition style, prop patterns, styling approach) and any
    accessibility/compat constraints documented or visible in the code for this area.
 4. **Bug:** check whether the symptom is plausibly UI-layer (state sync issue, render timing,
@@ -53,6 +60,8 @@ this brief instead of re-deriving the same frontend map from scratch.
 5. **Feature/other:** list component/UX conventions the new work must respect (existing design
    system usage, naming, accessibility patterns already enforced).
 6. Write findings using the contract below. Prefer bullets; cite file paths.
+7. **(greenfield only)** Propose the baseline frontend conventions this area should adopt — see
+   **Project maturity** above. Still bounded (same 12-bullet/40-line cap).
 
 ## Completion Output
 
@@ -66,6 +75,7 @@ Return a single markdown block:
 - Conventions / accessibility-compat notes: [...]
 - (bug) UI-side hypotheses, ranked by evidence: [...]
 - (feature/other) Conventions the solution must respect: [...]
+- (greenfield) Baseline frontend conventions proposed for this area: [...]
 - Open questions for /prd: [...]
 ```
 
