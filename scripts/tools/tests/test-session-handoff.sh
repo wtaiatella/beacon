@@ -30,13 +30,13 @@ id=$("$SM" begin-run "smoke-handoff-$$")
 tmpdir=$(mktemp)
 printf '%s\n' 'snapshot line' >"$tmpdir"
 "$SH" write-handoff merged "$tmpdir" >/dev/null
-"$SH" write-handoff specialist arc "$tmpdir" >/dev/null
+"$SH" write-handoff specialist jira "$tmpdir" >/dev/null
 rm -f "$tmpdir"
 
 test -f "$ROOT/docs/sessions/$id/pre-plan/merged-brief.md"
-test -f "$ROOT/docs/sessions/$id/pre-plan/specialists/arc.md"
+test -f "$ROOT/docs/sessions/$id/pre-plan/specialists/jira.md"
 grep -q '^kind: merged-brief' "$ROOT/docs/sessions/$id/pre-plan/merged-brief.md"
-grep -q '^specialist: arc' "$ROOT/docs/sessions/$id/pre-plan/specialists/arc.md"
+grep -q '^specialist: jira' "$ROOT/docs/sessions/$id/pre-plan/specialists/jira.md"
 grep -q 'snapshot line' "$ROOT/docs/sessions/$id/pre-plan/merged-brief.md"
 
 rel=$("$SM" session-root)

@@ -53,17 +53,17 @@ Procedure: [run-pipeline skill](agentic/skills/run-pipeline/SKILL.md) · [human-
 The SDD framework (agents, skills, commands, hooks) has **one canonical source**: `agentic/`. It is **installed** into whichever IDE runtime(s) you use — nothing under `.claude/` or `.cursor/` that came from `agentic/` should be hand-edited; edit the source and reinstall.
 
 ```bash
-scripts/setup-agentic.sh claude   # → user-level Claude plugin `bcs-sdd` (/bcs-sdd:<name>) + root CLAUDE.md
+scripts/setup-agentic.sh claude   # → user-level Claude plugin `beacon-sdd` (/beacon-sdd:<name>) + root CLAUDE.md
 scripts/setup-agentic.sh cursor   # → .cursor/{agents,hooks,hooks.json,rules,skills}
 scripts/setup-agentic.sh all      # claude + cursor (+ antigravity stub)
 ```
 
 | Layer | Canonical source | Claude Code | Cursor |
 |---|---|---|---|
-| Personas / subagents | `agentic/agents/` | `bcs-sdd` plugin subagents (Task tool) | `.cursor/agents/` |
-| Commands | `agentic/commands/` | `/bcs-sdd:<name>` slash commands | — (Cursor does not mirror commands as skills) |
-| Skills | `agentic/skills/` | `bcs-sdd` plugin skills | `.cursor/skills/` |
-| Hooks | `agentic/hooks/` + `agentic/adapters/<ide>/hooks/` | `bcs-sdd` plugin `hooks/hooks.json` | `.cursor/hooks.json` + `.cursor/hooks/` |
+| Personas / subagents | `agentic/agents/` | `beacon-sdd` plugin subagents (Task tool) | `.cursor/agents/beacon/` |
+| Commands | `agentic/commands/` | `/beacon-sdd:<name>` slash commands | — (Cursor does not mirror commands as skills) |
+| Skills | `agentic/skills/` | `beacon-sdd` plugin skills | `.cursor/skills/beacon/` |
+| Hooks | `agentic/hooks/` + `agentic/adapters/<ide>/hooks/` | `beacon-sdd` plugin `hooks/hooks.json` | `.cursor/hooks.json` + `.cursor/hooks/beacon/` |
 | **Shared SDD contract** | `agentic/AGENTS.md` | root `AGENTS.md` (generated; imported via `@AGENTS.md` in `CLAUDE.md`) | root `AGENTS.md` (generated; read natively) |
 | Always-on identity (IDE-specific wiring only) | `agentic/adapters/claude/CLAUDE.md` | root `CLAUDE.md` (generated — do not edit) | — |
 | Always-on identity (IDE-specific wiring only) | `agentic/adapters/cursor/rules/00-workspace-router.mdc` | — | `.cursor/rules/00-workspace-router.mdc` (generated) |
@@ -75,7 +75,7 @@ Cursor-flavored copy of the same rules. `CLAUDE.md` and `00-workspace-router.mdc
 what genuinely differs per tool: exact invocation mechanics, model-selection tables, and hook
 event/matcher names.
 
-**Project overlays** (`bcs-*`, optional, team- or repo-specific) live outside `agentic/` in the IDE runtime dirs (`.claude/`, `.cursor/`, or the shared `.agents/` tree that both read from) and are **never required** by the core SDD personas or the `/run` orchestrator. Full setup details: [agentic/docs/setup.md](agentic/docs/setup.md).
+**Project overlays** (any name — no naming-prefix convention; optional, team- or repo-specific) live outside `agentic/`, under the shared `.agents/{agents,commands,skills}/` tree, and are linked flat into the IDE runtime dirs (`.claude/`, `.cursor/`) outside the `beacon/` subfolder the framework itself uses — they are **never required** by the core SDD personas or the `/run` orchestrator. Full setup details: [agentic/docs/setup.md](agentic/docs/setup.md).
 
 ---
 
@@ -95,7 +95,7 @@ docs/specs/{YYYY-MM-DD}-{slug}/                   # without a ticket key
 └── summary.md           # post-pipeline handoff narrative (/summary)
 ```
 
-`prd.md`, `spectech.md`, and `tasks.md` are **three separate, right-sized files — never merged into one `spec.md`**. There is **no `/plan` command and no single-file spec mode** in this repo; the required front end of `/run` is always `/prd` → `/spectech` → `/tasks`. `_state.json` + `_notes.md` is the **only** control-file pair — if a folder ever contains `context.json` too, that is a regression to report, not something to silently resolve. Full schema: the `bcs-ticket-workflow` project skill.
+`prd.md`, `spectech.md`, and `tasks.md` are **three separate, right-sized files — never merged into one `spec.md`**. There is **no `/plan` command and no single-file spec mode** in this repo; the required front end of `/run` is always `/prd` → `/spectech` → `/tasks`. `_state.json` + `_notes.md` is the **only** control-file pair — if a folder ever contains `context.json` too, that is a regression to report, not something to silently resolve. Full schema: see `agentic/AGENTS.md` — **Spec Format**.
 
 ---
 

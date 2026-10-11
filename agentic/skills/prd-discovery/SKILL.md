@@ -32,7 +32,7 @@ discovery — just ask those (or default them and record in Assumptions).
 Mirror the interactive style, bounded for a requirements phase:
 
 1. **Assess first, ask second.** Read the idea + attachments + `_state.json`/`_notes.md` (see the
-   `bcs-ticket-workflow` skill — the only control-file convention). Build an internal
+   AGENTS.md's Spec Format section — the only control-file convention). Build an internal
    coverage map of the areas below: Clear / Partial / Missing. Only Partial/Missing **and
    high-impact** areas earn a question.
 2. **One question at a time.** Never present a wall of questions. Use `AskUserQuestion` (or a

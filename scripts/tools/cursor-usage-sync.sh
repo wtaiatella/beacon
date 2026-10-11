@@ -77,7 +77,7 @@ function readAuth() {
     throw new Error('Cursor state.vscdb not found at ' + dbPath);
   }
   // Copy to temp — live DB may be locked / WAL-only for some keys.
-  const tmp = path.join(os.tmpdir(), 'bcs-cursor-state-' + process.pid + '.vscdb');
+  const tmp = path.join(os.tmpdir(), 'beacon-cursor-state-' + process.pid + '.vscdb');
   fs.copyFileSync(dbPath, tmp);
   try {
     const wal = dbPath + '-wal';
@@ -174,7 +174,7 @@ function apiHeaders(sessionToken) {
     Cookie: `WorkosCursorSessionToken=${sessionToken}`,
     Origin: 'https://cursor.com',
     Referer: 'https://cursor.com/dashboard',
-    'User-Agent': 'bcs1-cursor-usage-sync/1.0',
+    'User-Agent': 'beacon-cursor-usage-sync/1.0',
   };
 }
 

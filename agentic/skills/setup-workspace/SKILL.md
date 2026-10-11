@@ -99,7 +99,6 @@ in `.mcp.json` as hints. General heuristics (not exhaustive — adapt to what's 
 | `jira`, `atlassian`, `rovo` | `getAccessibleAtlassianResources` or `atlassianUserInfo` |
 | `confluence` | `getConfluenceSpaces` |
 | `gitlab` | `whoami` or `health_check` |
-| `arc`, `avatax` | any catalog/project list operation |
 | unknown | try `whoami`, `health_check`, `list`, or `ping` in that order |
 
 If **all attempts fail** (auth error, timeout, tool not found): mark `access: no`, record the
@@ -117,7 +116,6 @@ tool is useful in a pipeline. Examples of discovery logic (illustrative, not pre
 - **Jira** — list visible projects; note keys.
 - **Glean** — confirm the authenticated identity; no enumerable workspace config expected.
 - **GitLab** — get the authenticated user's namespace; optionally list recent projects.
-- **ARC / AvaTax RC** — list catalogs, namespaces, or schemas if an operation exists.
 
 Discovery is **bounded**: stop after 3 operations or when you have enough to present to the user.
 Never dump raw API responses into the registry.
@@ -234,7 +232,7 @@ There is no `Status`/`Access` for a specialist entry — unlike MCP servers, the
 health-check; the entry either exists (and its agent file is assumed to exist) or it doesn't.
 
 **Suggested use examples (adapt to what was discovered):**
-- "Activate when PRD involves UI, screens, or component design in br-tax-ui."
+- "Activate when PRD involves UI, screens, or component design in web-ui."
 - "Activate when ticket involves Migrate Standard integration or ISS retention rules."
 - "Activate for broad enterprise knowledge search when ticket context is ambiguous."
 - *(specialist)* "Activate when the ticket touches payment processing or billing cycles."

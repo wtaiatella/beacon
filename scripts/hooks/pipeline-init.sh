@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-pipeline §2 Init — begin-run (unless --resume), trace anchors, apply-models --snapshot,
-# session-memory read, optional knowledge-source note (ARC + local KB). One structured report.
+# session-memory read, optional knowledge-source note (local KB). One structured report.
 # v1: workspace root only; stable stdout section headers (=== ... ===).
 # Bash 3.2+ compatible.
 set -euo pipefail
@@ -119,10 +119,8 @@ section "session-memory-lines: $LINE_COUNT"
 printf '%s\n' "$READ_OUT" | tail -n 80 || true
 
 section "=== knowledge-sources ==="
-# ARC (AvaTax Release Central) was removed as a framework-level knowledge
-# source — generic pre-plan grounding now comes from the domain specialists
-# (system-design-specialist, etc.), and /kb's local knowledge/<dir>/ tree is
-# the only fallback this check still considers.
+# Generic pre-plan grounding comes from the domain specialists (system-design-specialist,
+# etc.); /kb's local knowledge/<dir>/ tree is the only fallback this check considers.
 KB_HIT=0
 # Bash 3.2 + set -u: "${TARGETS[@]}" is "unbound" when the array is empty — guard the loop.
 if [ "${#TARGETS[@]}" -gt 0 ]; then

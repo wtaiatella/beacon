@@ -3,61 +3,61 @@
   "hooks": {
     "beforeShellExecution": [
       {
-        "command": ".cursor/hooks/before-shell.sh"
+        "command": ".cursor/hooks/beacon/before-shell.sh"
       }
     ],
     "beforeReadFile": [
       {
-        "command": ".cursor/hooks/before-read.sh"
+        "command": ".cursor/hooks/beacon/before-read.sh"
       }
     ],
     "preToolUse": [
       {
-        "command": ".cursor/hooks/subagent-gate.sh",
+        "command": ".cursor/hooks/beacon/subagent-gate.sh",
         "matcher": "Write"
       }
     ],
     "afterFileEdit": [
       {
-        "command": ".cursor/hooks/format-on-edit.sh"
+        "command": ".cursor/hooks/beacon/format-on-edit.sh"
       }
     ],
     "beforeSubmitPrompt": [
       {
-        "command": ".cursor/hooks/tool-audit.sh"
+        "command": ".cursor/hooks/beacon/tool-audit.sh"
       }
     ],
     "postToolUse": [
       {
-        "command": ".cursor/hooks/tool-audit.sh"
+        "command": ".cursor/hooks/beacon/tool-audit.sh"
       }
     ],
     "postToolUseFailure": [
       {
-        "command": ".cursor/hooks/tool-audit.sh"
+        "command": ".cursor/hooks/beacon/tool-audit.sh"
       }
     ],
     "subagentStop": [
       {
-        "command": ".cursor/hooks/tool-audit.sh"
+        "command": ".cursor/hooks/beacon/tool-audit.sh"
       }
     ],
     "stop": [
       {
-        "command": ".cursor/hooks/tool-audit.sh"
+        "command": ".cursor/hooks/beacon/tool-audit.sh"
       }
     ],
     "sessionStart": [
       {
-        "command": ".cursor/hooks/session-init.sh"
+        "command": ".cursor/hooks/beacon/session-init.sh"
       }
     ],
     "sessionEnd": [
       {
-        "command": ".cursor/hooks/audit-log.sh"
+        "command": ".cursor/hooks/beacon/audit-log.sh"
       },
       {
-        "command": ".cursor/hooks/session-verify.sh"
+        "command": ".cursor/hooks/beacon/session-verify.sh"
       }
     ]
   }

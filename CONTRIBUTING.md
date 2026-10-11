@@ -42,7 +42,7 @@ This repo’s merge requests go through **GitLab**. After implementation, use th
 When you **add** or **change** MCP servers (beyond the shipped optional blocks):
 
 1. Edit **`.cursor/mcp.json`** (and/or **global** `~/.cursor/mcp.json`) using **`${env:…}`** for tenant URLs and tokens where possible — **`docs/reference/cursor-mcp.md`**.
-2. Follow the integration guides: **`docs/reference/gitlab-cursor-workflow.md`**, **`docs/reference/atlassian-cursor-workflow.md`** (ROAD-01 read-only), **`docs/reference/glean-cursor-workflow.md`** (ROAD-26), **`docs/reference/arc-mcp-workflow.md`** (ROAD-25), and **`docs/arc-onboarding.md`** (ARC: **Cursor MCP config** vs **`avatax-release-central`** server-side onboarding — `projects_config.py`, `feature_registry.py`, Confluence ATPE indexes; **no secrets** in git).
+2. Follow the integration guides: **`docs/reference/gitlab-cursor-workflow.md`**, **`docs/reference/atlassian-cursor-workflow.md`** (ROAD-01 read-only), **`docs/reference/glean-cursor-workflow.md`** (ROAD-26) — **no secrets** in git.
 3. Update **Toolbox** sections in **`.cursor/agents/*.md`** for any persona that should prefer those tools when loaded, and align **`00-workspace-router.mdc`** (optional MCP / search-source table) if discovery order or tool names change.
 4. Run **`./scripts/setup.sh`** so JSON parse checks still pass.
 

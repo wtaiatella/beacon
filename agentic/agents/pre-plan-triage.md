@@ -32,9 +32,9 @@ from that tree.
    behavior, not a degraded state.
 
 `gitlab` is **not** a pre-plan source at all (removed from this role — see `mcp-gitlab.md`; it is
-invoked mid-run for branch/MR metadata instead). `arc` no longer exists — the AvaTax-specific
-AvaTax Release Central source was removed in favor of the generic domain specialists; if you see
-historical references to `arc`/ARC/AvaTax in older session notes, ignore them.
+invoked mid-run for branch/MR metadata instead). Enterprise sources today are limited to
+`jira`/`confluence`/`glean` (gated by registration + ticket signal, above) — there is no fourth
+enterprise source.
 
 ## Toolbox
 
@@ -72,8 +72,7 @@ historical references to `arc`/ARC/AvaTax in older session notes, ignore them.
   specialists already say so explicitly if they truly find no analog).
 - **Enterprise intent cues:** Map phrases like "design doc", "Confluence", "ticket", "Jira", "MR
   policy", "protected branch", "approval rule", "org-wide", "Slack/incident", "Glean" → candidate
-  signal for the corresponding enterprise source, **subject to the registry gate** below. There is
-  **no** AvaTax/ARC cue anymore.
+  signal for the corresponding enterprise source, **subject to the registry gate** below.
 
 ## Domain specialist routing
 
@@ -115,8 +114,8 @@ For each of `jira`, `confluence`, `glean`:
 2. **Signal check:** only for **eligible** sources, apply the intent cues above to decide whether
    *this* ticket actually needs it.
 3. Only sources that pass **both** checks go into `wave2_sources` / `follow_up`. There is no
-   Wave 1 anymore for enterprise sources (no `glean`+`arc` breadth pass) — enterprise sources are
-   a single optional follow-up wave, gated the same way regardless of which one.
+   separate Wave 1 breadth pass for enterprise sources — they are a single optional follow-up
+   wave, gated the same way regardless of which one.
 
 ## Output schema (normative)
 

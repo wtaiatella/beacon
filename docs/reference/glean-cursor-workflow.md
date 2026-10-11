@@ -58,7 +58,6 @@ Same as other MCP docs: repo may track a **minimal** `.cursor/settings.json`; **
 
 - **Local codebase** (`Read`, `Grep`, `SemanticSearch`): source of truth for **this repo’s** implementation and file state.
 - **Glean:** broad **“what does the org know?”** discovery across connected systems; **permission-aware**; good for prior art, runbooks, incidents, policies **not** only in one repo.
-- **ARC MCP** (ROAD-25, when available): **project-scoped** Release Central / AvaTax knowledge—prefer for that corpus; Glean does not replace it.
 - **Atlassian MCP:** **targeted** Jira issue fetch or Confluence space search when you have a **key** or **space**; avoid duplicate heavy queries if Glean already answered the same question.
 - **Never assume** any optional MCP is loaded; degrade gracefully.
 

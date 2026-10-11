@@ -46,8 +46,7 @@ Pick the smallest profile that fits:
   boundary/coupling analysis in Architecture.
 
 Record the chosen profile in the header (`profile: lean|standard|full`) and in
-`_state.json.spectech_profile` (see the `bcs-ticket-workflow` skill — the only control-file
-convention).
+`_state.json.spectech_profile` (see AGENTS.md's Spec Format section — the only control-file convention).
 When in doubt, start smaller — you can deepen a section, but don't manufacture sections.
 
 ## Spectech Template (section order; include per profile)
@@ -251,7 +250,7 @@ Run this as an actual review with fresh eyes (not just a box-tick):
 - [ ] **Testing strategy** covers the levels appropriate to the change
 - [ ] File saved to `docs/specs/{slug}/spectech.md`; `_state.json.steps.spectech` updated to
       `"done"`, `_state.json.spectech_profile` set to the chosen profile, and a matching
-      `_notes.md` entry appended — per the `bcs-ticket-workflow` skill (the only control-file
+      `_notes.md` entry appended — per AGENTS.md's Spec Format section (the only control-file
       convention; no other metadata file is created)
 
 ---

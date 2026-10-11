@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Blocking doc checks for /run pre-plan: flat orchestration, wave skips, merge+gate,
-# merged brief handoff. Modeled after verify-mcp-arc-orchestration-docs.sh.
+# merged brief handoff.
 # Run from repo root: ./scripts/tools/verify-preplan-orchestration-docs.sh
 set -euo pipefail
 
@@ -29,10 +29,10 @@ grep -qE '`Task\(mcp-\*\)`|Task\(mcp-' "$SKILL" || fail "SKILL must mention Task
 grep -qE 'not nested inside|must not.*nest|/plan` must not' "$SKILL" \
   || fail "SKILL must forbid nesting Task(mcp-*) inside Task(plan) for /run pre-plan"
 
-# --- Wave 1 omitted when triage lists neither glean nor arc ---
+# --- Wave 1 omitted when triage lists none of the enterprise sources ---
 grep -q 'Skip Wave 1' "$SKILL" || fail "SKILL must document Skip Wave 1 when wave1 empty"
-grep -q 'neither' "$SKILL" || fail "SKILL must state Wave 1 skip when triage lists neither glean nor arc"
-grep -qE 'glean|arc' "$SKILL" || fail "SKILL must name glean and/or arc for Wave 1 triage"
+grep -q 'neither' "$SKILL" || fail "SKILL must state Wave 1 skip when triage lists none of jira/confluence/glean"
+grep -qE 'jira|confluence|glean' "$SKILL" || fail "SKILL must name jira/confluence/glean for Wave 1 triage"
 
 # --- merge + gate before Wave 2 ---
 grep -q 'merge + gate' "$SKILL" || fail "SKILL must document merge + gate before Wave 2"

@@ -1,6 +1,6 @@
 # MCP servers inventory
 
-Optional MCP servers used with this workspace. **GitLab** is a local **stdio** process (`@zereight/mcp-gitlab`) in **user-global** `~/.cursor/mcp.json`. Atlassian, Glean, and ARC are typically **Streamable HTTP**. Tool names match Cursor descriptors when the IDE has loaded the server (`~/.cursor/projects/<project>/mcps/<server>/tools/*.json`). **Verify live tools** in **Settings → Tools & MCP** after upgrades — lists can drift.
+Optional MCP servers used with this workspace. **GitLab** is a local **stdio** process (`@zereight/mcp-gitlab`) in **user-global** `~/.cursor/mcp.json`. Atlassian and Glean are typically **Streamable HTTP**. Tool names match Cursor descriptors when the IDE has loaded the server (`~/.cursor/projects/<project>/mcps/<server>/tools/*.json`). **Verify live tools** in **Settings → Tools & MCP** after upgrades — lists can drift.
 
 ## Read vs write and `Task(readonly)`
 
@@ -17,7 +17,6 @@ Optional MCP servers used with this workspace. **GitLab** is a local **stdio** p
 | GitLab | [gitlab-cursor-workflow.md](gitlab-cursor-workflow.md) |
 | Atlassian (Jira / Confluence) | [atlassian-cursor-workflow.md](atlassian-cursor-workflow.md) |
 | Glean | [glean-cursor-workflow.md](glean-cursor-workflow.md) |
-| AvaTax Release Central (ARC) | [arc-mcp-workflow.md](arc-mcp-workflow.md) |
 | Transports, `${env:…}`, config | [cursor-mcp.md](cursor-mcp.md) |
 
 ---
@@ -63,7 +62,7 @@ Optional MCP servers used with this workspace. **GitLab** is a local **stdio** p
 | | |
 |--|--|
 | **`mcp.json` key** | `glean_default` |
-| **URL (committed)** | `https://avalara-prod-be.glean.com/mcp/default` |
+| **URL (committed)** | `https://example-org.glean.com/mcp/default` |
 | **Typical use** | Org-wide enterprise search and document read; optional `chat` for synthesis. |
 
 **Tools (from descriptors):** `chat`, `read_document`, `search`
@@ -72,25 +71,3 @@ Optional MCP servers used with this workspace. **GitLab** is a local **stdio** p
 
 ---
 
-## avatax-release-central
-
-| | |
-|--|--|
-| **`mcp.json` key** | `avatax-release-central` |
-| **URL (committed)** | `https://avatax-release-central.gamma.int.us-west-2.aws.avalara.io/api/kb/mcp/` |
-| **Auth** | Optional `Authorization: Bearer ${env:ARC_MCP_TOKEN}` — see [arc-mcp-workflow.md](arc-mcp-workflow.md) |
-
-**Tools (from descriptors):**
-
-- **Core search:** `search_arc_knowledge`, `search_avatax_knowledge`, `search_database_schema`, `search_federated`, `search_release_context`
-- **Release context:** `get_release_context`, `list_releases`
-- **Project groups:** `search_proj_content`, `search_proj_cross_border`, `search_proj_ecosystem`, `search_proj_hub`, `search_proj_shared_libs`, `search_proj_soap_batch`, `search_proj_tcs`, `search_proj_tcs_deps`, `search_proj_testing`, `search_proj_tss`
-- **Feature-scoped:** `search_feat_*` (many tools, e.g. `search_feat_vat`, `search_feat_nexus`, `search_feat_cross_border`, … — verify full set in **Settings → MCP**)
-
-**Read vs write:** **Read-only** retrieval against Release Central indexes — agents do not mutate RC content from this repo’s guidance; see [arc-mcp-workflow.md](arc-mcp-workflow.md).
-
----
-
-## Pre-plan vs in-session (ARC)
-
-For **`/run`**, the orchestrator may delegate **`Task(mcp-arc)`** during **Pre-plan context** when triage requires ARC — **in addition to** in-session ARC tool use by **`/plan`**, **`/dev`**, and **`/fix`**. See [arc-mcp-workflow.md](arc-mcp-workflow.md) (**Two lanes**) and **`docs/run-pipeline-reference.md`**.

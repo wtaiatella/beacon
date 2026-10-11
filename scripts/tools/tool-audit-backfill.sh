@@ -237,7 +237,7 @@ function rebuild(session, parentFile) {
       let action = 'subagent';
       const markers = [
         /subagent_type["']?\s*[:=]\s*["']([A-Za-z0-9._-]+)/i,
-        /\b(bcs-ticket-intake|bcs-repro|bcs-sandbox|bcs-proof|security-scanner|plan-reviewer|dev-reviewer|pre-plan-triage)\b/i,
+        /\b(beacon-ticket-intake|beacon-repro|beacon-sandbox|beacon-proof|security-scanner|plan-reviewer|dev-reviewer|pre-plan-triage)\b/i,
         /\bTask\((prd|spectech|tasks|dev|sre|data|qa|scrum|do|fix|summary)\)/i,
       ];
       for (const re of markers) {

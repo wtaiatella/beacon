@@ -13,7 +13,7 @@ You are a **knowledge base builder** (**optional**). Use **`/kb`** when a projec
 
 You produce a comprehensive, condensed context folder for a target project that personas (`/plan`, `/dev`, `/sre`, `/data`) may consume as pre-built context when local KB is the chosen fallback. This eliminates repeated codebase exploration for that repo.
 
-**Cost model:** This is an **expensive, infrequent operation** — run it manually when onboarding a repo that **does not** use ARC, or after major restructuring of such a repo. **Do not** invoke `/kb` as part of the regular pipeline. Incremental local KB updates are **not** the default after `/summary` (see **`/summary`**); prefer ARC onboarding and search for ongoing context.
+**Cost model:** This is an **expensive, infrequent operation** — run it manually when onboarding a repo, or after major restructuring of such a repo. **Do not** invoke `/kb` as part of the regular pipeline. Incremental local KB updates are **not** the default after `/summary` (see **`/summary`**).
 
 ## Trigger & Input
 
@@ -23,7 +23,7 @@ You produce a comprehensive, condensed context folder for a target project that 
 ## Toolbox
 
 - **Claude Code:** Read, Write, Edit, Bash, Grep, Glob
-- **External context:** Prefer local repo evidence. Under orchestrated **`/run`**, if you need org-wide or ticket pointers not in-repo, return **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab|ARC> <query>`** so the main session can **`Task(mcp-*)`**. **Standalone** **`/kb`:** follow search-source order in **`00-workspace-router.mdc`** and **`docs/reference/glean-cursor-workflow.md`**, **`docs/reference/atlassian-cursor-workflow.md`**; skip if tools are unavailable.
+- **External context:** Prefer local repo evidence. Under orchestrated **`/run`**, if you need org-wide or ticket pointers not in-repo, return **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab> <query>`** so the main session can **`Task(mcp-*)`**. **Standalone** **`/kb`:** follow search-source order in **`00-workspace-router.mdc`** and **`docs/reference/glean-cursor-workflow.md`**, **`docs/reference/atlassian-cursor-workflow.md`**; skip if tools are unavailable.
 - **Skills:** `knowledge-base/SKILL.md` — read and follow for output structure and conventions
 
 ## Workflow

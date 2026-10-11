@@ -4,17 +4,23 @@
 
 | Canonical | Installed to | Why |
 |-----------|----------------|-----|
-| `agentic/agents/` | `.cursor/agents/` | Cursor subagent discovery (persona / Task entrypoints) |
-| `agentic/skills/` | `.cursor/skills/` | Cursor skills path (`/`), kept inside `.cursor/` |
+| `agentic/agents/` | `.cursor/agents/beacon/` | Cursor subagent discovery (persona / Task entrypoints) |
+| `agentic/skills/` | `.cursor/skills/beacon/` | Cursor skills path (`/`), kept inside `.cursor/` |
 | `agentic/commands/` | *(not installed)* | Avoid duplicate `/` next to agents; Claude-only thin proxies |
-| `agentic/hooks/` | `.cursor/hooks/` | Shared dual-protocol scripts (+ `lib/hook-protocol.js`) |
-| `adapters/cursor/hooks/*` | `.cursor/hooks/` (overlay) | Cursor-only hooks (e.g. `tool-audit.sh`) |
-| `adapters/cursor/hooks.json` | `.cursor/hooks.json` | Cursor hook events |
-| `adapters/cursor/rules/*.mdc` | `.cursor/rules/` | Always-on context (**CLAUDE.md equivalent**) |
+| `agentic/hooks/` | `.cursor/hooks/beacon/` | Shared dual-protocol scripts (+ `lib/hook-protocol.js`) |
+| `adapters/cursor/hooks/*` | `.cursor/hooks/beacon/` (overlay) | Cursor-only hooks (e.g. `tool-audit.sh`) |
+| `adapters/cursor/hooks.json` | `.cursor/hooks.json` | Cursor hook events (top-level path Cursor requires; points into `.cursor/hooks/beacon/`) |
+| `adapters/cursor/rules/*.mdc` | `.cursor/rules/beacon/` | Always-on context (**CLAUDE.md equivalent**) |
 | `adapters/cursor/docs/` | `docs/adapters/cursor/` | Cursor platform reference (generated) |
 
+All framework content installs under a `beacon/` subfolder inside each `.cursor/` directory it
+uses — a structural, location-based rule: anything outside `beacon/` in `.cursor/agents/`,
+`.cursor/skills/`, `.cursor/rules/`, `.cursor/hooks/` is not part of the SDD framework, regardless
+of filename. There is no naming-prefix convention to maintain.
+
 Manifests: `.cursor/.agentic-managed` and `.agents/.agentic-managed`.
-Generated runtimes and `docs/adapters/` are **gitignored** — only `agentic/` (+ `bcs-*` overlays) is source.
+Generated runtimes and `docs/adapters/` are **gitignored** — only `agentic/` (+ project overlays
+under `.agents/`, any name) is source.
 
 ## Always-on context (CLAUDE.md → Cursor rules)
 
@@ -51,7 +57,7 @@ Action/tool audit is **per-IDE** (separate scripts and TSV files). Do not put au
 ## Claude mirror deactivation (anti-duplicate `/`)
 
 Default `scripts/setup-agentic.sh cursor` **deactivates** the managed Claude mirror
-(`.claude/.agentic-managed` paths only). Project overlays (`bcs-*`) stay.
+(`.claude/.agentic-managed` paths only). Project overlays (any name) stay.
 
 - Restore Claude: `scripts/setup-agentic.sh claude`
 - Dual-IDE: `scripts/setup-agentic.sh cursor --keep-claude`
@@ -61,12 +67,13 @@ Default `scripts/setup-agentic.sh cursor` **deactivates** the managed Claude mir
 
 Path rewrites on install:
 
-- `.claude/skills/<framework>/` → `.cursor/skills/<framework>/` (not `bcs-*` overlays)
-- `.claude/agents/` → `.cursor/agents/`
-- `.claude/hooks/` → `.cursor/hooks/`
+- `.claude/skills/<framework>/` → `.cursor/skills/beacon/<framework>/` (not project overlays)
+- `.claude/agents/` → `.cursor/agents/beacon/`
+- `.claude/hooks/` → `.cursor/hooks/beacon/`
 
-**No command→skill emission.** Personas live under `.cursor/agents/`; framework skills under
-`.cursor/skills/` (including `/run`).
+**No command→skill emission.** Personas live under `.cursor/agents/beacon/`; framework skills
+under `.cursor/skills/beacon/` (including `/run`). Project overlays (linked from `.agents/`, any
+name) land flat in `.cursor/agents/` and `.cursor/commands/`, outside `beacon/`.
 
 ## Notes
 

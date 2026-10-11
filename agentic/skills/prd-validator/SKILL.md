@@ -233,7 +233,7 @@ When `/prd` finishes generating prd.md:
 
 1. Run this validator
 2. If issues found: present report, suggest fixes
-3. If approved: update `_state.json` (see `bcs-ticket-workflow` skill, the only control-file
+3. If approved: update `_state.json` (see AGENTS.md — Spec Format, the only control-file
    convention) → validation outcome recorded alongside `steps.prd: "done"`
 4. User can fix and re-run `/prd` (will re-validate)
 5. Only approved PRDs proceed to `/spectech`

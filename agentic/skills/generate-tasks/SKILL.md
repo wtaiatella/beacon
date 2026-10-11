@@ -196,7 +196,7 @@ every user story maps to ≥1 task; every task maps back to a requirement (no or
 - [ ] No task too large (>5 days → break down)
 - [ ] File saved to `docs/specs/{slug}/tasks.md`; `_state.json.steps.tasks` updated to `"done"`
       (ready-for-dev tracked there too) and a matching `_notes.md` entry appended — per the
-      `bcs-ticket-workflow` skill (the only control-file convention; no other metadata file is
+      AGENTS.md's Spec Format section (the only control-file convention; no other metadata file is
       created)
 
 ---

@@ -25,10 +25,10 @@ agentic/
 | Path | Why |
 |------|-----|
 | `docs/run-pipeline-reference.md` | Shared pipeline human reference (not IDE-specific) |
-| `docs/reference/arc-*.md`, `mcp-servers-inventory.md` | Enterprise / product context |
+| `docs/reference/mcp-servers-inventory.md` | Enterprise / product context |
 | `docs/reference/*-cursor-workflow.md` | Product workflows (Atlassian/GitLab/Glean) — Cursor-named historically; still shared process docs |
 | `docs/reference/nested-task-audit.md` | Shared orchestration invariant |
-| `docs/model-catalog.md`, `docs/arc-onboarding.md` | Shared |
+| `docs/model-catalog.md` | Shared |
 | `docs/sessions/`, `docs/specs/` | Runtime / local (mostly gitignored) |
 
 These are **not** installed by `setup-agentic.sh`. Edit them in place under `docs/`.

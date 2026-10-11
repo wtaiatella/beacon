@@ -37,9 +37,9 @@ read_body() {
 
 valid_specialist() {
   case "$1" in
-    glean|arc|jira|confluence|gitlab) return 0 ;;
+    glean|jira|confluence|gitlab) return 0 ;;
     *)
-      echo "session-handoff: invalid specialist '$1' (expected: glean, arc, jira, confluence, gitlab)" >&2
+      echo "session-handoff: invalid specialist '$1' (expected: glean, jira, confluence, gitlab)" >&2
       return 1
       ;;
   esac
@@ -105,7 +105,7 @@ Usage: session-handoff.sh write-handoff merged [content-file]
 
 Writes pre-plan handoff artifacts under the active session:
   docs/sessions/<id>/pre-plan/merged-brief.md
-  docs/sessions/<id>/pre-plan/specialists/<name>.md   (name: glean|arc|jira|confluence|gitlab)
+  docs/sessions/<id>/pre-plan/specialists/<name>.md   (name: glean|jira|confluence|gitlab)
 
 content-file:
   - Path to a file to copy into the artifact, or omit / use - with stdin redirected.

@@ -41,7 +41,7 @@ You are the **main session agent** executing this skill. There is **no** `/run` 
 ## Anti‑patterns (do not do these)
 
 - Use `Task(run, …)` — the `run` agent does not exist.
-- For **`/run`**, delegate the pre-plan wave (domain specialists, `repro-specialist`, and any gated enterprise **`Task(mcp-*)`**) only from the **main session** during **Pre-plan context (domain specialists + optional MCP)** (or a later orchestrator merge), not nested inside **`Task(prd)`** / **`Task(dev)`**. Domain specialists and `repro-specialist` run **in parallel**, gated only by `pre-plan-triage`'s `domain_specialists` / `repro_candidate` fields — no enterprise-style merge+gate between them. Enterprise sources (`jira`, `confluence`, `glean` — `arc` no longer exists, removed in favor of the generic domain specialists) run **only** when triage's **`wave2_sources`** lists them (already registry- **and** signal-gated — see `pre-plan-triage.md`). **Flat** orchestration only (main session); do **not** nest any `Task(...)` inside `Task(prd)`. **Mid-run** enterprise fetch for any specialist follows the same **main-session-only** rule — **do not** nest **`Task(mcp-*)`** inside personas.
+- For **`/run`**, delegate the pre-plan wave (domain specialists, `repro-specialist`, and any gated enterprise **`Task(mcp-*)`**) only from the **main session** during **Pre-plan context (domain specialists + optional MCP)** (or a later orchestrator merge), not nested inside **`Task(prd)`** / **`Task(dev)`**. Domain specialists and `repro-specialist` run **in parallel**, gated only by `pre-plan-triage`'s `domain_specialists` / `repro_candidate` fields — no enterprise-style merge+gate between them. Enterprise sources (`jira`, `confluence`, `glean`) run **only** when triage's **`wave2_sources`** lists them (already registry- **and** signal-gated — see `pre-plan-triage.md`). **Flat** orchestration only (main session); do **not** nest any `Task(...)` inside `Task(prd)`. **Mid-run** enterprise fetch for any specialist follows the same **main-session-only** rule — **do not** nest **`Task(mcp-*)`** inside personas.
 - Skip the **PRD/Spectech/Tasks segment** (**`Task(prd)`**→**`Task(spectech)`**→**`Task(tasks)`**) / **`Task(qa)`** / **`Task(summary)`** unless the user passed the matching **`--skip`** flag (**`--skip plan`** for the front-end segment — flag name unchanged; see **§3-4**).
 - Run **§ 7.0** (**QA prep wave** — **`Task(spec-validator)`** + **`Task(security-scanner)`** → **`artifacts/scanners/`**) whenever **`Task(qa)`** runs **without** **`--skip qa`**; skipping **§ 7.0** while still running **`Task(qa)`** **without** **`--skip qa`** is **orchestration failure** (see **Invalid completion**).
 - Fill in “N/A” for all scores and models to pretend the pipeline ran.
@@ -57,7 +57,7 @@ You are the **main session agent** executing this skill. There is **no** `/run` 
 From the user’s `/run` line, extract:
 
 - **Targets:** a **ticket-folder path** or a **Jira key** — never a single-file `spec.md` path (FR-4, FR-5, AC-6):
-  - **Ticket folder:** `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — folder containing `prd.md`, `spectech.md`, `tasks.md`, `_state.json`, `_notes.md` (see the `bcs-ticket-workflow` skill).
+  - **Ticket folder:** `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — folder containing `prd.md`, `spectech.md`, `tasks.md`, `_state.json`, `_notes.md` (see AGENTS.md — Spec Format).
   - **Jira key:** e.g. `BG-10965` — resolves to an existing ticket folder (matched via `_state.json.ticket`) or scaffolds a new one; see **Ticket-folder resolution (Jira-key primary argument)** below.
   - **Shorthand:** slug match (finds the folder), `latest` (most recent).
   - Single-file `spec.md` paths and bare target-directory discovery for a spec-authoring persona are **not** accepted — the required orchestrator's front end is always **`Task(prd)`**→**`Task(spectech)`**→**`Task(tasks)`** (FR-3); there is no `Task(plan)` and no `/plan` in this orchestrator (FR-4).
@@ -69,7 +69,7 @@ Implements spectech's **D8**. When the primary argument matches a Jira-key patte
 
 1. Search `docs/specs/*/_state.json` for a `.ticket` field matching the key.
 2. **If found:** use that folder — proceed to **§3-4** using the existing `_state.json`/`_notes.md`.
-3. **If not found:** create the folder scaffold `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (date = today, `{TICKET-KEY}` is the Jira key as-is e.g. `BG-10965`, slug is a short kebab-case description derived from the key) with a bare `_state.json` (ticket key set, `steps` empty) + `_notes.md` (per the `bcs-ticket-workflow` skill), then proceed to **§3-4** with the Jira key passed through as context to `Task(prd)`.
+3. **If not found:** create the folder scaffold `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (date = today, `{TICKET-KEY}` is the Jira key as-is e.g. `BG-10965`, slug is a short kebab-case description derived from the key) with a bare `_state.json` (ticket key set, `steps` empty) + `_notes.md` (per AGENTS.md's Spec Format section), then proceed to **§3-4** with the Jira key passed through as context to `Task(prd)`.
 4. **Does not** run project-specific intake/repro tools — FR-10 is explicit that optional
    project overlays are not wired into the required orchestrator. If the ticket folder is not
    ready yet, scaffold it here (or the user prepares it first), then proceed with
@@ -80,9 +80,9 @@ Implements spectech's **D8**. When the primary argument matches a Jira-key patte
 When the primary argument is a **folder path** (`docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` or `docs/specs/{YYYY-MM-DD}-{slug}/`):
 
 1. **Validate folder exists** — if not, ask user: create new or abort.
-2. **Check for files in order:** `tasks.md` → `spectech.md` → `prd.md` → check `_state.json.current_step` / `.steps` for workflow status (see the `bcs-ticket-workflow` skill for the schema).
+2. **Check for files in order:** `tasks.md` → `spectech.md` → `prd.md` → check `_state.json.current_step` / `.steps` for workflow status (see AGENTS.md — Spec Format, for the schema).
 3. **Determine entry point:** resume at the first `pending` / `in_progress` / `blocked` step among `prd` → `spectech` → `tasks` (in that order) per `_state.json.steps`; if all three are `done`, proceed directly to **§5 Implementation**.
-4. **Two-control-file regression guard (AC-1):** if both `context.json` and `_state.json` are found in the folder, stop and surface the collision (per `bcs-ticket-workflow`'s guard) rather than picking one silently.
+4. **Two-control-file regression guard (AC-1):** if both `context.json` and `_state.json` are found in the folder, stop and surface the collision (per the AC-1 regression guard in AGENTS.md — Spec Format) rather than picking one silently.
 5. **Pass to `Task(prd)`** (or whichever of `Task(prd)`/`Task(spectech)`/`Task(tasks)` resumes per step 3): the **folder path**, plus which of `prd.md`/`spectech.md`/`tasks.md` already exist and their `_state.json.steps` status.
 
 Steps not listed in `--skip` are **required** for a valid completion.
@@ -282,7 +282,7 @@ For each **working repo** that will eventually be touched:
 
 ### Commit policy (mid-pipeline vs Finish)
 
-**Authority:** Only the **main session** orchestrator commits. Personas (**`dev`**, **`*-reviewer`**, **`scrum`**, etc.) **never** run **`git commit`**. Schema: project skill **`bcs-ticket-workflow`** → **`_state.json.commit_policy`**.
+**Authority:** Only the **main session** orchestrator commits. Personas (**`dev`**, **`*-reviewer`**, **`scrum`**, etc.) **never** run **`git commit`**. Schema: **`_state.json.commit_policy`** (see AGENTS.md — Spec Format).
 
 **When to ask:** After **§ 2 Init** (so the ticket folder is known) and the **§ 5 pre-check — branch gate** has resolved the working branch, **before the first § 5** **`Task(dev|sre|data)`**. If **`_state.json.commit_policy`** already has **`mode`** + **`consent`** + **`asked_at`**, **do not** re-ask unless the user requests a change. On **`--resume`**, reuse the stored policy.
 
@@ -331,7 +331,7 @@ Run **one** Shell invocation from the **workspace root**:
 - **With `--resume`:**  
   `scripts/hooks/pipeline-init.sh --resume`
 
-**Semantics (inside the script — do not duplicate as separate Shell steps):** **`begin-run`** (when not resuming), **`write-trace-anchors`** (with **`--resume`** when resuming), **`apply-models.sh --snapshot`**, **`session-memory.sh read`**, and optional **`KNOWLEDGE_SOURCES`** **`session-memory.sh write`** when both ARC (see stdout **`arc-declared-in-mcp-json`**) and checked local KB are absent. **Non-zero exit** from **`pipeline-init.sh`** is a hard failure — stop the pipeline. **Parsed stdout:** use **`=== … ===`** section headers documented in **`docs/run-pipeline-reference.md`** — **Init script stdout**.
+**Semantics (inside the script — do not duplicate as separate Shell steps):** **`begin-run`** (when not resuming), **`write-trace-anchors`** (with **`--resume`** when resuming), **`apply-models.sh --snapshot`**, **`session-memory.sh read`**, and optional **`KNOWLEDGE_SOURCES`** **`session-memory.sh write`** when the checked local KB (see stdout **`local-knowledge-index`**) is absent for the checked targets. **Non-zero exit** from **`pipeline-init.sh`** is a hard failure — stop the pipeline. **Parsed stdout:** use **`=== … ===`** section headers documented in **`docs/run-pipeline-reference.md`** — **Init script stdout**.
 
 - **Manual model mode:** If **`=== model-mode ===`** output indicates **`manual`**, treat the pipeline as **manual model mode** — see **Model plan** below. Otherwise use team baseline plus dynamic per-step model selection. **Independent of orchestration:** **`--manual` step gates** (pause after plan segment and each domain track) are **not** manual model mode; for orchestration pauses see **Manual step gates (`--manual`)**.
 - **Snapshot path:** Read **`snapshot-path:`** from **`pipeline-init.sh`** stdout (same as **`APPLY_MODELS_SNAPSHOT`** / default under **`docs/sessions/.model-snapshot`**). In **manual model** mode, per-step **`apply-models.sh`** overrides are skipped per **Model plan**; the Init snapshot still records frontmatter.
@@ -471,8 +471,8 @@ When **`Task(dev|sre|data)`**, **`Task(qa)`**, or **`Task(fix)`** returns **`REQ
 
 **Task display names** — So parallel **`Task`** runs are distinguishable in UI/logs, use **`Task(..., description="…")`** when the Claude Code **`Task`** API supports it:
 
-- **Implementation:** **`Dev (Phase &lt;N&gt; — &lt;spec-slug&gt;)`**, **`Sre (Phase &lt;N&gt; — &lt;spec-slug&gt;)`**, **`Data (Phase &lt;N&gt; — &lt;spec-slug&gt;)`** (adjust **Phase** / domain to match the active spec slice). Example: **`Dev (Phase 2 — mcp-arc-preplan-orchestration-spec)`**.
-- **Pre-plan MCP specialists:** e.g. **`MCP-ARC (pre-plan — &lt;spec-slug&gt;)`**, **`MCP-Glean (pre-plan — &lt;spec-slug&gt;)`** — same **spec slug** as the active run when known.
+- **Implementation:** **`Dev (Phase &lt;N&gt; — &lt;spec-slug&gt;)`**, **`Sre (Phase &lt;N&gt; — &lt;spec-slug&gt;)`**, **`Data (Phase &lt;N&gt; — &lt;spec-slug&gt;)`** (adjust **Phase** / domain to match the active spec slice). Example: **`Dev (Phase 2 — payments-api-preplan-orchestration-spec)`**.
+- **Pre-plan MCP specialists:** e.g. **`MCP-Jira (pre-plan — &lt;spec-slug&gt;)`**, **`MCP-Glean (pre-plan — &lt;spec-slug&gt;)`** — same **spec slug** as the active run when known.
 
 **Fallback** — If **`description`** is unsupported or ignored, put the **same label as the first line** of the **`Task`** prompt body (or an agreed session-memory **`DISPLAY_NAME`** line) so operators can still tell delegations apart.
 

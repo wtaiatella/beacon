@@ -30,8 +30,9 @@ scripts/setup-agentic.sh antigravity   # → .agent/ (stub)
 scripts/setup-agentic.sh all           # claude + cursor + antigravity
 ```
 
-**Generated (gitignored):** `.claude/` framework mirror, `.cursor/`, `.agents/`, root `CLAUDE.md`,
-`docs/adapters/`. **Tracked overlays:** `.claude/**/bcs-*` only. **Tracked source:** `agentic/`.
+**Generated (gitignored):** `.claude/` framework mirror, `.cursor/`, root `CLAUDE.md`,
+`docs/adapters/`. **Tracked overlays:** `.agents/{agents,commands,skills}/` (any name — no
+naming-prefix convention) plus their `.claude/**` symlinks. **Tracked source:** `agentic/`.
 
 **Claude** copies framework verbatim and installs root `CLAUDE.md` from
 `adapters/claude/CLAUDE.md`. **Cursor** adapts paths, installs `.cursor/rules/*.mdc` (always-on),
