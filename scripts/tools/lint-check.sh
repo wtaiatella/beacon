@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Auto-detect linter in a target directory and run checks.
 # After changing to TARGET:
-#   1) scans .cursor/agents/*.md for MCP toolbox leakage (see check_no_mcp_in_non_specialists).
+#   1) scans agentic/agents/*.md for MCP toolbox leakage (see check_no_mcp_in_non_specialists).
 # Then runs language linters: eslint, ruff, flake8, golangci-lint, cargo clippy.
 #
 # Simulating failures locally (integration tests under scripts/tools/tests/):
@@ -18,19 +18,19 @@
 # Only these agent files may mention the patterns below (implementation-tier and most personas must
 # route enterprise context via REQUEST_MAIN / orchestrator Task(mcp-*), not direct tool marketing):
 #   - mcp-*.md, plan.md, pre-plan-triage.md
-# Forbidden in all other .cursor/agents/*.md (case-insensitive where noted):
+# Forbidden in all other agentic/agents/*.md (case-insensitive where noted):
 #   - "Optional MCP" — optional-toolbox bullets that invite direct MCP use from non-specialists.
 #   - "call_mcp_tool" — Cursor MCP tool invocation hook name.
 #   - "MCP server" / "MCP servers" — generic MCP server product phrasing (orchestration prose may use
 #     Task(mcp-*) or specialist names; those are not matched here).
 #
 # Subagent shell / rogue-instruction guard (ROAD-55; scripts/tools/lint-subagent-prompt-patterns.py):
-# Scans .cursor/agents/*.md and .cursor/skills/**/*.md only (not .cursor/rules/ or scripts/tools/).
+# Scans agentic/agents/*.md and agentic/skills/**/*.md only (not agentic/adapters/cursor/rules/ or scripts/tools/).
 # Fails on forbidden substrings outside markdown fences when the line is not exempt:
 #   - python3 -c, git mv, git commit, awk '{
 # Exemptions (see script docstring and CONTRIBUTING.md): fenced ``` blocks; lines with
-# <!-- lint:allow-subagent-shell -->; first-party script paths (pipeline-finish, git-inspect.sh,
-# query-transcript.py, audit-session-trace); or clear prohibition/negation prose.
+# <!-- lint:allow-subagent-shell -->; first-party script paths (pipeline-finish, pipeline-commit,
+# git-inspect.sh, query-transcript.py, audit-session-trace); or clear prohibition/negation prose.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -92,7 +92,7 @@ check_no_root_session_symlinks() {
 }
 
 check_no_mcp_in_non_specialists() {
-  local agents_dir=".cursor/agents"
+  local agents_dir="agentic/agents"
   if [[ ! -d "$agents_dir" ]]; then
     return 0
   fi
@@ -118,7 +118,7 @@ check_no_mcp_in_non_specialists() {
   done
   shopt -u nullglob
   if [[ $found -ne 0 ]]; then
-    echo "Error: Disallowed MCP toolbox patterns in .cursor/agents/*.md (only mcp-*.md, plan.md, pre-plan-triage.md may contain them). See script header in scripts/tools/lint-check.sh and CONTRIBUTING.md." >&2
+    echo "Error: Disallowed MCP toolbox patterns in agentic/agents/*.md (only mcp-*.md, plan.md, pre-plan-triage.md may contain them). See script header in scripts/tools/lint-check.sh and CONTRIBUTING.md." >&2
     return 1
   fi
   return 0
@@ -128,7 +128,7 @@ check_no_root_session_symlinks || exit 1
 check_no_mcp_in_non_specialists
 
 # ROAD-55: no instructional inline shell one-liners in permanent agent/skill prompts.
-if [[ -d ".cursor/agents" || -d ".cursor/skills" ]]; then
+if [[ -d "agentic/agents" || -d "agentic/skills" ]]; then
   python3 "$SCRIPT_DIR/lint-subagent-prompt-patterns.py" "$(pwd)" || exit 1
 fi
 

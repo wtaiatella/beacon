@@ -1,6 +1,6 @@
 ---
 name: security-specialist
-description: "Pre-plan wave, scheduled when the ticket crosses an auth/input/sensitive-data boundary: grounds the ticket in the existing threat surface and how similar code already validates input/handles auth. Feeds /spectech so security is designed in from the start instead of only caught later by QA's security-scanner. Never proposes a solution. Read-only."
+description: "Pre-plan wave, scheduled when the ticket crosses an auth/input/sensitive-data boundary: grounds the ticket in the existing threat surface and how similar code already validates input/handles auth. Feeds /spectech so security is designed in from the start instead of only caught later by QA's security-scanner. Never proposes a solution. Read-only. Use when the pre-plan wave needs security/threat-surface grounding for a ticket."
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---

@@ -1,6 +1,6 @@
 # Manual verification — phased implementation (implementation segment)
 
-Use this checklist to validate **phased implementation**, **domain isolation**, **mutation guardrails**, and **`--resume`** behavior for **`/run`** orchestration. Authoritative procedure remains **`.cursor/skills/run-pipeline/SKILL.md`** (**§ 5** — *Implementation payload construction*, **§ 6**, **Interaction with `--resume`**).
+Use this checklist to validate **phased implementation**, **domain isolation**, **mutation guardrails**, and **`--resume`** behavior for **`/run`** orchestration. Authoritative procedure remains **`agentic/skills/run-pipeline/SKILL.md`** (**§ 5** — *Implementation payload construction*, **§ 6**, **Interaction with `--resume`**).
 
 **Scope:** Human or live-session verification only; Cursor does not expose a guaranteed raw **`Task`** API. Adapt capture methods to your environment (Cursor UI, exported chat, orchestrator notes, or **`docs/sessions/<id>/current.md`** excerpts).
 
@@ -74,7 +74,7 @@ If the UI does not show full **`Task`** payloads, document that limitation and r
 
 ### Fail / document
 
-- Any **Phase 2** **`Task(dev|sre|data)`** starting **before** phase 1 **§ 6** **PROCEED** + patch is **orchestration failure** per **`.cursor/rules/00-workspace-router.mdc`** invalid-pipeline rules.
+- Any **Phase 2** **`Task(dev|sre|data)`** starting **before** phase 1 **§ 6** **PROCEED** + patch is **orchestration failure** per **`agentic/adapters/cursor/rules/00-workspace-router.mdc`** invalid-pipeline rules.
 
 ---
 
@@ -142,9 +142,9 @@ If the UI does not show full **`Task`** payloads, document that limitation and r
 
 | Topic | Location |
 |-------|----------|
-| One phase / one domain per **`Task`** | **`.cursor/skills/run-pipeline/SKILL.md`** — **Implementation payload construction**, **Anti-patterns** |
+| One phase / one domain per **`Task`** | **`agentic/skills/run-pipeline/SKILL.md`** — **Implementation payload construction**, **Anti-patterns** |
 | **`GATE: impl \| DONE \| phase: k`** | Same file — **§ 6**, **Interaction with `--resume`** |
-| Invalid completion (skipped § 6, etc.) | **`.cursor/rules/00-workspace-router.mdc`** — **Invalid pipeline output** |
+| Invalid completion (skipped § 6, etc.) | **`agentic/adapters/cursor/rules/00-workspace-router.mdc`** — **Invalid pipeline output** |
 | Session layout | **`docs/run-pipeline-reference.md`** — **Session storage** |
 
 ---

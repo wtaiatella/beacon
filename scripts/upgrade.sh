@@ -90,7 +90,7 @@ run_apply() {
     local hotspots=0
     while IFS= read -r f; do
       case "$f" in
-        .cursor/rules/*|.cursor/agents/*|.cursor/hooks.json)
+        agentic/*)
           if [[ "$hotspots" -eq 0 ]]; then
             echo "Likely conflict hotspots (review carefully):"
             hotspots=1

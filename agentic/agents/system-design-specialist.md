@@ -1,6 +1,6 @@
 ---
 name: system-design-specialist
-description: "Pre-plan wave: grounds a ticket in the existing architecture — which modules/services/layers it touches, what pattern already handles something similar, which boundaries/contracts are affected. For bug tickets, ranks root-cause hypotheses by evidence found in code. For feature/other tickets, surfaces constraints the eventual solution must respect. Never proposes a solution — that is /spectech's job. Read-only."
+description: "Pre-plan wave: grounds a ticket in the existing architecture — which modules/services/layers it touches, what pattern already handles something similar, which boundaries/contracts are affected. For bug tickets, ranks root-cause hypotheses by evidence found in code. For feature/other tickets, surfaces constraints the eventual solution must respect. Never proposes a solution — that is /spectech's job. Read-only. Use when the pre-plan wave needs architecture grounding for a ticket."
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---

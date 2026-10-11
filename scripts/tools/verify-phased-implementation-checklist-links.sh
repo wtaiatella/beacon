@@ -27,8 +27,8 @@ grep -q 'docs/specs' "$CHECKLIST" \
 
 # --- Tracked files the checklist must cite; must exist in clone ---
 REFS=(
-  ".cursor/skills/run-pipeline/SKILL.md"
-  ".cursor/rules/00-workspace-router.mdc"
+  "agentic/skills/run-pipeline/SKILL.md"
+  "agentic/adapters/cursor/rules/00-workspace-router.mdc"
   "docs/run-pipeline-reference.md"
   "docs/reference/nested-task-audit.md"
 )

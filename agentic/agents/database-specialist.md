@@ -1,6 +1,6 @@
 ---
 name: database-specialist
-description: "Pre-plan wave, scheduled only when the ticket touches persistence: grounds the ticket in existing tables/models/migrations, constraints, and integrity rules. For bug tickets, checks whether the symptom could be data-shape related (null fields, stale cache, write races). For feature/other tickets, surfaces schema constraints the solution must respect. Never proposes a solution. Read-only."
+description: "Pre-plan wave, scheduled only when the ticket touches persistence: grounds the ticket in existing tables/models/migrations, constraints, and integrity rules. For bug tickets, checks whether the symptom could be data-shape related (null fields, stale cache, write races). For feature/other tickets, surfaces schema constraints the solution must respect. Never proposes a solution. Read-only. Use when the pre-plan wave needs persistence grounding for a ticket."
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---

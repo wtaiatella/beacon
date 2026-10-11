@@ -1,6 +1,6 @@
 ---
 name: spectech
-description: "Technical specification designer that generates detailed technical specifications from PRD, including architecture, APIs, data models, and testing strategy."
+description: "Technical specification designer that generates detailed technical specifications from PRD, including architecture, APIs, data models, and testing strategy. Use when generating or updating a ticket's technical specification from its PRD."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---

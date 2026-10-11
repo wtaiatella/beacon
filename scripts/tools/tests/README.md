@@ -1,6 +1,6 @@
 # Workspace linter checks
 
-These scripts validate **committed** paths only (`docs/specs/*-spec.md`, `.cursor/agents/*.md`). There are no isolated fixture directories wired into the linters.
+These scripts validate **committed** paths only (`agentic/agents/*.md`, `agentic/skills/**/*.md`). There are no isolated fixture directories wired into the linters.
 
 ## Automated smoke check
 
@@ -10,11 +10,11 @@ From the repository root:
 ./scripts/tools/tests/run-workspace-linter-selftest.sh
 ```
 
-This runs `./scripts/tools/lint-workspace-content.sh` and is suitable before an MR when you changed specs or agents.
+This runs `./scripts/tools/lint-workspace-agents.sh` and is suitable before an MR when you changed agents.
 
 ## lint-check.sh subagent shell patterns (ROAD-55)
 
-`scripts/tools/lint-check.sh` rejects forbidden instructional substrings in **`.cursor/agents/*.md`** and **`.cursor/skills/**/*.md`** (see **CONTRIBUTING.md** — *No Historical Tracking IDs* section for full `lint-check.sh` behavior).
+`scripts/tools/lint-check.sh` rejects forbidden instructional substrings in **`agentic/agents/*.md`** and **`agentic/skills/**/*.md`** (see **CONTRIBUTING.md** — *No Historical Tracking IDs* section for full `lint-check.sh` behavior).
 
 **Self-check** (clean isolated tree passes; negative case uses a temporary directory):
 
@@ -66,7 +66,6 @@ Covers `audit-session-trace.py` against a fake `$HOME/.cursor/projects/<hash>/ag
 
 Because linters target real repo paths, use a **temporary** edit on a branch (or stash), then revert:
 
-1. **Spec linter** — In any `docs/specs/*-spec.md` file: rename the file to break allowed patterns (`YYYY-MM-DD-{slug}-spec.md` or optional `…T…Z-` / `…-HHMM-` affixes per `generate-spec`), drop required frontmatter, reorder `##` sections away from `generate-spec`, or add an invalid task tag outside `[dev|sre|data]` (with optional `:repo`). Run `./scripts/tools/lint-workspace-specs.sh`; expect exit 1 and `FAIL` lines.
-2. **Agent linter** — In any `.cursor/agents/*.md` file: remove “Use when” from `description`, or drop a required frontmatter key. Run `./scripts/tools/lint-workspace-agents.sh`; expect exit 1.
+1. **Agent linter** — In any `agentic/agents/*.md` file: remove “Use when” from `description`, or drop a required frontmatter key. Run `./scripts/tools/lint-workspace-agents.sh`; expect exit 1.
 
 Restore the file(s) before committing.

@@ -1,6 +1,6 @@
 ---
 name: frontend-specialist
-description: "Pre-plan wave, scheduled only when the ticket touches UI: grounds the ticket in the existing frontend framework/state-management, component conventions, and accessibility/compat constraints. For bug tickets, surfaces UI-side root-cause hypotheses. For feature/other tickets, surfaces conventions the solution must respect. Never proposes a solution. Read-only."
+description: "Pre-plan wave, scheduled only when the ticket touches UI: grounds the ticket in the existing frontend framework/state-management, component conventions, and accessibility/compat constraints. For bug tickets, surfaces UI-side root-cause hypotheses. For feature/other tickets, surfaces conventions the solution must respect. Never proposes a solution. Read-only. Use when the pre-plan wave needs UI grounding for a ticket."
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---

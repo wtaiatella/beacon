@@ -7,7 +7,7 @@
 # when available; otherwise a line-oriented fallback is used (single-line descriptions).
 #
 # Exit codes:
-#   0  All agent files passed (or no .md files under .cursor/agents/).
+#   0  All agent files passed (or no .md files under agentic/agents/).
 #   1  One or more validation failures.
 #
 # Usage: lint-workspace-agents.sh [--help|-h]
@@ -15,12 +15,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-AGENTS_DIR="$ROOT/.cursor/agents"
+AGENTS_DIR="$ROOT/agentic/agents"
 FAIL=0
 
 usage() {
   echo "Usage: $(basename "$0")"
-  echo "  Validates .cursor/agents/*.md frontmatter (name, description, model) and"
+  echo "  Validates agentic/agents/*.md frontmatter (name, description, model) and"
   echo "  requires case-insensitive \"Use when\" in description (see workspace router)."
 }
 
@@ -83,7 +83,7 @@ shopt -s nullglob
 AGENT_FILES=("$AGENTS_DIR"/*.md)
 
 if [[ ${#AGENT_FILES[@]} -eq 0 ]]; then
-  echo "OK No agent files under .cursor/agents/ (nothing to validate)"
+  echo "OK No agent files under agentic/agents/ (nothing to validate)"
   exit 0
 fi
 

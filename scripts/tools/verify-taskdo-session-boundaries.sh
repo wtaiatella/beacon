@@ -8,9 +8,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-SKILL=".cursor/skills/run-pipeline/SKILL.md"
+SKILL="agentic/skills/run-pipeline/SKILL.md"
 SESSION_MEM="scripts/tools/session-memory.sh"
-ROUTER=".cursor/rules/00-workspace-router.mdc"
+ROUTER="agentic/adapters/cursor/rules/00-workspace-router.mdc"
 
 echo "verify-taskdo-session-boundaries: repo root=$ROOT"
 

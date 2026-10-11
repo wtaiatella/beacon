@@ -1,6 +1,6 @@
 ---
 name: prd
-description: "Product requirements analyzer that generates PRD documents from project context, attachments, and client requirements."
+description: "Product requirements analyzer that generates PRD documents from project context, attachments, and client requirements. Use when generating or updating a ticket's PRD."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---

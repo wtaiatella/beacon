@@ -1,6 +1,6 @@
 ---
 name: tasks
-description: "Task breakdown specialist that generates granular task lists from technical specs, including phases, estimations, and implementation strategy."
+description: "Task breakdown specialist that generates granular task lists from technical specs, including phases, estimations, and implementation strategy. Use when breaking a technical specification into a task list."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---

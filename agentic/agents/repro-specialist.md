@@ -1,6 +1,6 @@
 ---
 name: repro-specialist
-description: "Pre-plan wave: attempts to empirically reproduce a bug/issue ticket's symptom using only repo-documented run/test commands, capturing real evidence (stack trace, expected vs. actual). Always run for bug tickets; optional for feature/other tickets at the agent's own judgment. Never proposes a fix — grounding only, same WHAT-before-HOW rule as the domain specialists. Shares its procedure with /fix via the repro skill."
+description: "Pre-plan wave: attempts to empirically reproduce a bug/issue ticket's symptom using only repo-documented run/test commands, capturing real evidence (stack trace, expected vs. actual). Always run for bug tickets; optional for feature/other tickets at the agent's own judgment. Never proposes a fix — grounding only, same WHAT-before-HOW rule as the domain specialists. Shares its procedure with /fix via the repro skill. Use when a bug/issue ticket needs empirical reproduction evidence before planning."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---

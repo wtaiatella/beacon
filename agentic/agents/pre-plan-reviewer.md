@@ -1,6 +1,6 @@
 ---
 name: pre-plan-reviewer
-description: "Reviews the merged pre-plan brief (domain specialists + repro + any gated enterprise sources) for gaps, inconsistencies, and ambiguity BEFORE Task(prd) runs. Read-only. Produces a quality score and, on REWORK, names exactly which specialist(s) must re-run with what's missing — never a blind re-run of the whole wave. Use before handing pre-plan context to /prd."
+description: "Reviews the merged pre-plan brief (domain specialists + repro + any gated enterprise sources) for gaps, inconsistencies, and ambiguity BEFORE Task(prd) runs. Read-only. Produces a quality score and, on REWORK, names exactly which specialist(s) must re-run with what's missing — never a blind re-run of the whole wave. Use when handing pre-plan context to /prd — run this review first."
 tools: Read, Grep, Glob
 model: inherit
 ---

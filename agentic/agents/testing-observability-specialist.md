@@ -1,6 +1,6 @@
 ---
 name: testing-observability-specialist
-description: "Pre-plan wave: finds what test/log/metric coverage already exists (or is missing) for the ticket's area, so /prd can register coverage as a requirement and /spectech can design it in. This is a GAP-finding view for planning — distinct from QA's VERIFICATION view (spec-validator/dev-reviewer/qa checking that implemented code is covered and tests pass), which is unchanged. Never proposes a solution. Read-only."
+description: "Pre-plan wave: finds what test/log/metric coverage already exists (or is missing) for the ticket's area, so /prd can register coverage as a requirement and /spectech can design it in. This is a GAP-finding view for planning — distinct from QA's VERIFICATION view (spec-validator/dev-reviewer/qa checking that implemented code is covered and tests pass), which is unchanged. Never proposes a solution. Read-only. Use when the pre-plan wave needs test/log/metric coverage gaps identified for a ticket."
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---

@@ -19,9 +19,10 @@ try to reproduce this," not two.
 
 This procedure **only** uses commands the repository **already documents**. It never invents a
 `docker run ...`, a server-start one-liner, or a port to bind — that is exactly the kind of ad-hoc
-shell this framework's Zero-Trust philosophy exists to prevent (same reasoning as "no inline
-`python3 -c`, no raw shell for mechanical work" elsewhere in this framework). If the repo doesn't
-document a way to run or test the affected surface, **say so and stop** — do not get creative.
+shell this framework's Zero-Trust philosophy exists to prevent.
+<!-- lint:allow-subagent-shell -->
+(Same reasoning elsewhere in this framework: never use inline `python3 -c` or raw shell for mechanical work.)
+If the repo doesn't document a way to run or test the affected surface, **say so and stop** — do not get creative.
 
 ## Workflow
 

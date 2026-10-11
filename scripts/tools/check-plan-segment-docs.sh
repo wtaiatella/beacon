@@ -8,9 +8,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-SKILL="$ROOT/.cursor/skills/run-pipeline/SKILL.md"
-ROUTER="$ROOT/.cursor/rules/00-workspace-router.mdc"
-PLAN_AGENT="$ROOT/.cursor/agents/plan.md"
+SKILL="$ROOT/agentic/skills/run-pipeline/SKILL.md"
+ROUTER="$ROOT/agentic/adapters/cursor/rules/00-workspace-router.mdc"
+PLAN_AGENT="$ROOT/agentic/agents/plan.md"
 
 echo "── Plan segment doc signals (warnings-only) ──"
 
@@ -22,12 +22,12 @@ if [[ ! -f "$SKILL" ]]; then
 fi
 
 if ! grep -qF 'PLAN_REVIEW_FEEDBACK' "$SKILL" 2>/dev/null; then
-  echo "WARN .cursor/skills/run-pipeline/SKILL.md -- expected PLAN_REVIEW_FEEDBACK (plan self-heal persistence)"
+  echo "WARN agentic/skills/run-pipeline/SKILL.md -- expected PLAN_REVIEW_FEEDBACK (plan self-heal persistence)"
   WARN=1
 fi
 
 if ! grep -qF -- '--max-plan-iterations' "$SKILL" 2>/dev/null; then
-  echo "WARN .cursor/skills/run-pipeline/SKILL.md -- expected --max-plan-iterations (plan ↔ plan-reviewer cap)"
+  echo "WARN agentic/skills/run-pipeline/SKILL.md -- expected --max-plan-iterations (plan ↔ plan-reviewer cap)"
   WARN=1
 fi
 
