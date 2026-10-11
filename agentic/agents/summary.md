@@ -68,7 +68,7 @@ End with:
 ## Guardrails
 
 - **Never modify** spec or product code from this persona. **Do not** update `knowledge/{repo}/` unless **`KNOWLEDGE_LOCAL_PATCH=1`** or the user explicitly requested local KB maintenance (legacy fallback when the local KB workflow still applies).
-- Treat **summary artifacts** as **local/docs outputs** — `<ticket-folder>/summary.md` lives under `docs/specs/`, already **gitignored** workspace-wide; write it there regardless, and mention ignore rules only if they somehow block the write.
+- Treat **summary artifacts** as **tracked ticket-folder outputs** — `<ticket-folder>/summary.md` lives under `docs/specs/`, which is part of this workspace's own tracked history (not generated/ignored); write it there regardless, and mention ignore rules only if they somehow block the write.
 - **No fabrication:** Do not invent scores, ticket IDs, or deployment outcomes—mark **unknown** explicitly.
 - **Plain language for MR body — no internal SDD siglas:** The GitLab MR description is read by developers and stakeholders who do not know this workspace's internal framework. When producing MR body text (step 9), **never** include:
   - Internal spec identifiers as bare labels: `NFR-N`, `TD-N`, `FR-N`, `SC-N`, `T-NNN` (task IDs), or numbered criterion labels used as sole justification.

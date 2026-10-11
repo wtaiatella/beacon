@@ -287,7 +287,9 @@ schema.
 
 ## Multi-Repo
 
-- Target repos are cloned as subdirectories of the workspace root and are gitignored (per-developer, not tracked)
+- Target repos are cloned as subdirectories of the workspace root; `/clone` excludes each one from
+  this workspace's own history by appending a `.gitignore` entry (they are their own git repos —
+  never tracked as part of the workspace)
 - Add one with **`/clone <git-url> [target-dir]`** — clones into the root and registers it in the inventory
 - The inventory (repo name + current branch) is detected dynamically and injected into context on session start — no need to list repos manually
 - Scope tables in specs list involved repos

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Clone a target repository into the workspace root so it joins the dynamically
-# detected repo inventory (see .claude/hooks/session-init.sh). Child repos are
-# gitignored by the workspace by design. Used by the /clone command.
+# detected repo inventory (see .claude/hooks/session-init.sh). The workspace's
+# .gitignore tracks everything by default (project files, specs, knowledge),
+# so each cloned child repo must be explicitly ignored — this script appends
+# a `/<dir>/` entry to .gitignore on every successful clone. Used by /clone.
 #
 # Usage: clone-repo.sh <git-ssh-or-https-url> [target-dir]
 set -euo pipefail
@@ -41,10 +43,20 @@ BRANCH="$(git -C "$ROOT/$DIR" branch --show-current 2>/dev/null | head -1)"
 
 echo ""
 echo "✓ Cloned '$DIR/' (branch: $BRANCH)"
-echo "It is now part of the workspace's target-repo inventory (auto-detected on session start; gitignored by the workspace)."
+echo "It is now part of the workspace's target-repo inventory (auto-detected on session start)."
 
-# Register in Cursor/VS Code Source Control (git.scanRepositories). Nested repos are
-# otherwise easy to miss because the workspace root .gitignore uses "*".
+# Register the new child repo in .gitignore (workspace tracks everything by
+# default; each cloned repo is its own git history and must be excluded
+# explicitly — idempotent, appends once per directory name).
+GITIGNORE="$ROOT/.gitignore"
+IGNORE_LINE="/$DIR/"
+if [ -f "$GITIGNORE" ] && ! grep -Fxq "$IGNORE_LINE" "$GITIGNORE"; then
+  printf '%s\n' "$IGNORE_LINE" >> "$GITIGNORE"
+  echo "Added '$IGNORE_LINE' to .gitignore (child repo, excluded from this workspace's history)."
+fi
+
+# Register in Cursor/VS Code Source Control (git.scanRepositories). Nested
+# repos otherwise don't show up in the SCM panel on their own.
 if [ -f "$ROOT/scripts/tools/sync-vscode-git-repos.sh" ]; then
   bash "$ROOT/scripts/tools/sync-vscode-git-repos.sh" || true
   echo "Registered '$DIR/' in .vscode/settings.json → git.scanRepositories (Reload Window if SCM does not list it yet)."

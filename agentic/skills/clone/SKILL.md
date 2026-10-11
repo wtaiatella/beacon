@@ -7,8 +7,10 @@ disable-model-invocation: true
 # Clone
 
 Clone a git repository into a single folder directly under the workspace root so it joins the
-dynamically detected child-repo inventory (see root `CLAUDE.md` / session-init). Child (target)
-repos are gitignored by the workspace **by design**.
+dynamically detected child-repo inventory (see root `CLAUDE.md` / session-init). The workspace
+tracks everything by default (it doubles as a real project's own repo — specs, knowledge, etc.),
+so child (target) repos are explicitly excluded: the clone helper appends a `/<dir>/` entry to
+`.gitignore` for each one.
 
 ## Trigger & Input
 
@@ -22,9 +24,9 @@ repos are gitignored by the workspace **by design**.
 1. If `$ARGUMENTS` is empty, ask the user for the repo URL and show the usage:
    `/clone <git-ssh-or-https-url> [target-dir]`.
 2. Run the clone helper (clones into the workspace root, derives the folder name unless a target
-   dir is given, refuses to overwrite an existing folder, registers the folder in
-   `.vscode/settings.json` → `git.scanRepositories` for Cursor/VS Code Source Control, records the
-   clone in session memory, and prints the updated inventory):
+   dir is given, refuses to overwrite an existing folder, appends `/<dir>/` to `.gitignore`,
+   registers the folder in `.vscode/settings.json` → `git.scanRepositories` for Cursor/VS Code
+   Source Control, records the clone in session memory, and prints the updated inventory):
 
    ```bash
    scripts/tools/clone-repo.sh $ARGUMENTS
@@ -43,6 +45,6 @@ repos are gitignored by the workspace **by design**.
 
 - Only clone into a single folder directly under the workspace root — never outside it, never a
   nested path.
-- Child (target) repos are gitignored by the workspace **by design**; do **not** `git add` them to
-  the workspace repo.
+- Child (target) repos must be excluded from the workspace's own history — the clone helper handles
+  this by appending a `.gitignore` entry; do **not** `git add` them to the workspace repo.
 - Do not run any other git write operations on the cloned repo beyond the clone itself.

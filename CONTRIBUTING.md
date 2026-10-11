@@ -18,11 +18,14 @@ A shared framework for agentic development. It is **not** where your application
 
 ## What You Should NOT Commit
 
-- Your local specs, including each ticket folder's `summary.md` (`docs/specs/` is gitignored)
-- Session memory files (`docs/sessions/` is gitignored)
+- Session memory files (`docs/sessions/` is gitignored, except the tracked README)
 - Audit logs (`docs/audit.log` is gitignored)
 - Usage event logs (`docs/usage-events.tsv` is gitignored — optional ROAD-18 granular cost rows; example schema in `docs/usage-events.example.tsv`)
-- Child repository code (gitignored)
+- Child repository code — `/clone` excludes each one with its own `.gitignore` entry
+
+Note: `docs/specs/` (ticket folders, including each one's `summary.md`) is **tracked** by design in
+this workspace — see `.gitignore` for the rationale (this repo doubles as a real project's own
+history, not just the SDD framework's dev checkout).
 - Raw API tokens, OAuth client secrets, or host-specific internal URLs that your policy keeps out of git (prefer **`${env:…}`** in `.cursor/mcp.json` — see **`docs/reference/cursor-mcp.md`**)
 - `.env` files, secrets, or credentials
 - **Repository-root session shims:** Do not add **`exploration`** or **`qa-artifacts`** at the workspace root (symlink or directory) to “mirror” paths under **`docs/sessions/`**. Use canonical dirs only: **`docs/sessions/<session-id>/artifacts/explorer/`** and **`.../artifacts/scanners/`** (see **`run-pipeline`** skill — no backward-compat symlinks for migrations). Root-level names are **`/exploration`** and **`/qa-artifacts`** in **`.gitignore`**; **`./scripts/tools/lint-check.sh .`** fails if the root contains disallowed session symlinks.

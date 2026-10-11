@@ -178,7 +178,7 @@ Compare reported **token counts**, **truncated excerpts**, and **file hints** in
 
 Use this checklist when validating **orchestrator docs** and **live `/run`** behavior (no CI substitute for branch UX and **`Pre-plan context:`** shape). Short pointer list: **`docs/sessions/README.md`**.
 
-- **(a) Protected branch — soft prompt at §1, hard gate at §5** — Start **`/run`** on a **protected** branch (`main`, `master`, `develop`, `release/*`). Expect **§1** to only ask a **soft, informational** question (switch for analysis, or continue on the current branch) — **not** a hard stop — and Init, pre-plan **`Task(mcp-*)`**, and **`Task(prd)`**/`Task(spectech)`/`Task(tasks)` proceed regardless (they only write the gitignored ticket folder). The **hard stop** (abort, switch, or an **approved** new branch name) fires later, immediately **before the first § 5** `Task(dev|sre|data)` — see skill **§1 Ordering** and **§5 Pre-check — branch gate**.
+- **(a) Protected branch — soft prompt at §1, hard gate at §5** — Start **`/run`** on a **protected** branch (`main`, `master`, `develop`, `release/*`). Expect **§1** to only ask a **soft, informational** question (switch for analysis, or continue on the current branch) — **not** a hard stop — and Init, pre-plan **`Task(mcp-*)`**, and **`Task(prd)`**/`Task(spectech)`/`Task(tasks)` proceed regardless (they only write the ticket folder, in the workspace root — not a child/target repo). The **hard stop** (abort, switch, or an **approved** new branch name) fires later, immediately **before the first § 5** `Task(dev|sre|data)` — see skill **§1 Ordering** and **§5 Pre-check — branch gate**.
 - **(b) Jira-only / Wave 2-only (no Wave 1)** — Use a goal where **`Task(pre-plan-triage)`** lists **no** Wave 1 sources (**neither** **`glean`** nor **`arc`**) but **may** need **`jira`** / **`confluence`** / **`gitlab`**. Expect **no** **`Task(mcp-glean)`** or **`Task(mcp-arc)`** — **merge + gate** after triage (or an empty Wave 1 merge), then Wave 2 only as gated.
 - **(c) `Pre-plan context:` vs raw MCP JSON** — After pre-plan, inspect the **`Task(plan)`** prompt or orchestrator log: **`Pre-plan context:`** must be a **short, summarized** brief (bullets / pointers), **not** a paste of full MCP tool JSON or unbounded dumps. On disk, **`pre-plan/merged-brief.md`** is the **bounded** merged artifact; **`pre-plan/specialists/*.md`** are **capped** snapshots — see **Local auditing** above and **Persistence contract** in **Session storage**.
 
@@ -293,7 +293,7 @@ Set orchestration state **`manual_step_gates: true`** when the user passes **`--
 
 ## Working Repo Architecture
 
-The agentic-workspace is a FRAMEWORK repo. App projects (myapp/, avatax-db-script/, etc.) are independent git repos cloned inside the workspace root and gitignored. They exist on disk but are NOT part of the workspace git history. The pipeline reads framework files from the workspace and makes code changes in the working repos. Worktrees are created in the working repos for isolation.
+This workspace is a FRAMEWORK repo. App projects (e.g. `myapp/`, `payments-api/`) are independent git repos cloned inside the workspace root via `/clone`, which excludes each one from the workspace's own history with a `.gitignore` entry. They exist on disk but are NOT part of the workspace git history. The pipeline reads framework files from the workspace and makes code changes in the working repos. Worktrees are created in the working repos for isolation.
 
 ## Delegation Header
 

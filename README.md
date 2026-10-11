@@ -158,7 +158,7 @@ flowchart TD
 
 **§1** repo/branch awareness (read-only; soft "switch for analysis or stay?" prompt — **not** a hard gate) → **§2** `pipeline-init.sh` → **Pre-plan** (domain specialists + repro, always; optional Jira/Confluence/Glean only if registered + signaled) → **§3–4** `Task(prd)` → `Task(spectech)` → `Task(tasks)`, then `plan-reviewer` (folder mode) ↔ `Task(scrum)` self-heal loop → **§5 pre-check** (hard branch gate: protected branch? stop — abort / stay / create + approve a name; default **no worktree**, plain checkout) → **§5** per-phase implementation (`Task(dev|sre|data)`) → **§6** implementation review (`*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or on REWORK) → **§7.0** QA prep (`spec-validator` + `security-scanner`) → **§7** `Task(qa)` → **§7.1** final `Task(scrum)` → **§8** `Task(summary)` → **§9** `pipeline-finish.sh` (commit / push / MR prompts).
 
-**Why the branch gate sits at §5, not §1:** `/prd` → `/spectech` → `/tasks` only write the ticket folder (`docs/specs/<ticket>/…`, gitignored) — there's no risk in drafting the spec while the working repo is on its protected/default branch, and that's often the *correct* branch to analyze from. The first actual write to the working repo is §5, so that's where the hard gate (and branch-name approval) belongs. Worktrees are **opt-in only** — the default is a single checkout on whichever branch the §5 gate resolves.
+**Why the branch gate sits at §5, not §1:** `/prd` → `/spectech` → `/tasks` only write the ticket folder (`docs/specs/<ticket>/…`, in the workspace root — not a child/target repo, so `subagent-gate` doesn't apply) — there's no risk in drafting the spec while the working repo is on its protected/default branch, and that's often the *correct* branch to analyze from. The first actual write to a child/target repo is §5, so that's where the hard gate (and branch-name approval) belongs. Worktrees are **opt-in only** — the default is a single checkout on whichever branch the §5 gate resolves.
 
 | Kind | Meaning |
 |---|---|
@@ -335,7 +335,7 @@ scripts/setup-agentic.sh claude   # or: cursor | all
 ```
 
 - **Prerequisites:** Node.js ≥ 18, git, and the IDE(s) you use (Claude Code and/or Cursor).
-- **Target repos:** clone the app repo(s) you'll modify as subdirectories of the workspace root (gitignored, per-developer) — or use multi-root attach (`scripts/tools/attach-project.sh`) for a separate `PROJECTS_ROOT`.
+- **Target repos:** clone the app repo(s) you'll modify as subdirectories of the workspace root via `/clone` (each gets its own `.gitignore` entry — it's a separate git repo, never tracked as part of this workspace) — or use multi-root attach (`scripts/tools/attach-project.sh`) for a separate `PROJECTS_ROOT`.
 - **Optional MCP:** see [MCP configuration](#mcp-configuration) below.
 - Re-run `scripts/setup-agentic.sh <claude|cursor|all>` any time `agentic/` changes — generated trees are overwritten, never hand-edited.
 
