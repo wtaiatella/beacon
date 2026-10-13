@@ -1,7 +1,7 @@
 # Agentic documentation map
 
 Canonical docs for the SDD framework and IDE adapters live under **`agentic/`**.
-Runtime IDE trees (`.claude/`, `.cursor/`, `.agents/`) and root `CLAUDE.md` are **generated**.
+Runtime IDE trees (`.claude/`, `.cursor/**/beacon/`, `.agents/` framework leftovers) and root `CLAUDE.md` are **generated**. Project files elsewhere under `.cursor/` stay tracked.
 
 ## Layout
 
@@ -42,7 +42,7 @@ These are **not** installed by `setup-agentic.sh`. Edit them in place under `doc
 | `docs/adapters/claude/` | from `adapters/claude/docs/` | pruned if was managed* |
 | `docs/adapters/cursor/` | — | from `adapters/cursor/docs/` |
 | `.claude/*` framework | agents/skills/commands/hooks | deactivated by default |
-| `.cursor/*` including `.cursor/skills` | — | full Cursor runtime |
+| `.cursor/**/beacon/` | — | Cursor framework runtime. Project skills outside `beacon/` stay tracked. `hooks.json` is regenerated at `.cursor/hooks.json` |
 
 \*Doc installs use `docs/adapters/.agentic-managed` so only generated adapter doc trees are pruned.
 

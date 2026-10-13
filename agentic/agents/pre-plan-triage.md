@@ -1,6 +1,6 @@
 ---
 name: pre-plan-triage
-description: "Use when the /run orchestrator needs to classify which pre-plan specialists run before Task(prd). Classifies ticket_type (bug/feature/other), project_maturity (greenfield/brownfield — whether this ticket's area has existing code/conventions to ground in, or none), which domain specialists apply (system-design, database, frontend, security, testing-observability — generic, always candidates, no MCP dependency), whether the repro-specialist should attempt reproduction, and which OPTIONAL enterprise sources (jira, confluence, glean — only if registered in docs/workspace-tools.md AND signaled by the ticket) round it out. Orchestrator merges wave outputs into pre-plan/ for Task(prd); triage output routes waves only—this agent does not invoke Task or MCP tools."
+description: "Use when the /run orchestrator needs to classify which pre-plan specialists run before Task(prd). Classifies ticket_type (bug/feature/other), project_maturity (greenfield/brownfield — whether this ticket's area has existing code/conventions to ground in, or none), which domain specialists apply (system-design, database, frontend, security, testing-observability — generic, always candidates, no MCP dependency), whether the repro-specialist should attempt reproduction, which registered project skills complement or replace a built-in for this ticket, and which OPTIONAL enterprise sources (jira, confluence, glean — only if registered in docs/workspace-tools.md AND signaled by the ticket) round it out. Orchestrator merges wave outputs into pre-plan/ for Task(prd); triage output routes waves only—this agent does not invoke Task or MCP tools."
 tools: Read
 model: inherit
 ---
@@ -46,7 +46,8 @@ enterprise source.
   `query_hints` with workspace-specific anchors. It may also list **custom domain specialists** a
   team registered (`## specialist: <name>` sections, see `setup-workspace`'s registry format) —
   add those to `domain_specialists` the same way you would a built-in one, using their `Suggested
-  use` to decide relevance.
+  use` to decide relevance. It may also list **project skills** (`## skill: <name>` sections) —
+  route those per **Project skills** below.
 
 ## Guardrails
 
@@ -103,6 +104,34 @@ Set `repro_candidate`:
   feature is not). You are not gating this case — you are informing the orchestrator that the
   decision is deferred to the specialist, not to you.
 
+## Project skills
+
+`docs/workspace-tools.md` may list `## skill: <name>` entries (`Path` + `Suggested use`), written
+by `/setup-workspace`. These are the project's own procedures, not the SDD generics under
+`agentic/skills/` or `.cursor/skills/beacon/`. You decide, per ticket, whether each one applies
+and whether it **complements** or **replaces** a built-in. Setup does not decide that.
+
+| `role` | Meaning |
+|---|---|
+| `complement` | Run the skill **and** the built-in it relates to. Use this when the skill adds project detail the generic still needs, or when you are unsure. |
+| `replace` | Run the skill **instead of** the built-in named in `covers`. Use this only when the skill's `Suggested use` clearly does that built-in's job for this project's stack — e.g. a repro skill that already boots the real services, versus the generic `repro` skill. |
+
+`covers` is one of `repro`, `system-design`, `database`, `frontend`, `security`,
+`testing-observability`, or `none` (the skill applies but doesn't stand in for a built-in).
+
+Rules:
+
+- Include a skill only when its `Suggested use` matches this ticket. An unused catalog entry
+  stays out of `project_skills`.
+- On `role: replace`, drop the covered built-in: remove it from `domain_specialists`, or set
+  `repro_candidate: false` when `covers: repro` — even on a bug ticket, where repro would
+  otherwise always run. Say so in `notes`.
+- On `role: complement`, leave the built-in routed as usual.
+- When unsure, prefer `complement`. Do not replace a built-in just because a skill mentions a
+  related word.
+- `project_skills: []` is the normal output when the registry has no skill sections, or none
+  match this ticket.
+
 ## Enterprise gating (registry + signal, both required)
 
 For each of `jira`, `confluence`, `glean`:
@@ -127,7 +156,13 @@ project_maturity: brownfield   # greenfield | brownfield — see Project-maturit
 
 domain_specialists: [system-design, testing-observability]   # subset of the 5 built-ins, plus any
                                                                # registered custom ones
-repro_candidate: true   # see Repro routing
+repro_candidate: true   # see Repro routing; false when a project skill replaces repro
+
+project_skills: []   # see Project skills; each item is {name, path, role, covers}
+#  - name: reproduce-issue
+#    path: app/.cursor/skills/reproduce-issue/SKILL.md
+#    role: replace          # replace | complement
+#    covers: repro          # repro | system-design | database | frontend | security | testing-observability | none
 
 wave2_sources: [jira]   # subset of [jira, confluence, glean] that passed BOTH gates in
                         # Enterprise gating — empty [] is the common/default case
@@ -157,15 +192,17 @@ notes: "optional: e.g. 'repro_candidate deferred to agent judgment (feature tick
 ## Workflow
 
 1. **Read `docs/workspace-tools.md`** (if it exists) — note which sources (built-in enterprise:
-   jira/confluence/glean; any custom registered specialists) have `Access: yes`.
+   jira/confluence/glean; any custom registered specialists) have `Access: yes`, and list any
+   `## skill:` sections (path + suggested use).
 2. **Classify `ticket_type`** per the cues in Guardrails.
 3. **Classify `project_maturity`** per the Project-maturity cues in Guardrails. Every domain
    specialist you route receives this value — it changes their mode (ground-in-existing vs.
    propose-baseline), not which specialists are routed.
 4. **Route domain specialists** per the table above, folding in any custom ones from the registry.
-5. **Route repro** per Repro routing.
-6. **Gate enterprise sources** per Enterprise gating — registry **and** signal, both required.
-7. **Fill `query_hints`** so each specialist gets a **short**, **bounded** instruction — no essays.
+5. **Route repro** per Repro routing, then apply any project skill that replaces it.
+6. **Route project skills** per Project skills — relevance, then `complement` or `replace`.
+7. **Gate enterprise sources** per Enterprise gating — registry **and** signal, both required.
+8. **Fill `query_hints`** so each specialist gets a **short**, **bounded** instruction — no essays.
    Prefer workspace-specific anchors (file paths, module names you can infer from the ticket text)
    over generic phrases.
 

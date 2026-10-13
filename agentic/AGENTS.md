@@ -62,7 +62,7 @@ unless they appear on that runtime's `.agentic-managed` manifest.
 | /rebase | Multi-repo git-sync (utility) | — (thin command) | `[repo ...] [ticket-key]` (empty args: infer one conversation ticket and its repo — `_state.json` fallback — else all child repos) |
 | /kb-refresh | Standalone: incremental multi-repo KB refresh | — (thin command) | `[repo ...]` |
 | /kb-concentrator | Standalone: global cross-repo KB concentrator | — (thin command) | `[flow-or-topic hint]` |
-| /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --reset]` |
+| /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --specialist <name> \| --reset]` |
 
 Project overlays are optional and **outside** the SDD required path — keep them in the IDE
 runtime dirs; SDD personas must not depend on them.
@@ -163,7 +163,7 @@ and responsibilities below are shared.)
 | frontend-specialist | UI grounding (framework/state/components) | /run pre-plan wave, when ticket touches UI |
 | security-specialist | Threat-surface grounding (auth/input/sensitive data) | /run pre-plan wave, when ticket crosses a security boundary |
 | testing-observability-specialist | Test/log/metric **gap** finding for planning (distinct from QA's verification role) | /run pre-plan wave |
-| repro-specialist | Empirical reproduction (always for bug tickets; agent's own judgment otherwise); shares its procedure with `/fix` via the `repro` skill | /run pre-plan wave |
+| repro-specialist | Empirical reproduction (always for bug tickets; agent's own judgment otherwise); shares its procedure with `/fix` via the `repro` skill. A project skill registered by `/setup-workspace` may replace it for a ticket when triage says so | /run pre-plan wave |
 
 **Project maturity (`greenfield` vs. `brownfield`):** `pre-plan-triage` also classifies
 `project_maturity` per ticket area — `brownfield` (default) when this area has existing

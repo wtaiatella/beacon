@@ -69,9 +69,11 @@ gating); you do not have the authority to request one that wasn't registered.
 - **Ambiguity / actionability for `/prd`**: /100 — can `/prd` act on each finding without having
   to guess what it means? Vague findings ("there might be an issue in auth") score low; concrete
   ones (file path, what exists, what's missing) score high.
-- **Repro quality** (bug tickets where `repro-specialist` attempted reproduction): /100 — if it
-  reproduced, is the evidence concrete (verbatim error, command)? If it didn't attempt or
-  couldn't, is that honestly stated rather than glossed over?
+- **Repro quality** (bug tickets where `repro-specialist` attempted reproduction, or a project
+  skill with `role: replace` and `covers: repro` did): /100 — if it reproduced, is the evidence
+  concrete (verbatim error, command)? If it didn't attempt or couldn't, is that honestly stated
+  rather than glossed over? Judge the skill's brief when it replaced the generic; do not flag
+  the generic's absence in that case.
 
 ## Scoring Guidance
 

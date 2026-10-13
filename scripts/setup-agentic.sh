@@ -664,4 +664,24 @@ case "$TARGET" in
     ;;
 esac
 
+# .gitignore merge=union lives in .gitattributes (the built-in driver is
+# selected by that attribute, not by a custom merge.<name>.driver config).
+# Re-running setup restores the line if a merge dropped it.
+ensure_gitignore_merge_union() {
+  local attr="$ROOT/.gitattributes"
+  local line='.gitignore merge=union'
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "DRY: ensure '$line' in .gitattributes"
+    return
+  fi
+  if [[ -f "$attr" ]] && grep -qxF "$line" "$attr"; then
+    echo "    .gitattributes already sets .gitignore merge=union"
+    return
+  fi
+  printf '\n# Union .gitignore when merging this SDD into a project repo.\n%s\n' "$line" >> "$attr"
+  echo "    wrote .gitignore merge=union into .gitattributes"
+}
+
+ensure_gitignore_merge_union
+
 echo "OK: setup-agentic ($TARGET) finished."

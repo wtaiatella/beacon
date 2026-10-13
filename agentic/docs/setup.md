@@ -24,8 +24,10 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 | Runtime | Outputs |
 |---------|---------|
 | Claude | user plugin `beacon-sdd` (`/beacon-sdd:<name>`), root `CLAUDE.md`. Project `.claude/` keeps overlays only (any name — no naming-prefix convention) |
-| Cursor | `.cursor/{agents,hooks,hooks.json,rules,skills}` — framework content under a `beacon/` subfolder in each; overlays linked flat outside it |
+| Cursor | framework content under `.cursor/{agents,hooks,rules,skills}/beacon/` (gitignored). `.cursor/hooks.json` is generated at the top level. Project files elsewhere under `.cursor/` stay tracked |
 | Docs | `docs/adapters/{claude,cursor}/` |
+
+`.gitattributes` sets `.gitignore merge=union` so merging this SDD into a project keeps both ignore files. `scripts/setup-agentic.sh` restores that line if a merge removed it.
 
 ### What stays tracked
 

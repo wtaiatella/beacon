@@ -25,7 +25,7 @@ instead.
 - Documentation improvements (`docs/`, `README.md`, `AGENTS.md`)
 - Bug fixes in any of the above
 
-**Never edit generated trees by hand:** `.claude/`, `.cursor/`, `.agent/`, root `CLAUDE.md` /
+**Never edit generated trees by hand:** `.claude/`, `.cursor/**/beacon/`, `.agent/`, root `CLAUDE.md` /
 `AGENTS.md`, `docs/adapters/`. These are produced by `scripts/setup-agentic.sh` from `agentic/` —
 edit the source and re-run the script.
 
