@@ -23,7 +23,7 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 
 | Runtime | Outputs |
 |---------|---------|
-| Claude | user plugin `beacon-sdd` (`/beacon-sdd:<name>`), root `CLAUDE.md`. Project `.claude/` keeps overlays only (any name — no naming-prefix convention) |
+| Claude | user plugin `beacon-sdd` (`/beacon-sdd:<name>`), root `CLAUDE.md`. Setup does not copy or link project skills, agents, or commands into `.claude/` |
 | Cursor | framework content under `.cursor/{agents,hooks,rules,skills}/beacon/` (gitignored). `.cursor/hooks.json` is generated at the top level. Project files elsewhere under `.cursor/` stay tracked |
 | Docs | `docs/adapters/{claude,cursor}/` |
 
@@ -32,7 +32,7 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 ### What stays tracked
 
 - `agentic/` — SDD source of truth
-- `.agents/{agents,commands,skills}/` and their `.claude/**` symlinks — project overlays (any name; not part of SDD)
+- project skills, agents, and commands, wherever the project keeps them — not installed or linked by setup
 - `.mcp.json` — shared MCP baseline (optional; not generated yet)
 - `docs/` — shared product/process docs (see `agentic/docs/README.md`)
 
@@ -92,7 +92,7 @@ No audit hook until a Claude-specific strategy is added under `agentic/adapters/
 
 ## Dual-IDE note
 
-Default `cursor` install **deactivates** the managed Claude framework mirror under `.claude/` (overlays remain, any name) so `/` is not duplicated. Use `--keep-claude` or `all` if you need both mirrors populated.
+Default `cursor` install **deactivates** the managed Claude framework mirror under `.claude/` (only paths listed in `.claude/.agentic-managed`) so `/` is not duplicated. Use `--keep-claude` or `all` if you need both mirrors populated.
 
 ## Edit workflow
 

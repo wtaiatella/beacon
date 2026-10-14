@@ -75,7 +75,7 @@ Cursor-flavored copy of the same rules. `CLAUDE.md` and `00-workspace-router.mdc
 what genuinely differs per tool: exact invocation mechanics, model-selection tables, and hook
 event/matcher names.
 
-**Project overlays** (any name — no naming-prefix convention; optional, team- or repo-specific) live outside `agentic/`, under the shared `.agents/{agents,commands,skills}/` tree, and are linked flat into the IDE runtime dirs (`.claude/`, `.cursor/`) outside the `beacon/` subfolder the framework itself uses — they are **never required** by the core SDD personas or the `/run` orchestrator. Full setup details: [agentic/docs/setup.md](agentic/docs/setup.md).
+**Project skills, agents, and commands** live outside `agentic/`, wherever that project keeps them. Setup does not copy or symlink them. They are **never required** by the core SDD personas or the `/run` orchestrator. Full setup details: [agentic/docs/setup.md](agentic/docs/setup.md).
 
 ---
 
@@ -491,7 +491,7 @@ default. See [model-catalog](docs/model-catalog.md).
 
 ## Extending the workspace
 
-Add agents under `agentic/agents/`, skills under `agentic/skills/`, commands under `agentic/commands/`, hooks under `agentic/hooks/` (or the per-IDE `agentic/adapters/<ide>/hooks/`) — then reinstall with `scripts/setup-agentic.sh <claude|cursor|all>`. Project-specific overlays that should **not** become part of the shared framework stay directly in the IDE runtime dirs. See [CONTRIBUTING.md](CONTRIBUTING.md) and `scripts/upgrade.sh`.
+Add agents under `agentic/agents/`, skills under `agentic/skills/`, commands under `agentic/commands/`, hooks under `agentic/hooks/` (or the per-IDE `agentic/adapters/<ide>/hooks/`) — then reinstall with `scripts/setup-agentic.sh <claude|cursor|all>`. Project-specific skills, agents, and commands stay in the project and are not installed by that script. See [CONTRIBUTING.md](CONTRIBUTING.md) and `scripts/upgrade.sh`.
 
 ---
 

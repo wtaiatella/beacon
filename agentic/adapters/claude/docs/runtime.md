@@ -18,10 +18,9 @@ Install:
 scripts/setup-agentic.sh claude
 ```
 
-Project overlays (any name — no naming-prefix convention; a file is an overlay by virtue of
-living under `.agents/{agents,commands,skills}/`) are **not** in `agentic/`; they live under
-`.claude/` (linked from `.agents/`) and are tracked separately. The Cursor adapter may
-deactivate the managed Claude framework mirror to avoid duplicate slash entries — overlays are kept.
+Project skills, agents, and commands are **not** in `agentic/`. Setup does not copy or link
+them. The Cursor adapter may deactivate the managed Claude framework mirror (paths listed in
+`.claude/.agentic-managed` only) to avoid duplicate slash entries.
 
 ## vs Cursor
 

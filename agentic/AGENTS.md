@@ -38,8 +38,8 @@ there is no `/plan` and no single-`spec.md`-producing mode in this repo. See **S
 
 **Canonical framework source:** edit SDD agents/skills/commands/hooks under `agentic/` (not scanned
 by IDEs). Install into a runtime with `scripts/setup-agentic.sh claude|cursor|antigravity|all`.
-Project overlays stay in the IDE runtime dirs (outside `agentic/`) and are never pruned by setup
-unless they appear on that runtime's `.agentic-managed` manifest.
+Project skills, agents, and commands stay outside `agentic/`. Setup does not copy or link them,
+and prunes a path only when that runtime's `.agentic-managed` manifest lists it.
 
 ## Personas
 
@@ -64,8 +64,8 @@ unless they appear on that runtime's `.agentic-managed` manifest.
 | /kb-concentrator | Standalone: global cross-repo KB concentrator | — (thin command) | `[flow-or-topic hint]` |
 | /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --specialist <name> \| --reset]` |
 
-Project overlays are optional and **outside** the SDD required path — keep them in the IDE
-runtime dirs; SDD personas must not depend on them.
+Project skills, agents, and commands are optional and **outside** the SDD required path.
+SDD personas must not depend on them. Setup does not place them.
 
 `scrum` is **read-only**. All other persona subagents are write-capable. Personas escalate helpers,
 enterprise MCP, or human decisions with `REQUEST_MAIN:` / `QUESTION:` / `ASK_USER` /
@@ -129,8 +129,8 @@ control, reused unchanged.
 (multi-repo git-sync), `/kb-refresh` / `/kb-concentrator` (knowledge), `/setup-workspace`
 (tool registry). These share the workspace but are not steps of `/run`.
 
-**Project overlays (optional, outside SDD):** project-specific commands/agents/skills kept in the
-IDE runtime dirs (not under `agentic/`). They may write extra files into a ticket folder when used,
+**Project skills, agents, and commands (optional, outside SDD):** kept by the project, not under
+`agentic/`, and not installed by setup. They may write extra files into a ticket folder when used,
 but **SDD personas and the required orchestrator must not require them**.
 
 ## Supporting Subagents
@@ -322,8 +322,9 @@ Structured project context at `knowledge/{project-name}/` (tracked in git, share
 ## Skills
 
 Framework skills ship under `agentic/skills/` (installed per-IDE — see your adapter file for exact
-paths). Optional project-specific overlay skills (if a team adds any) are kept outside `agentic/`
-and must never be required by a core SDD persona or by the required orchestrator.
+paths). Optional project-specific skills (if a team adds any) are kept outside `agentic/`
+and must never be required by a core SDD persona or by the required orchestrator. Setup does
+not copy or link them.
 
 - **run-pipeline** — /run (the authoritative end-to-end orchestration workflow the main loop follows — PRD/Spectech/Tasks segment → implement → review → QA → summary)
 - **generate-prd** / **generate-spectech** / **generate-tasks** — the `/prd`/`/spectech`/`/tasks` personas' normative document templates, adapted to read/write `_state.json`+`_notes.md`

@@ -18,9 +18,10 @@ uses — a structural, location-based rule: anything outside `beacon/` in `.curs
 `.cursor/skills/`, `.cursor/rules/`, `.cursor/hooks/` is not part of the SDD framework, regardless
 of filename. There is no naming-prefix convention to maintain.
 
-Manifests: `.cursor/.agentic-managed` and `.agents/.agentic-managed`.
-Generated runtimes and `docs/adapters/` are **gitignored** — only `agentic/` (+ project overlays
-under `.agents/`, any name) is source.
+Manifest: `.cursor/.agentic-managed`. A leftover `.agents/.agentic-managed` is only read to
+delete framework paths a previous install wrote there.
+Generated runtimes and `docs/adapters/` are **gitignored** — `agentic/` is the framework source.
+Project skills, agents, and commands are not installed or linked.
 
 ## Always-on context (CLAUDE.md → Cursor rules)
 
@@ -57,7 +58,7 @@ Action/tool audit is **per-IDE** (separate scripts and TSV files). Do not put au
 ## Claude mirror deactivation (anti-duplicate `/`)
 
 Default `scripts/setup-agentic.sh cursor` **deactivates** the managed Claude mirror
-(`.claude/.agentic-managed` paths only). Project overlays (any name) stay.
+(`.claude/.agentic-managed` paths only). Other files under `.claude/` stay.
 
 - Restore Claude: `scripts/setup-agentic.sh claude`
 - Dual-IDE: `scripts/setup-agentic.sh cursor --keep-claude`
@@ -67,13 +68,13 @@ Default `scripts/setup-agentic.sh cursor` **deactivates** the managed Claude mir
 
 Path rewrites on install:
 
-- `.claude/skills/<framework>/` → `.cursor/skills/beacon/<framework>/` (not project overlays)
+- `.claude/skills/<framework>/` → `.cursor/skills/beacon/<framework>/`
 - `.claude/agents/` → `.cursor/agents/beacon/`
 - `.claude/hooks/` → `.cursor/hooks/beacon/`
 
 **No command→skill emission.** Personas live under `.cursor/agents/beacon/`; framework skills
-under `.cursor/skills/beacon/` (including `/run`). Project overlays (linked from `.agents/`, any
-name) land flat in `.cursor/agents/` and `.cursor/commands/`, outside `beacon/`.
+under `.cursor/skills/beacon/` (including `/run`). The rewrite runs only inside those `beacon/`
+trees. Project skills, agents, and commands are not copied or linked.
 
 ## Notes
 

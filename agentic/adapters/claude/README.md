@@ -10,8 +10,7 @@
 | `adapters/claude/docs/` | `docs/adapters/claude/` |
 
 Managed framework paths are recorded in `.claude/.agentic-managed`. Prune only touches that list.
-Project overlays (any name — no naming-prefix convention) under `.claude/` are tracked in git and
-never pruned by setup.
+Setup does not copy or link project skills, agents, or commands.
 
 ## Always-on context
 
@@ -23,8 +22,7 @@ Scripts under `agentic/hooks/` are dual-protocol (Claude Code + Cursor). Claude 
 event names + matchers in `settings.json`; Cursor wiring is `adapters/cursor/hooks.json`.
 Shared payload/response normalization lives in `hooks/lib/hook-protocol.js`.
 
-## Project overlays
+## Project skills, agents, and commands
 
-Any agents/commands/skills **not** installed from `agentic/` (and therefore absent from
-`.agentic-managed`) are left untouched by setup. Keep project overlays in the runtime dir;
-do not add them under `agentic/`.
+Anything **not** installed from `agentic/` is left untouched. Keep it in the project;
+do not add it under `agentic/`. Setup does not symlink it into an IDE runtime.

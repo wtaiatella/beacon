@@ -7,8 +7,8 @@ alwaysApply: true
 
 > Cursor always-on project context (equivalent role to root `CLAUDE.md` for Claude Code).
 > Canonical SDD source lives under `agentic/`; install with `scripts/setup-agentic.sh cursor`.
-> Project overlays (any name — no naming-prefix convention) stay in IDE runtime dirs and are
-> **outside** the required orchestrator.
+> Project skills, agents, and commands stay with the project. Setup does not copy or link
+> them, and they are **outside** the required orchestrator.
 >
 > The **shared, IDE-agnostic** SDD contract (workspace identity, ticket folder, personas, pipeline,
 > confidence scoring, multi-repo, knowledge base, skills, hooks (purpose), session memory, metrics,
@@ -22,7 +22,7 @@ alwaysApply: true
 |------|------|
 | Subagents / personas | `.cursor/agents/beacon/` |
 | Framework skills | `.cursor/skills/beacon/` |
-| Project overlays | `.agents/{agents,commands,skills}/` (any name; Cursor skills load from here, agents/commands are linked flat into `.cursor/`, outside `beacon/`) |
+| Project skills, agents, commands | Wherever the project keeps them. Setup does not copy or link them. |
 | Hooks | `.cursor/hooks.json` + `.cursor/hooks/beacon/` |
 | Canonical source | `agentic/` (edit here, then re-run setup) |
 

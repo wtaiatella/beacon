@@ -5,10 +5,9 @@
 > Cursor equivalent: `agentic/adapters/cursor/rules/*.mdc` → `.cursor/rules/` via `setup-agentic.sh cursor`.
 >
 > Framework SDD lives under `agentic/{agents,skills,commands,hooks}` and is installed as the
-> user-level Claude plugin `beacon-sdd` (`/beacon-sdd:<name>`). Project overlays (any name — no
-> naming-prefix convention) live in `.agents/` and are linked into `.claude/` so Claude Code can
-> see them. Cursor installs the same framework under a `beacon/` subfolder inside each `.cursor/`
-> directory it uses, and reads overlay skills from `.agents/skills/`.
+> user-level Claude plugin `beacon-sdd` (`/beacon-sdd:<name>`). Project skills, agents, and
+> commands stay with the project; setup does not copy or link them. Cursor installs the same
+> framework under a `beacon/` subfolder inside each `.cursor/` directory it uses.
 
 @AGENTS.md
 

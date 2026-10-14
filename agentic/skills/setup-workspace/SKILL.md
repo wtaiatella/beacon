@@ -189,8 +189,8 @@ complements or replaces a built-in — that is `pre-plan-triage`'s call on each 
 3. **Skip the framework.** Do not register `agentic/skills/`, `agentic/agents/`,
    `.cursor/skills/beacon/`, `.cursor/agents/beacon/`, or any file whose directory is named
    `beacon`. Those are the SDD generics, not the project's.
-4. **Dedupe.** Overlays under `.agents/` are often symlinked into `.cursor/`. If the same
-   frontmatter `name` appears twice, register it once and keep the `.agents/` path.
+4. **Dedupe.** If the same frontmatter `name` appears in more than one of the paths above,
+   register it once and keep the `.agents/` path when that copy exists.
 5. **Read each file's frontmatter** (`name`, `description`). If `name` is missing, use the
    directory name (skills) or the filename without `.md` (agents). `Suggested use` is the
    description, trimmed to one sentence.

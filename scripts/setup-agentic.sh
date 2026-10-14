@@ -4,7 +4,7 @@
 #
 # - Framework source of truth: agentic/{agents,skills,commands,hooks}
 # - Only paths recorded in each runtime's .agentic-managed manifest are pruned
-# - Files not on that manifest (project overlays, local extras) are never deleted
+# - Project skills, agents, and commands are not copied or linked
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -38,10 +38,11 @@ Usage: scripts/setup-agentic.sh <claude|cursor|antigravity|all> [--dry-run] [--k
                (~/.claude/plugins/marketplaces/beacon-sdd-local, not ~/.claude/skills).
                If that plugin is already installed and the source is unchanged,
                only refresh workspace control files (CLAUDE.md, adapter docs)
-               and drop the managed .claude/ framework mirror. Overlays stay.
-  cursor       Install + adapt entirely under .cursor/ (agents, hooks, rules,
-               skills). Also deactivates managed Claude and .agents mirrors
-               so / entries are not duplicated. Overlays stay.
+               and drop the managed .claude/ framework mirror.
+  cursor       Install + adapt entirely under .cursor/*/beacon/ (agents, hooks,
+               rules, skills) plus .cursor/hooks.json. Also deactivates managed
+               Claude and legacy .agents mirrors so / entries are not duplicated.
+               Does not copy or link project skills, agents, or commands.
   antigravity  Stub install into .agent/
   all          Run claude + cursor + antigravity (no Claude deactivation)
 
@@ -68,9 +69,8 @@ Cursor adapter specifics:
   - docs    → docs/adapters/cursor/  (from agentic/adapters/cursor/docs/)
   - by default, prune .claude/ paths listed in .claude/.agentic-managed
   - by default, prune .agents/ paths listed in .agents/.agentic-managed
-  - project overlays (any name, kept under .agents/) link in flat — outside
-    beacon/ — into .cursor/agents/, .cursor/commands/, and .claude/{agents,
-    commands,skills}/; unmanaged files already in those dirs are kept too
+    (legacy framework copies only; other files there are left alone)
+  - does not copy or symlink project skills, agents, or commands
 
 Claude adapter:
   - framework → ~/.claude/plugins/marketplaces/beacon-sdd-local/beacon-sdd
@@ -115,7 +115,7 @@ managed_add() {
 }
 
 # Remove every path listed in a runtime's .agentic-managed (framework only).
-# Leaves unmanaged overlays intact. Clears the manifest afterward.
+# Leaves every other file intact. Clears the manifest afterward.
 deactivate_managed_runtime() {
   local runtime_root="$1"
   local label="$2"
@@ -150,7 +150,7 @@ deactivate_managed_runtime() {
       echo "# Cleared by Cursor install (framework mirror deactivated)."
       echo "# Re-run: scripts/setup-agentic.sh claude"
     } > "$manifest"
-    echo "    deactivated $label ($removed managed paths removed; overlays kept)"
+    echo "    deactivated $label ($removed managed paths removed)"
   fi
 }
 
@@ -271,8 +271,7 @@ overlay_adapter_hooks() {
 # Framework content lives under a `beacon/` subfolder inside each .cursor/
 # directory (agents/skills/rules/hooks) so anything outside beacon/ is
 # structurally not part of the SDD framework — no naming-prefix convention
-# needed. Project overlays (any name, kept under .agents/) are linked flat,
-# outside beacon/, and must keep their .claude/ prefix untouched here.
+# needed. This rewrite runs only on those beacon/ trees.
 adapt_cursor_paths() {
   local dest="$1"
   [[ -d "$dest" ]] || return 0
@@ -295,15 +294,14 @@ adapt_cursor_paths() {
     local tmp
     tmp="$(mktemp)"
     # Base rewrites (framework agents/hooks move under .cursor/.../beacon/ for
-    # Cursor; commands are never mirrored into Cursor — only overlay commands
-    # live flat under .cursor/commands/, so that path is left untouched here)
+    # Cursor; commands are never mirrored into Cursor)
     sed \
       -e 's|\.claude/agents/|.cursor/agents/beacon/|g' \
       -e 's|\.claude/commands/|.cursor/commands/|g' \
       -e 's|\.claude/hooks/|.cursor/hooks/beacon/|g' \
       "$f" > "$tmp"
 
-    # Framework skills only: .claude/skills/<name>/ → .cursor/skills/beacon/<name>/
+    # Framework skills: .claude/skills/<name>/ → .cursor/skills/beacon/<name>/
     local name
     for name in "${skill_names[@]}"; do
       sed -i '' -e "s|\\.claude/skills/${name}/|.cursor/skills/beacon/${name}/|g" "$tmp"
@@ -340,49 +338,6 @@ install_adapter_docs() {
     managed_add "$base"
   done
   managed_finish
-}
-
-# Point each IDE at the project overlays kept under .agents/. Any file there
-# is an overlay by virtue of living in that dedicated tree — no naming-prefix
-# convention required (that used to be a `beacon-*` filter tied to this
-# project's own name, which silently dropped any overlay named something
-# else — e.g. a downloaded skill, or the same framework installed under a
-# different project name). Linked flat (outside any `beacon/` subfolder) so
-# overlays are visibly separate from the framework's own managed content.
-# Cursor already loads .agents/skills/. It does not load .agents/agents or
-# .agents/commands, so those are linked into .cursor/. Claude Code does not
-# load .agents/ at all, so agents, commands, and skills are linked into .claude/.
-# Skills are not linked into .cursor/skills/ (that would list each skill twice).
-link_project_overlays() {
-  local overlay_root="$ROOT/.agents"
-  [[ -d "$overlay_root" ]] || return 0
-
-  link_overlay_tree() {
-    local kind="$1"
-    local dest_root="$2"
-    local src_dir="$overlay_root/$kind"
-    [[ -d "$src_dir" ]] || return 0
-    local path name dest rel
-    for path in "$src_dir"/*; do
-      [[ -e "$path" ]] || continue
-      name="$(basename "$path")"
-      dest="$dest_root/$name"
-      if [[ "$DRY_RUN" -eq 1 ]]; then
-        echo "DRY: link $dest → $path"
-        continue
-      fi
-      mkdir -p "$dest_root"
-      rel="$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1], os.path.dirname(sys.argv[2])))' "$path" "$dest")"
-      ln -sfn "$rel" "$dest"
-    done
-  }
-
-  echo "    link project overlays from .agents/ (flat, any name)"
-  link_overlay_tree agents "$ROOT/.cursor/agents"
-  link_overlay_tree commands "$ROOT/.cursor/commands"
-  link_overlay_tree agents "$ROOT/.claude/agents"
-  link_overlay_tree commands "$ROOT/.claude/commands"
-  link_overlay_tree skills "$ROOT/.claude/skills"
 }
 
 # User-level Claude plugin. Not under ~/.claude/skills: on this machine that
@@ -545,7 +500,8 @@ install_claude() {
   install_claude_plugin
 
   # Drop the project framework mirror. Same-named files under .claude/ override
-  # the plugin, and skills there show up as a second /. Overlays stay.
+  # the plugin, and skills there show up as a second /. Only paths previously
+  # listed in .claude/.agentic-managed are removed.
   managed_begin "$ROOT/.claude"
   managed_finish
 
@@ -557,8 +513,7 @@ install_claude() {
   fi
 
   install_adapter_docs "claude"
-  link_project_overlays
-  echo "    done (plugin is user-level; project overlays stay in .agents/)"
+  echo "    done (plugin is user-level)"
 }
 
 install_cursor() {
@@ -574,10 +529,9 @@ install_cursor() {
 
   # --- .cursor: agents + hooks + rules + skills, all under a `beacon/`
   # subfolder so anything outside beacon/ is structurally not part of the
-  # SDD framework (no naming-prefix convention needed — see
-  # link_project_overlays). hooks.json itself must stay at the top-level
-  # path Cursor requires (.cursor/hooks.json) and points into
-  # .cursor/hooks/beacon/ for the actual scripts.
+  # SDD framework. hooks.json itself must stay at the top-level path Cursor
+  # requires (.cursor/hooks.json) and points into .cursor/hooks/beacon/.
+  # Project skills, agents, and commands are not copied or linked.
   managed_begin "$ROOT/.cursor"
   sync_dir_managed "$SRC/agents" "$ROOT/.cursor/agents/beacon" "agents/beacon"
   sync_dir_managed "$SRC/hooks" "$ROOT/.cursor/hooks/beacon" "hooks/beacon"
@@ -595,12 +549,11 @@ install_cursor() {
   copy_file_managed "$SRC/adapters/cursor/hooks.json" "$ROOT/.cursor/hooks.json" "hooks.json"
   managed_finish
 
-  # Previous installs wrote framework skills here. Cursor and Claude both
-  # discover .agents/skills/, so leave the managed tree removed.
+  # Previous installs wrote framework skills here. Remove only those managed
+  # paths. Anything else under .agents/ belongs to the project.
   if [[ -f "$ROOT/.agents/.agentic-managed" ]]; then
     deactivate_managed_runtime "$ROOT/.agents" "legacy .agents skills"
   fi
-  link_project_overlays
 
   install_adapter_docs "cursor"
 
