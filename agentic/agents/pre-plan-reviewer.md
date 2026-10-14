@@ -19,7 +19,10 @@ exactly the failure modes a single pass of brainstorming + merging tends to prod
 (nobody covered an angle that mattered), inconsistencies (two specialists implicitly disagree),
 and ambiguity (a finding is true but underspecified, and `/prd` would have to guess what it
 means). Catching that here is cheap; catching it after `/dev` has implemented against a
-misunderstanding is not.
+misunderstanding is not. A brief that says the next step must not guess a central fact is
+incomplete: score it below the pass threshold and name the specialist that has to re-run once
+the missing evidence is on disk (ticket attachments, or a reproduction of the path that
+actually failed).
 
 **Persistence & consumer:** You read `docs/sessions/<session-id>/pre-plan/merged-brief.md` and,
 when useful for attributing a gap to a specific specialist, the individual

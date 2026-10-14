@@ -191,9 +191,13 @@ complements or replaces a built-in — that is `pre-plan-triage`'s call on each 
    `beacon`. Those are the SDD generics, not the project's.
 4. **Dedupe.** If the same frontmatter `name` appears in more than one of the paths above,
    register it once and keep the `.agents/` path when that copy exists.
-5. **Read each file's frontmatter** (`name`, `description`). If `name` is missing, use the
+5. **Read each file's frontmatter** (`name`, `description`) and the first part of the body
+   (role and what it reads and writes — stop before long templates). If `name` is missing, use the
    directory name (skills) or the filename without `.md` (agents). `Suggested use` is the
-   description, trimmed to one sentence.
+   description, trimmed to one sentence. `Context` is up to four sentences: what it needs as
+   input, what it writes, and which generic job it resembles (`repro`, `system-design`,
+   `database`, `frontend`, `security`, `testing-observability`, `jira-capture`, or `none`).
+   Do not decide `replace` or `complement`. That stays with `pre-plan-triage`.
 6. **Write one `## skill: <name>` section per skill and one `## agent: <name>` section per
    agent** (see **Registry format**). If a previously registered file is gone, drop that section
    and say so in the final report.
@@ -261,6 +265,7 @@ _Last updated: <YYYY-MM-DD> · Updated by: /setup-workspace_
 
 - **Path:** .cursor/skills/<name>/SKILL.md   ← workspace-relative path to that SKILL.md
 - **Suggested use:** <one sentence from the skill's description>
+- **Context:** <up to four sentences: inputs, outputs, and which generic job it resembles>
 
 ---
 
@@ -268,6 +273,7 @@ _Last updated: <YYYY-MM-DD> · Updated by: /setup-workspace_
 
 - **Path:** .agents/agents/<name>.md   ← workspace-relative path to that agent file
 - **Suggested use:** <one sentence from the agent's description>
+- **Context:** <up to four sentences: inputs, outputs, and which generic job it resembles>
 ```
 
 **Required field semantics (MCP server sections):**
@@ -293,7 +299,8 @@ health-check; the entry either exists (and its agent file is assumed to exist) o
 | Field | Values | Purpose |
 |---|---|---|
 | `Path` | workspace-relative path | Where triage and the orchestrator find the procedure (skill) or the persona (agent) |
-| `Suggested use` | one sentence | Consumed by `pre-plan-triage` to decide if this ticket should use it, and whether it complements or replaces a built-in |
+| `Suggested use` | one sentence | Short label. Triage reads this with `Context`. |
+| `Context` | up to four sentences | What it needs, what it writes, and which generic job it resembles. Triage uses this to choose `replace`, `complement`, or `skip`. Setup does not make that choice. |
 
 **Suggested use examples (adapt to what was discovered):**
 - "Activate when PRD involves UI, screens, or component design in web-ui."

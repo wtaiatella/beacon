@@ -54,10 +54,10 @@ confidence:
 ---
 ```
 
-- `confidence.threshold` overrides the workspace default (75%). Use higher values for regulated or security-critical work, lower for internal tooling.
+- `confidence.threshold` overrides the workspace default (90%). Use higher values for regulated or security-critical work, lower for internal tooling.
 - `confidence.weights` set per-domain risk multipliers. Default is 1.0 for all domains. Higher weight = stricter scoring for that domain when `/scrum` aggregates across domains. Set based on where the real risk lives in this spec (e.g., data changes on a payment system → `data: 2.0`).
 - See the `confidence-scoring` skill for the full scoring model, calibration thresholds by project type, and trend analysis guidance.
-- When omitted, the pipeline uses workspace defaults (threshold 75%, equal domain weights).
+- When omitted, the pipeline uses workspace defaults (threshold 90%, equal domain weights).
 
 ### 2. Title (H1)
 

@@ -247,9 +247,9 @@ parallel working copies. See the `run-pipeline` skill — **§1**, **§5 Pre-che
 
 - Per-persona reviewers emit 0–100% scores including spec alignment
 - /scrum (PO/SM/PM) evaluates at each gate with business judgment
-- **≥ threshold (default 75%):** PROCEED
-- **50–74%:** ASK_USER
-- **< 50%:** REWORK (automatic)
+- **≥ threshold (default 90%):** PROCEED
+- **Below threshold, first miss:** REWORK (automatic)
+- **Below threshold after at least one rework:** ASK_USER
 - **Max loops hit:** ESCALATE
 - /scrum may override defaults when business context warrants
 - Threshold is per-gate; document overrides in the ticket folder or session notes when non-default

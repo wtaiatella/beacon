@@ -104,40 +104,57 @@ Set `repro_candidate`:
   feature is not). You are not gating this case — you are informing the orchestrator that the
   decision is deferred to the specialist, not to you.
 
+## Cloned child repos
+
+Child repos already on disk are listed in `.gitignore` under the line
+`# --- clone-managed entries below`. Each following non-comment line is a `/<dir>/` path.
+A repo is cloned when that directory exists. Read the marker and check the directories before
+you write that a repo is not cloned. Do not infer it from a missing `knowledge/` index or from
+the ticket text.
+
 ## Project skills and agents
 
-`docs/workspace-tools.md` may list `## skill: <name>` and `## agent: <name>` entries (`Path` +
-`Suggested use`), written by `/setup-workspace`. These are the project's own procedures and
-personas, not the SDD generics under `agentic/skills/`, `agentic/agents/`, or
+`docs/workspace-tools.md` may list `## skill: <name>` and `## agent: <name>` entries (`Path`,
+`Suggested use`, and `Context`), written by `/setup-workspace`. These are the project's own
+procedures and personas, not the SDD generics under `agentic/skills/`, `agentic/agents/`, or
 `.cursor/{skills,agents}/beacon/`. You decide, per ticket, whether each one applies and whether
-it **complements** or **replaces** a built-in. Setup does not decide that.
+it **complements** or **replaces** a built-in. Setup does not decide that. Do not prefer a
+project file because of its name. Prefer it when `Context` shows it does the same job as a
+built-in, or a better one, for this ticket.
+
+`project_skills` and `project_agents` list **every** catalog entry, not only the ones that run.
+`role: skip` keeps the entry visible and the orchestrator does not run it.
 
 Skills and agents are different and may both apply to the same ticket. A skill that boots the
 stack and an agent that investigates that framework complement each other — include both when
-each `Suggested use` matches. Do not drop one because the other was selected.
+each `Context` matches. Do not drop one because the other was selected.
 
 | `role` | Meaning |
 |---|---|
 | `complement` | Run this skill or agent **and** the built-in it relates to (and any other selected project skill or agent). Use this when it adds project detail the generic still needs, when it pairs with another project skill/agent, or when you are unsure. |
-| `replace` | Run this skill or agent **instead of** the built-in named in `covers`. Use this only when its `Suggested use` clearly does that built-in's job for this project's stack — e.g. a repro skill that already boots the real services, versus the generic `repro` skill. |
+| `replace` | Run this skill or agent **instead of** the built-in named in `covers`. Use this only when its `Context` clearly does that built-in's job for this project's stack — for example a repro procedure that already boots the real services, versus the generic `repro` skill. |
+| `skip` | Do not run it. The entry stays in the list so the catalog decision is visible. `covers: none`. |
 
 `covers` is one of `repro`, `system-design`, `database`, `frontend`, `security`,
 `testing-observability`, or `none` (it applies but doesn't stand in for a built-in).
 
 Rules:
 
-- Include an entry only when its `Suggested use` matches this ticket. An unused catalog entry
-  stays out of `project_skills` / `project_agents`.
+- Every `## skill:` and `## agent:` section becomes one list item. `role: skip` is how an
+  entry stays out of the wave. An empty list is only valid when the registry has no sections
+  of that kind.
+- Judge from `Context` first, then `Suggested use`. If `Context` says the procedure gathers
+  evidence the same way a built-in does, and the child repo it needs is cloned, `replace` or
+  `complement`. If the repo it needs is not cloned, `skip` and say so in `reason`.
 - On `role: replace`, drop the covered built-in: remove it from `domain_specialists`, or set
   `repro_candidate: false` when `covers: repro` — even on a bug ticket, where repro would
   otherwise always run. Say so in `notes`. If both a skill and an agent would replace the same
-  built-in, keep the one whose `Suggested use` is the closer match and set the other to
-  `complement` (or omit it).
+  built-in, keep the one whose `Context` is the closer match and set the other to
+  `complement` (or `skip`).
 - On `role: complement`, leave the built-in routed as usual.
-- When unsure, prefer `complement`. Do not replace a built-in just because a name mentions a
-  related word.
-- `project_skills: []` and `project_agents: []` are the normal output when the registry has no
-  sections of that kind, or none match this ticket.
+- When unsure between `replace` and `complement`, prefer `complement`. Do not replace a
+  built-in just because a name mentions a related word.
+- `reason` is one line: why it runs, or why it is skipped.
 
 ## Enterprise gating (registry + signal, both required)
 
@@ -165,12 +182,13 @@ domain_specialists: [system-design, testing-observability]   # subset of the 5 b
                                                                # registered custom ones
 repro_candidate: true   # see Repro routing; false when a project skill replaces repro
 
-project_skills: []   # see Project skills and agents; each item is {name, path, role, covers}
-project_agents: []   # same shape as project_skills; agents are Task personas, skills are procedures
+project_skills: []   # every ## skill: entry; each item is {name, path, role, covers, reason}
+project_agents: []   # every ## agent: entry; same shape; agents are Task personas, skills are procedures
 #  - name: reproduce-issue
 #    path: app/.cursor/skills/reproduce-issue/SKILL.md
-#    role: replace          # replace | complement
+#    role: replace          # replace | complement | skip
 #    covers: repro          # repro | system-design | database | frontend | security | testing-observability | none
+#    reason: "Context boots this stack and reproduces the issue; child repo is cloned"
 
 wave2_sources: [jira]   # subset of [jira, confluence, glean] that passed BOTH gates in
                         # Enterprise gating — empty [] is the common/default case
@@ -201,15 +219,16 @@ notes: "optional: e.g. 'repro_candidate deferred to agent judgment (feature tick
 
 1. **Read `docs/workspace-tools.md`** (if it exists) — note which sources (built-in enterprise:
    jira/confluence/glean; any custom registered specialists) have `Access: yes`, and list any
-   `## skill:` and `## agent:` sections (path + suggested use).
+   `## skill:` and `## agent:` sections (path, suggested use, and context). Read the clone-managed
+   marker in `.gitignore` and which of those directories exist.
 2. **Classify `ticket_type`** per the cues in Guardrails.
 3. **Classify `project_maturity`** per the Project-maturity cues in Guardrails. Every domain
    specialist you route receives this value — it changes their mode (ground-in-existing vs.
    propose-baseline), not which specialists are routed.
 4. **Route domain specialists** per the table above, folding in any custom ones from the registry.
 5. **Route repro** per Repro routing, then apply any project skill that replaces it.
-6. **Route project skills and agents** per Project skills and agents — relevance, then
-   `complement` or `replace`. Keep both when they match and complement each other.
+6. **Route project skills and agents** per Project skills and agents — one item per catalog
+   entry, `complement`, `replace`, or `skip`. Keep both when they match and complement each other.
 7. **Gate enterprise sources** per Enterprise gating — registry **and** signal, both required.
 8. **Fill `query_hints`** so each specialist gets a **short**, **bounded** instruction — no essays.
    Prefer workspace-specific anchors (file paths, module names you can infer from the ticket text)

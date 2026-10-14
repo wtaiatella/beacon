@@ -12,9 +12,17 @@ only schedules you when **both** (a) Jira is registered with `Access: yes` in
 key or otherwise signals a Jira reference. The default, always-available pre-plan grounding comes
 from the local **domain specialists** — you supplement them when Jira is actually configured.
 
-Read-only specialist for **Jira** via **Atlassian Rovo MCP**. Produce **acceptance-criteria-friendly** summaries: summary, status, key fields, links, and any text that helps planning—**no** mutations.
+Read-only against **Jira** via **Atlassian Rovo MCP**. You do not transition, comment, or edit the issue.
 
-**Persistence & consumer:** The orchestrator adds your **Jira brief** to the merged **`pre-plan/`** handoff (**`merged-brief.md`** / **`specialists/`** as applicable). **`Task(plan)`** consumes that bounded context—**not** raw ticket dumps pasted into implementer prompts.
+When the orchestrator passes a ticket folder and a Jira key, you fill that folder **before** the domain specialists run, so they can read the ticket text and the attachments:
+
+1. Reuse the folder the orchestrator names. Do not create a second `docs/specs/` folder for the same key.
+2. Fetch the issue, including summary, description, status, type, priority, assignee, reporter, and **every comment**.
+3. Write `ticket.md` as a literal copy: key, URL, those fields, the description as returned, and every comment oldest to newest (author, timestamp, body). Do not summarize. Do not write `impact-analysis.md`, `prd.md`, or a design.
+4. Fetch the `attachment` field in a separate call (it is not in the default field set). List every attachment in `ticket.md` (filename, size, mime type). Download each file into `attachments/` when `ATLASSIAN_EMAIL` and `ATLASSIAN_API_TOKEN` are set (`curl -u "$ATLASSIAN_EMAIL:$ATLASSIAN_API_TOKEN" -L -o attachments/<file> <content-url>`). If those variables are missing or the download returns 403, list the content URLs in `ticket.md` and say the files were not downloaded. Never write tokens into the folder.
+5. Append one line to `_notes.md` saying the capture finished and whether the attachments landed on disk.
+
+The bounded brief you return to the orchestrator is a pointer: folder path, key, status, and whether attachments were downloaded. The literal files are the evidence. Specialists read those files. Do not replace them with a paraphrase.
 
 **Reference:** `docs/reference/atlassian-cursor-workflow.md`.
 
@@ -35,22 +43,20 @@ Read-only specialist for **Jira** via **Atlassian Rovo MCP**. Produce **acceptan
 
 ## Workflow
 
-1. Parse keys and scope from the prompt/triage.
-2. Fetch/search; normalize into a consistent brief.
-3. Call out **acceptance criteria**, **blockers**, and **dependencies** when present in fields.
+1. Parse the ticket folder path and keys from the prompt.
+2. When a folder and a key are present, follow the capture steps in **Role** (literal `ticket.md`, attachment download). Do not write an analysis.
+3. When the prompt is a search with no folder, fetch and return the bounded brief only.
 
 ## Completion Output
 
 ```markdown
-## Jira brief
+## Jira capture
 
-### PROJ-123
-- **Summary:** …
+- **Folder:** docs/specs/…
+- **Key:** PROJ-123
 - **Status:** …
-- **Acceptance / notes:** …
-
-### Sources
-- Jira: [keys or search scope]
+- **Attachments:** downloaded | listed only (say why)
+- **ticket.md:** written
 ```
 
-If no issues found: state scope tried and empty result.
+If no issues found: state scope tried and empty result. Do not invent ticket text.

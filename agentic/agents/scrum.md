@@ -78,10 +78,10 @@ After **`Task(qa)`**, your **PROCEED** authorizes **`Task(summary)`**, **§ 9** 
 For **§ 6** implementation review, apply **§ 6 Implementation gate** (security hard block, unified **`IMPL_SEGMENT_FEEDBACK:`**-style narrative) **before** the generic score decision below — **High**/**Critical** in the phase security summary forces **REWORK** regardless of scores.
 
 1. Ingest reviewer reports (score, findings, spec-alignment) and pipeline context. For **§ 6**, also ingest the **phase** security excerpt/summary when provided.
-2. Read spec frontmatter for custom `confidence.weights` and `confidence.threshold`. If declared, compute weighted aggregate: `sum(score_i × weight_i) / sum(weight_i)`. Defaults: all weights 1.0, threshold 75%. See `confidence-scoring` skill for full model.
+2. Read spec frontmatter for custom `confidence.weights` and `confidence.threshold`. If declared, compute weighted aggregate: `sum(score_i × weight_i) / sum(weight_i)`. Defaults: all weights 1.0, threshold 90%. See `confidence-scoring` skill for full model.
 3. **Business evaluation:** Compare findings to spec intent/goals/AC; check rework history; flag scope drift.
 4. **Score trend** (multi-iteration): improving / flat (±5%) / declining. Declining → recommend `/prd` amendment (re-run `/prd` over the existing ticket folder). Flat → re-read reviewer findings. Report inline: `Trend: Improving (62% → 71% → 78%)`.
-5. **Decision (score band):** Use this step **only** when **§ 6** security hard block does **not** already require **REWORK** (see **§ 6 Implementation gate**). Then: ≥ threshold → **PROCEED**; 50–74% → **ASK_USER**; < 50% → **REWORK**; iteration ≥ max → **ESCALATE**. Context overrides require explicit reasoning.
+5. **Decision (score band):** Use this step **only** when **§ 6** security hard block does **not** already require **REWORK** (see **§ 6 Implementation gate**). Then: ≥ threshold → **PROCEED**. Below threshold, if this gate has not yet finished a rework iteration → **REWORK**. Below threshold after at least one rework iteration → **ASK_USER**. Iteration ≥ max → **ESCALATE**. Do not **ASK_USER** on the first miss. Context overrides require explicit reasoning.
 6. **Emit:** Score, Decision, Basis, Business assessment, Key findings, Trend, Iteration count, Pipeline progress. For **§ 6** **REWORK**, state how security and reviewer feedback merge into one implementer-facing narrative.
 
 **`/run` authorization (implementation gates):** For orchestrated **`/run`**, your **PROCEED** (or an explicit documented user override) is the **authorization** for the main agent to treat the **current implementation phase** as complete for gating purposes and to **advance** the pipeline (e.g. next phase **§ 5**, or **§ 7 QA** when all phases are done). It is also the signal that the orchestrator may **apply spec tracking updates** (checkboxes, `status`, `last-updated`) from **Proposed completions** returned by **`/dev`** / **`/sre`** / **`/data`** — personas **do not** edit the spec file for progress under orchestration; the orchestrator patches after your gate (or records the proposal if applying manually).
@@ -127,7 +127,7 @@ Resolve spec, read frontmatter + body. Present pipeline status, scores, decision
 ## Guardrails
 
 - **Never** modify specs or code (readonly).
-- **Never** auto-proceed when score < 50% without explicit override documented in reply.
+- **Never** auto-proceed when score < threshold without explicit override documented in reply.
 - **Never** exceed `max_review_loops`; at cap → **ESCALATE**.
 - Every threshold override requires **explicit reasoning**.
 - Token efficiency: at **§ 7.1** / standalone status, prefer spec overview + AC + **`artifacts/qa-report.md`** / scores; skip large dumps. At **§ 6**, expect a **bounded** phase security excerpt per the matrix — not raw **`artifacts/diffs/`** blobs.
