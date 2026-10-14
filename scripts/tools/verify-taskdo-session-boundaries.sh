@@ -23,14 +23,9 @@ test -f "$SKILL" || fail "missing $SKILL"
 test -f "$SESSION_MEM" || fail "missing $SESSION_MEM"
 test -f "$ROUTER" || fail "missing $ROUTER"
 
-# --- run-pipeline SKILL: begin-run (session rotation) ---
-# ROAD-52: Init may be encapsulated in pipeline-init.sh; SKILL must still document begin-run
-# (direct session-memory.sh begin-run or pipeline-init semantics).
-grep -qF 'begin-run' "$SKILL" || fail "SKILL must mention begin-run"
-if ! grep -qF 'session-memory.sh begin-run' "$SKILL"; then
-  grep -qF 'pipeline-init.sh' "$SKILL" \
-    || fail "SKILL must document session-memory.sh begin-run or encapsulate Init in pipeline-init.sh"
-fi
+# --- run-pipeline SKILL: ticket-scoped run dir ---
+grep -qF 'pipeline-init.sh' "$SKILL" || fail "SKILL must document pipeline-init.sh"
+grep -qF -- '--ticket' "$SKILL" || fail "SKILL must pass --ticket to the run-state scripts"
 
 # --- SKILL: Task(do) for authorized spec updates ---
 grep -qF '#### Task(do) for authorized spec updates' "$SKILL" \
@@ -44,11 +39,12 @@ grep -qF '**No direct Markdown edits' "$SKILL" \
 grep -qE '\*\.md|apply_patch' "$SKILL" \
   || fail "SKILL must forbid main-session *.md / apply_patch style edits for bookkeeping"
 
-# --- session-memory.sh: begin-run + cmd_begin_run / case begin-run ---
-grep -qF 'begin-run' "$SESSION_MEM" || fail "session-memory.sh must mention begin-run"
-grep -qF 'cmd_begin_run' "$SESSION_MEM" || fail "session-memory.sh must define cmd_begin_run"
-grep -qE 'begin-run\)|case.*begin-run' "$SESSION_MEM" \
-  || fail "session-memory.sh must dispatch begin-run (case label)"
+# --- session-memory.sh: ticket folder is the run identity ---
+grep -qF -- '--ticket' "$SESSION_MEM" || fail "session-memory.sh must require --ticket"
+grep -qF 'ensure)' "$SESSION_MEM" || fail "session-memory.sh must dispatch ensure"
+if grep -qE '^[[:space:]]*begin-run\)' "$SESSION_MEM"; then
+  fail "session-memory.sh must not dispatch begin-run"
+fi
 
 # --- 00-workspace-router.mdc: Task(do) after scrum for spec updates (not patches-only wording) ---
 grep -qF 'Task(do)' "$ROUTER" || fail "router must mention Task(do)"
@@ -65,8 +61,8 @@ grep -qF 'call `AskQuestion` first' "$SKILL" \
   || fail "SKILL must require AskQuestion before git when tool available"
 # ROAD-52: START may be spelled as log-gate.sh impl-start instead of a raw impl | START line.
 if ! grep -qF 'impl | START | phase: k | domain:' "$SKILL"; then
-  grep -qF 'log-gate.sh impl-start' "$SKILL" \
-    || fail "SKILL must document impl START telemetry (log-gate.sh impl-start or legacy line)"
+  grep -qF 'log-gate.sh --ticket <ticket-folder> impl-start' "$SKILL" \
+    || fail "SKILL must document impl START telemetry (log-gate.sh --ticket impl-start or legacy line)"
 fi
 grep -qF 'impl | DONE | phase: k | spec:' "$SKILL" \
   || fail "SKILL must document impl | DONE telemetry (multi-phase)"

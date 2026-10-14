@@ -43,67 +43,52 @@ first=$(bash "$HASH" --verify "$tmp" 2>/dev/null | head -1)
 [ "$first" = "$expected" ]
 
 # --- write-trace-anchors idempotence (session-memory integration) ---
-backup="$ROOT/docs/sessions/.test-cph-active-session-backup.$$"
-if [ -f "$ROOT/docs/sessions/ACTIVE_SESSION" ]; then
-  cp "$ROOT/docs/sessions/ACTIVE_SESSION" "$backup"
-else
-  : >"$backup"
-fi
-
+TICKET="docs/specs/test-cph-$$"
 cleanup_all() {
   cleanup_tmp
-  if [ -f "$backup" ]; then
-    if [ -s "$backup" ]; then
-      cat "$backup" >"$ROOT/docs/sessions/ACTIVE_SESSION"
-    else
-      rm -f "$ROOT/docs/sessions/ACTIVE_SESSION"
-    fi
-    rm -f "$backup"
-  fi
+  rm -rf "$ROOT/$TICKET" "$fake_target"
 }
+fake_target=""
 trap cleanup_all EXIT
+mkdir -p "$ROOT/$TICKET"
+sm() { "$SM" --ticket "$TICKET" "$@"; }
 
-id=$("$SM" begin-run "cph-test-$$")
-"$SM" write-trace-anchors
-grep -q '^SESSION_START:' "$ROOT/docs/sessions/$id/current.md"
-grep -q '^PROJECT_HASH:' "$ROOT/docs/sessions/$id/current.md"
-ph_line=$(grep '^PROJECT_HASH:' "$ROOT/docs/sessions/$id/current.md" | head -1)
+sm ensure >/dev/null
+sm write-trace-anchors
+grep -q '^SESSION_START:' "$ROOT/$TICKET/_run/timeline.md"
+grep -q '^PROJECT_HASH:' "$ROOT/$TICKET/_run/timeline.md"
+ph_line=$(grep '^PROJECT_HASH:' "$ROOT/$TICKET/_run/timeline.md" | head -1)
 ph_val="${ph_line#PROJECT_HASH: }"
 repo_hash=$(bash "$HASH" "$ROOT")
 [ "$ph_val" = "$repo_hash" ]
 
-# Second call is no-op (still one SESSION_START)
-count=$(grep -c '^SESSION_START:' "$ROOT/docs/sessions/$id/current.md" || true)
+count=$(grep -c '^SESSION_START:' "$ROOT/$TICKET/_run/timeline.md" || true)
 [ "$count" -eq 1 ]
 
-# --resume with anchors present: still no duplicate
-"$SM" write-trace-anchors --resume
-count2=$(grep -c '^SESSION_START:' "$ROOT/docs/sessions/$id/current.md" || true)
+sm write-trace-anchors --resume
+count2=$(grep -c '^SESSION_START:' "$ROOT/$TICKET/_run/timeline.md" || true)
 [ "$count2" -eq 1 ]
 
-rm -rf "$ROOT/docs/sessions/$id"
-
 # --- write-trace-anchors --resume with no anchors: must not mint new trace ---
-id2=$("$SM" begin-run "cph-resume-$$")
-"$SM" write-trace-anchors --resume
-if grep -q '^SESSION_START:' "$ROOT/docs/sessions/$id2/current.md" 2>/dev/null; then
+rm -rf "$ROOT/$TICKET/_run"
+sm ensure >/dev/null
+sm write-trace-anchors --resume
+if grep -q '^SESSION_START:' "$ROOT/$TICKET/_run/timeline.md" 2>/dev/null; then
   echo "FAIL: --resume should not write SESSION_START when anchors were absent" >&2
   exit 1
 fi
-rm -rf "$ROOT/docs/sessions/$id2"
 
-# --- ROAD-48: attach-target.txt → PROJECT_HASH + trace-hash-root use target root ---
+# --- attach-target.txt → PROJECT_HASH + trace-hash-root use target root ---
 fake_target=$(mktemp -d "${TMPDIR:-/tmp}/cph-fake-target.XXXXXX")
 fake_canon=$(cd "$fake_target" && pwd -P)
-id_48=$("$SM" begin-run "cph-road48-$$")
-printf '%s\n' "$fake_canon" >"$ROOT/docs/sessions/$id_48/attach-target.txt"
-thr=$("$SM" trace-hash-root)
+printf '%s\n' "$fake_canon" >"$ROOT/$TICKET/_run/attach-target.txt"
+thr=$(sm trace-hash-root)
 [ "$thr" = "$fake_canon" ] || {
   echo "FAIL: trace-hash-root expected '$fake_canon' got '$thr'" >&2
   exit 1
 }
-"$SM" write-trace-anchors
-ph_line=$(grep '^PROJECT_HASH:' "$ROOT/docs/sessions/$id_48/current.md" | head -1)
+sm write-trace-anchors
+ph_line=$(grep '^PROJECT_HASH:' "$ROOT/$TICKET/_run/timeline.md" | head -1)
 ph_val="${ph_line#PROJECT_HASH: }"
 want_48=$(bash "$HASH" "$fake_canon")
 [ "$ph_val" = "$want_48" ] || {
@@ -115,16 +100,13 @@ orch=$(bash "$HASH" "$ROOT")
   echo "FAIL: expected target PROJECT_HASH to differ from orchestrator for this test" >&2
   exit 1
 }
-rm -rf "$ROOT/docs/sessions/$id_48"
-rm -rf "$fake_target"
 
 # --- Invalid attach-target path → write-trace-anchors fails ---
-id_bad=$("$SM" begin-run "cph-badpath-$$")
-printf '%s\n' '/no/such/path/road48-test' >"$ROOT/docs/sessions/$id_bad/attach-target.txt"
-if "$SM" write-trace-anchors 2>/dev/null; then
+sm clear
+printf '%s\n' '/no/such/path/road48-test' >"$ROOT/$TICKET/_run/attach-target.txt"
+if sm write-trace-anchors 2>/dev/null; then
   echo "FAIL: expected write-trace-anchors to fail for missing attach directory" >&2
   exit 1
 fi
-rm -rf "$ROOT/docs/sessions/$id_bad"
 
 echo "OK cursor-project-hash + write-trace-anchors tests"

@@ -25,51 +25,27 @@ expect_rc() {
   [ "$got" -eq "$want" ] || fail "expected exit $want from $* (got $got)"
 }
 
-backup_as="$ROOT/docs/sessions/.test-se-backup-$$"
-if [ -f "$ROOT/docs/sessions/ACTIVE_SESSION" ]; then
-  cp "$ROOT/docs/sessions/ACTIVE_SESSION" "$backup_as"
-else
-  : >"$backup_as"
-fi
-
+TICKET="docs/specs/test-encap-$$"
 cleanup() {
-  if [ -f "$backup_as" ]; then
-    if [ -s "$backup_as" ]; then
-      cat "$backup_as" >"$ROOT/docs/sessions/ACTIVE_SESSION"
-    else
-      rm -f "$ROOT/docs/sessions/ACTIVE_SESSION"
-    fi
-    rm -f "$backup_as"
-  fi
+  rm -rf "$ROOT/$TICKET"
 }
 trap cleanup EXIT
+mkdir -p "$ROOT/$TICKET"
 
 # --- pipeline-init.sh ---
-"$PI" --help | grep -qE 'pipeline-init|Init|begin-run' || fail "pipeline-init --help"
+"$PI" --help | grep -qE 'pipeline-init|--ticket' || fail "pipeline-init --help"
 expect_rc 1 "$PI" --not-a-flag
+expect_rc 1 "$PI"
 
-rm -f "$ROOT/docs/sessions/ACTIVE_SESSION"
-out=$("$PI" 2>&1) || fail "pipeline-init happy path"
+out=$("$PI" --ticket "$TICKET" 2>&1) || fail "pipeline-init happy path"
 printf '%s\n' "$out" | grep -q '=== pipeline-init ===' || fail "pipeline-init missing banner"
-printf '%s\n' "$out" | grep -q '=== session-rotation ===' || fail "pipeline-init missing session-rotation"
+printf '%s\n' "$out" | grep -q '=== run-dir ===' || fail "pipeline-init missing run-dir"
 printf '%s\n' "$out" | grep -q '=== apply-models-snapshot ===' || fail "pipeline-init missing apply-models-snapshot"
-printf '%s\n' "$out" | grep -qE '^trace-hash-root: ' || fail "pipeline-init missing trace-hash-root line"
-new_id=$(head -n 1 "$ROOT/docs/sessions/ACTIVE_SESSION" | tr -d '\r\n')
-[ -n "$new_id" ] || fail "ACTIVE_SESSION empty after pipeline-init"
-rm -rf "$ROOT/docs/sessions/$new_id"
-[ ! -d "$ROOT/docs/sessions/$new_id" ] || fail "expected session dir removed for resume test"
-
-# Stale ACTIVE_SESSION must make --resume fail (do not rely only on deleted dir from above).
-printf '%s\n' 'nonexistent-session-id-for-encap-test' >"$ROOT/docs/sessions/ACTIVE_SESSION"
+printf '%s\n' "$out" | grep -qE 'trace-hash-root: ' || fail "pipeline-init missing trace-hash-root line"
+rm -rf "$ROOT/$TICKET/_run"
 rc=0
-"$PI" --resume >/dev/null 2>&1 || rc=$?
-[ "$rc" -eq 1 ] || fail "pipeline-init --resume with invalid session (got $rc)"
-
-if [ -s "$backup_as" ]; then
-  cat "$backup_as" >"$ROOT/docs/sessions/ACTIVE_SESSION"
-else
-  rm -f "$ROOT/docs/sessions/ACTIVE_SESSION"
-fi
+"$PI" --ticket "$TICKET" --resume >/dev/null 2>&1 || rc=$?
+[ "$rc" -eq 1 ] || fail "pipeline-init --resume without timeline (got $rc)"
 
 # --- git-inspect.sh ---
 "$GI" --help | grep -q 'git-inspect' || fail "git-inspect --help"
@@ -111,16 +87,13 @@ rc=0
 "$LG" impl-start >/dev/null 2>&1 || rc=$?
 [ "$rc" -eq 1 ] || fail "log-gate impl-start without --domain (got $rc)"
 
-rm -f "$ROOT/docs/sessions/ACTIVE_SESSION"
 rc=0
 "$LG" plan-done "docs/specs/x.md" >/dev/null 2>&1 || rc=$?
-[ "$rc" -eq 1 ] || fail "log-gate without session (got $rc)"
+[ "$rc" -eq 1 ] || fail "log-gate without --ticket (got $rc)"
 
-lg_id=$("$SM" begin-run "lg-test-$$") || fail "begin-run for log-gate"
-"$LG" plan-done "docs/specs/example.md" || fail "log-gate plan-done"
-# session-memory stores GATE lines as "- ts | <rest after GATE:>" (GATE prefix consumed).
-grep -q 'plan | DONE | spec: docs/specs/example.md' "$ROOT/docs/sessions/$lg_id/current.md" || fail "log-gate write"
-rm -rf "$ROOT/docs/sessions/$lg_id"
+"$SM" --ticket "$TICKET" ensure >/dev/null || fail "ensure for log-gate"
+"$LG" --ticket "$TICKET" plan-done "docs/specs/example.md" || fail "log-gate plan-done"
+grep -q 'plan | DONE | spec: docs/specs/example.md' "$ROOT/$TICKET/_run/timeline.md" || fail "log-gate write"
 
 trap - EXIT
 cleanup

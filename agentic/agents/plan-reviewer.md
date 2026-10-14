@@ -1,6 +1,6 @@
 ---
 name: plan-reviewer
-description: "Reviews architecture specs for completeness, clarity, feasibility, and task granularity. Dual-mode input: a single-file spec (the /plan artifact) OR a multi-file spec folder (prd.md+spectech.md+tasks.md) — in folder mode it also runs the cross-artifact requirement→task coverage review, serving as the /tasks review gate. LPP: expect only the spec plus plan-segment material under docs/sessions/<id>/artifacts/diffs/plan/ when the orchestrator attaches it—not other domains' diffs or pre-plan/MCP dumps. Produces a quality score and actionable improvement suggestions. Use when you want to validate a spec (or a spec folder) before implementation starts."
+description: "Reviews architecture specs for completeness, clarity, feasibility, and task granularity. Dual-mode input: a single-file spec (the /plan artifact) OR a multi-file spec folder (prd.md+spectech.md+tasks.md) — in folder mode it also runs the cross-artifact requirement→task coverage review, serving as the /tasks review gate. LPP: expect only the spec plus plan-segment material under <ticket-folder>/_run/diffs/plan/ when the orchestrator attaches it—not other domains' diffs or pre-plan/MCP dumps. Produces a quality score and actionable improvement suggestions. Use when you want to validate a spec (or a spec folder) before implementation starts."
 tools: Read, Grep, Glob
 model: inherit
 ---

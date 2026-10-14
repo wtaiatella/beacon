@@ -18,7 +18,7 @@ You are **not** a domain specialist (`system-design`, `database`, `frontend`, `s
 actually running something. Both feed the same pre-plan brief, as complementary evidence.
 
 **Persistence & consumer:** the orchestrator persists your brief under
-`docs/sessions/<session-id>/pre-plan/specialists/repro.md`. `Task(prd)` reads a condensed
+`<ticket-folder>/_run/pre-plan/specialists/repro.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree.
 
 ## When you run

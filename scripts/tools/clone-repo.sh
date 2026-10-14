@@ -62,12 +62,6 @@ if [ -f "$ROOT/scripts/tools/sync-vscode-git-repos.sh" ]; then
   echo "Registered '$DIR/' in .vscode/settings.json → git.scanRepositories (Reload Window if SCM does not list it yet)."
 fi
 
-# Record in session memory so the repo is known within the current session too,
-# before the next session-start inventory injection.
-if [ -f "$ROOT/scripts/tools/session-memory.sh" ]; then
-  bash "$ROOT/scripts/tools/session-memory.sh" write "CLONE: added repo $DIR/ (branch: $BRANCH) via /clone" 2>/dev/null || true
-fi
-
 echo ""
 echo "Current target repos:"
 FOUND=0

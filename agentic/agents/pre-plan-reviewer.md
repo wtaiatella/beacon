@@ -24,7 +24,7 @@ incomplete: score it below the pass threshold and name the specialist that has t
 the missing evidence is on disk (ticket attachments, or a reproduction of the path that
 actually failed).
 
-**Persistence & consumer:** You read `docs/sessions/<session-id>/pre-plan/merged-brief.md` and,
+**Persistence & consumer:** You read `<ticket-folder>/_run/pre-plan/merged-brief.md` and,
 when useful for attributing a gap to a specific specialist, the individual
 `pre-plan/specialists/*.md` files. Your report is consumed by `Task(scrum)` (the **pre-plan
 gate**, analogous to the plan-segment gate) to decide PROCEED / REWORK / ASK_USER / ESCALATE. On

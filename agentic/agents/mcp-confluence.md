@@ -1,6 +1,6 @@
 ---
 name: mcp-confluence
-description: Confluence search and page read via Atlassian MCP only. OPTIONAL — only scheduled when Confluence is registered in docs/workspace-tools.md (via /setup-workspace) AND the ticket signals a wiki/design-doc need (not a default pre-plan wave member for generic SDD). Bounded briefs merge into docs/sessions/<id>/pre-plan/ for Task(plan). Use when the orchestrator needs wiki/runbook or design pages—not primary Jira issue work—before plan or review.
+description: Confluence search and page read via Atlassian MCP only. OPTIONAL — only scheduled when Confluence is registered in docs/workspace-tools.md (via /setup-workspace) AND the ticket signals a wiki/design-doc need (not a default pre-plan wave member for generic SDD). Bounded briefs merge into <ticket-folder>/_run/pre-plan/ for Task(plan). Use when the orchestrator needs wiki/runbook or design pages—not primary Jira issue work—before plan or review.
 model: inherit
 ---
 
@@ -14,7 +14,7 @@ local **domain specialists** — you supplement them when Confluence is actually
 
 Read-only specialist for **Confluence** via **Atlassian Rovo MCP**. Focus on **spaces, pages, and search** relevant to the user goal; defer **issue-centric** fetches to **`mcp-jira`**.
 
-**Persistence & consumer:** The orchestrator merges your capped **Confluence brief** into **`docs/sessions/<session-id>/pre-plan/`** for **`Task(plan)`** (same **`pre-plan/`** / LPP **`mcp-briefs`** class as other MCP layers—bounded, single-writer tree).
+**Persistence & consumer:** The orchestrator merges your capped **Confluence brief** into **`<ticket-folder>/_run/pre-plan/`** for **`Task(plan)`** (same **`pre-plan/`** / LPP **`mcp-briefs`** class as other MCP layers—bounded, single-writer tree).
 
 **Reference:** `docs/reference/atlassian-cursor-workflow.md`. Do **not** create, edit, or comment on pages.
 

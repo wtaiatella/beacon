@@ -9,9 +9,9 @@ Two ideas sit on top of each other:
 - **SDD** (Spec-Driven Development) makes **specs** authoritative: scope, architecture, acceptance criteria, and phases live in `prd.md` / `spectech.md` / `tasks.md` inside a **ticket folder** under `docs/specs/`, not only in chat history.
 - **GSD** (thin vertical slices) keeps each implementation phase **small and independently testable** — a gate between phases instead of one monolithic "do everything" change.
 
-**Flat orchestration** and **least-privilege slices** exist so the system does not recreate the **infinite delegation loops** common in unconstrained multi-agent setups — where one agent spawns another, which spawns another, until context explodes and accountability vanishes. **Only** the `/run` **main session** schedules `Task(prd|spectech|tasks|dev|sre|data|qa|...)`, readonly specialists, and gates; **personas do not nest `Task` on other personas** (flat orchestration — a hard property of the Claude Code / Cursor agent runtime, not just a convention here). Implementers receive **least-privilege** work: **one phase**, **one domain** (e.g. `dev` vs `sre`), and `WORKTREE_PATHS` when needed — not full merged MCP dumps or whole-session transcripts. Readonly specialists write **bounded** artifacts under `docs/sessions/<id>/`. That structure keeps delegation **finite**, prompts **scoped**, and handoffs **explicit**.
+**Flat orchestration** and **least-privilege slices** exist so the system does not recreate the **infinite delegation loops** common in unconstrained multi-agent setups — where one agent spawns another, which spawns another, until context explodes and accountability vanishes. **Only** the `/run` **main session** schedules `Task(prd|spectech|tasks|dev|sre|data|qa|...)`, readonly specialists, and gates; **personas do not nest `Task` on other personas** (flat orchestration — a hard property of the Claude Code / Cursor agent runtime, not just a convention here). Implementers receive **least-privilege** work: **one phase**, **one domain** (e.g. `dev` vs `sre`), and `WORKTREE_PATHS` when needed — not full merged MCP dumps or whole-session transcripts. Readonly specialists write **bounded** artifacts under `<ticket-folder>/_run/`. That structure keeps delegation **finite**, prompts **scoped**, and handoffs **explicit**.
 
-**In one line:** `/run <ticket-folder | JIRA-KEY>` loads **[run-pipeline](agentic/skills/run-pipeline/SKILL.md)**: `/prd` → `/spectech` → `/tasks` → implement → review → QA → summary, with gates and least-privilege artifacts under `docs/sessions/<id>/`.
+**In one line:** `/run <ticket-folder | JIRA-KEY>` loads **[run-pipeline](agentic/skills/run-pipeline/SKILL.md)**: `/prd` → `/spectech` → `/tasks` → implement → review → QA → summary, with gates and least-privilege artifacts under `<ticket-folder>/_run/`.
 
 ---
 
@@ -101,7 +101,7 @@ docs/specs/{YYYY-MM-DD}-{slug}/                   # without a ticket key
 
 ## Orchestration hub
 
-Readonly specialists run **only** from the **orchestrator** (flat delegation). They write **bounded** output under `docs/sessions/<id>/pre-plan/` (merged MCP briefs) and `docs/sessions/<id>/artifacts/`. Implementers get **least-privilege** slices — one phase, one domain, `WORKTREE_PATHS` — not full session dumps.
+Readonly specialists run **only** from the **orchestrator** (flat delegation). They write **bounded** output under `<ticket-folder>/_run/pre-plan/` (merged MCP briefs) and `<ticket-folder>/_run/`. Implementers get **least-privilege** slices — one phase, one domain, `WORKTREE_PATHS` — not full session dumps.
 
 `Task(do)` applies mechanical edits (spec checkboxes, `_state.json`, `_notes.md`) through the **allowlisted script API**, and only **after** `Task(scrum)` authorizes it for that gate. **Finish** runs `pipeline-finish.sh` per the git/GitLab rules in `CLAUDE.md` and run-pipeline **§9**.
 
@@ -122,9 +122,9 @@ flowchart TD
         PR["plan-reviewer (folder mode)"]
     end
 
-    subgraph SESS["Bounded paths under docs/sessions/(session-id)/"]
+    subgraph SESS["Bounded paths under ticket/_run/"]
         PP["pre-plan/<br/>merged-brief.md, specialists/…"]
-        AR["artifacts/<br/>explorer/, scanners/, diffs/…"]
+        AR["explorer/, scanners/, diffs/…"]
     end
 
     subgraph LP["Least-privilege implementers — sliced prompts"]
@@ -298,32 +298,30 @@ sequenceDiagram
 
 ---
 
-## Session directory anatomy
+## Run directory anatomy
 
-**Active session pointer:** `docs/sessions/ACTIVE_SESSION` is a **plain-text file** (one line: the session id). Scripts resolve `docs/sessions/<session-id>/current.md` from that id.
+The ticket folder is the run identity. Scratch lives at `<ticket-folder>/_run/` and is tracked with the ticket.
 
 ```text
-docs/sessions/
-├── ACTIVE_SESSION             # one line: active session id (plain file, not a symlink)
-└── <session-id>/
-    ├── current.md             # timeline, GATE lines, trace anchors
-    ├── context-audit.log      # Finish audit (append-only)
+docs/specs/<date>-<key>-<slug>/
+└── _run/
+    ├── timeline.md            # GATE lines, trace anchors
+    ├── audit.log              # Finish audit (append-only)
     ├── attach-target.txt      # optional: multi-root writable repo root
     ├── session.code-workspace # optional: generated multi-root workspace
     ├── pre-plan/
     │   ├── merged-brief.md
-    │   └── specialists/       # system-design, database, frontend, security,
-    │                          # testing-observability, repro + optional jira/confluence/glean
-    └── artifacts/
-        ├── explorer/          # Task(codebase-explorer) reports
-        ├── scanners/          # §7.0 spec-validator, security-scanner
-        └── diffs/
-            ├── dev/
-            ├── sre/
-            └── data/
+    │   └── specialists/
+    ├── explorer/
+    ├── scanners/
+    └── diffs/
+        ├── dev/
+        ├── sre/
+        ├── data/
+        └── plan/
 ```
 
-`docs/sessions/` is **gitignored** — local scratch per clone. No backward-compatibility symlinks are created when artifact paths move (hard cutover to canonical paths only).
+`session-memory.sh --ticket <folder> ensure` creates this tree. `/fix` and `/do` do not.
 
 ---
 
@@ -426,11 +424,11 @@ Hooks **fail open** except the Cursor `subagent-gate` hook (no writes on protect
 ## Session memory and metrics
 
 ```bash
-scripts/tools/session-memory.sh read
+scripts/tools/session-memory.sh --ticket <ticket-folder> read
 scripts/tools/metrics.sh overview
 ```
 
-Local-only; aggregates `docs/audit.log`, `docs/sessions/`, and optional `docs/usage-events.tsv`. Nothing leaves the machine.
+Local-only; aggregates `docs/audit.log` and optional `docs/usage-events.tsv`. Nothing leaves the machine.
 
 ---
 

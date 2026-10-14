@@ -719,7 +719,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--session-id",
         default=None,
-        help="Session id (default: read docs/sessions/ACTIVE_SESSION)",
+        help="Deprecated. Ignored when --ticket is set.",
+    )
+    parser.add_argument(
+        "--ticket",
+        default=None,
+        help="Workspace-relative ticket folder. Reads <ticket>/_run/timeline.md and writes <ticket>/_run/audit.log.",
     )
     parser.add_argument(
         "--home",
@@ -815,26 +820,41 @@ def main(argv: list[str] | None = None) -> int:
         print("audit-session-trace: invalid or missing HOME; set --home", file=sys.stderr)
         return 1
 
-    session_id = read_session_id(workspace, args.session_id)
-    if not session_id:
-        msg = "no session id (pass --session-id or ensure docs/sessions/ACTIVE_SESSION)"
-        print(f"audit-session-trace: {msg}", file=sys.stderr)
-        return 2 if args.strict else 0
+    if args.ticket:
+        raw = args.ticket.strip().strip("/")
+        if not raw.startswith("docs/specs/") or ".." in raw.split("/"):
+            print(f"audit-session-trace: --ticket must be under docs/specs/: {raw}", file=sys.stderr)
+            return 1
+        ticket_dir = (workspace / raw).resolve()
+        try:
+            ticket_dir.relative_to((workspace / "docs" / "specs").resolve())
+        except ValueError:
+            print("audit-session-trace: --ticket resolves outside docs/specs", file=sys.stderr)
+            return 1
+        current_md = ticket_dir / "_run" / "timeline.md"
+        log_path = ticket_dir / "_run" / "audit.log"
+        session_id = raw
+    else:
+        session_id = read_session_id(workspace, args.session_id)
+        if not session_id:
+            msg = "no ticket (pass --ticket docs/specs/...)"
+            print(f"audit-session-trace: {msg}", file=sys.stderr)
+            return 2 if args.strict else 0
 
-    ok_sid, sid_err = validate_session_id(session_id)
-    if not ok_sid:
-        print(f"audit-session-trace: invalid session id: {sid_err}", file=sys.stderr)
-        return 1
+        ok_sid, sid_err = validate_session_id(session_id)
+        if not ok_sid:
+            print(f"audit-session-trace: invalid session id: {sid_err}", file=sys.stderr)
+            return 1
 
-    paths = session_paths_under_repo(workspace, session_id)
-    if paths is None:
-        print(
-            "audit-session-trace: session paths resolve outside docs/sessions (rejected)",
-            file=sys.stderr,
-        )
-        return 1
+        paths = session_paths_under_repo(workspace, session_id)
+        if paths is None:
+            print(
+                "audit-session-trace: session paths resolve outside docs/sessions (rejected)",
+                file=sys.stderr,
+            )
+            return 1
 
-    current_md, log_path = paths
+        current_md, log_path = paths
 
     if not current_md.is_file():
         print(f"audit-session-trace: missing {current_md}", file=sys.stderr)
@@ -853,7 +873,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not session_start_s or not project_hash:
         print(
-            "audit-session-trace: SESSION_START and/or PROJECT_HASH missing from current.md",
+            "audit-session-trace: SESSION_START and/or PROJECT_HASH missing from the run timeline",
             file=sys.stderr,
         )
         if args.strict:

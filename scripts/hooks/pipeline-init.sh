@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# run-pipeline §2 Init — begin-run (unless --resume), trace anchors, apply-models --snapshot,
-# session-memory read, optional knowledge-source note (local KB). One structured report.
+# run-pipeline §2 Init — ensure <ticket>/_run (unless --resume only checks it), trace anchors,
+# apply-models --snapshot, timeline read, optional knowledge-source note (local KB).
 # v1: workspace root only; stable stdout section headers (=== ... ===).
 # Bash 3.2+ compatible.
 set -euo pipefail
@@ -13,32 +13,36 @@ AM="$ROOT/scripts/tools/apply-models.sh"
 
 usage() {
   cat <<'EOF'
-Usage: pipeline-init.sh [--resume] [--slug <kebab-slug>] [--targets <dir> ...]
+Usage: pipeline-init.sh --ticket <docs/specs/...> [--resume] [--targets <dir> ...]
 
-  --resume     Do not run begin-run; keep ACTIVE_SESSION (same as /run --resume).
-  --slug       Optional kebab-case suffix for begin-run session id (only without --resume).
+  --ticket     Ticket folder (workspace-relative). Required. Run state is <ticket>/_run/.
+  --resume     Do not mint trace anchors; the timeline must already exist.
   --targets    Optional workspace-relative dirs for knowledge/<dir>/_index.md checks (§2).
 
-Hard failures (non-zero): begin-run, write-trace-anchors, apply-models --snapshot, or
+Hard failures (non-zero): missing ticket, ensure, write-trace-anchors, apply-models --snapshot, or
 session-memory write for the optional KNOWLEDGE_SOURCES line.
 
 Stdout: one report with fixed === section headers.
 
 Environment:
-  APPLY_MODELS_SNAPSHOT  Snapshot path override (default docs/sessions/.model-snapshot via apply-models).
+  APPLY_MODELS_SNAPSHOT  Snapshot path override (default docs/local/.model-snapshot via apply-models).
 EOF
 }
 
 RESUME=0
-SLUG=""
+TICKET=""
 TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --resume) RESUME=1; shift ;;
-    --slug)
-      [ $# -ge 2 ] || { echo "pipeline-init: --slug requires a value" >&2; exit 1; }
-      SLUG="$2"
+    --ticket)
+      [ $# -ge 2 ] || { echo "pipeline-init: --ticket requires a value" >&2; exit 1; }
+      TICKET="$2"
       shift 2
+      ;;
+    --slug)
+      echo "pipeline-init: --slug is gone; the ticket folder is the run identity" >&2
+      exit 1
       ;;
     --targets)
       shift
@@ -56,8 +60,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-if [ "$RESUME" -eq 1 ] && [ -n "$SLUG" ]; then
-  echo "pipeline-init: --slug is not used with --resume" >&2
+if [ -z "$TICKET" ]; then
+  echo "pipeline-init: --ticket <docs/specs/...> is required" >&2
   exit 1
 fi
 
@@ -76,30 +80,28 @@ fi
 
 cd "$ROOT"
 
-section "=== session-rotation ==="
+section "=== run-dir ==="
 if [ "$RESUME" -eq 0 ]; then
-  NEW_ID="$("$SM" begin-run "${SLUG}")" || exit 1
-  section "begin-run: ok"
-  section "session-id: $NEW_ID"
+  RUN_REL="$("$SM" --ticket "$TICKET" ensure)" || exit 1
+  section "ensure: ok"
+  section "run-dir: $RUN_REL"
 else
-  if ! "$SM" active-path >/dev/null 2>&1; then
-    echo "pipeline-init: --resume but no active session (run begin-run first or drop --resume)" >&2
+  if ! "$SM" --ticket "$TICKET" active-path >/dev/null 2>&1; then
+    echo "pipeline-init: --resume but $TICKET/_run/timeline.md is missing" >&2
     exit 1
   fi
-  section "begin-run: skipped (--resume)"
-  if [ -f "$ROOT/docs/sessions/ACTIVE_SESSION" ]; then
-    section "session-id: $(head -1 "$ROOT/docs/sessions/ACTIVE_SESSION" | tr -d '\r')"
-  fi
+  section "ensure: skipped (--resume)"
+  section "run-dir: $TICKET/_run"
 fi
 
 section "=== trace-anchors ==="
 if [ "$RESUME" -eq 1 ]; then
-  "$SM" write-trace-anchors --resume || exit 1
+  "$SM" --ticket "$TICKET" write-trace-anchors --resume || exit 1
 else
-  "$SM" write-trace-anchors || exit 1
+  "$SM" --ticket "$TICKET" write-trace-anchors || exit 1
 fi
 section "write-trace-anchors: ok"
-THR=$("$SM" trace-hash-root) || exit 1
+THR=$("$SM" --ticket "$TICKET" trace-hash-root) || exit 1
 section "trace-hash-root: $THR"
 
 section "=== model-mode ==="
@@ -107,13 +109,13 @@ MSRC=$("$AM" --show-source 2>&1) || exit 1
 printf '%s\n' "$MSRC" || true
 
 section "=== apply-models-snapshot ==="
-SNAPSHOT_OUT="${APPLY_MODELS_SNAPSHOT:-$ROOT/docs/sessions/.model-snapshot}"
+SNAPSHOT_OUT="${APPLY_MODELS_SNAPSHOT:-$ROOT/docs/local/.model-snapshot}"
 SNAPSHOT_MSG=$("$AM" --snapshot 2>&1) || exit 1
 printf '%s\n' "$SNAPSHOT_MSG" || true
 section "snapshot-path: $SNAPSHOT_OUT"
 
 section "=== session-memory-read ==="
-READ_OUT=$("$SM" read 2>&1) || exit 1
+READ_OUT=$("$SM" --ticket "$TICKET" read 2>&1) || exit 1
 LINE_COUNT=$(printf '%s\n' "$READ_OUT" | wc -l | tr -d ' ')
 section "session-memory-lines: $LINE_COUNT"
 printf '%s\n' "$READ_OUT" | tail -n 80 || true
@@ -140,7 +142,7 @@ fi
 
 if [ "${#TARGETS[@]}" -gt 0 ] && [ "$KB_HIT" -eq 0 ]; then
   WARN_MSG="KNOWLEDGE_SOURCES: no knowledge/<dir>/_index.md for checked targets — run /kb to build one, or rely on pre-plan domain specialists for per-ticket grounding instead."
-  "$SM" write "$WARN_MSG" || exit 1
+  "$SM" --ticket "$TICKET" write "$WARN_MSG" || exit 1
   section "session-memory-write: KNOWLEDGE_SOURCES (warning line appended)"
 elif [ "${#TARGETS[@]}" -eq 0 ]; then
   section "knowledge-warning: not emitted (no --targets to evaluate local KB)"

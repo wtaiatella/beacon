@@ -43,8 +43,8 @@ else warn "Claude Code CLI not detected (only needed for the Claude adapter)"; f
 
 # --- 2. Executable bits & runtime dirs ---
 chmod +x agentic/hooks/*.sh agentic/adapters/*/hooks/*.sh scripts/tools/*.sh scripts/setup.sh scripts/setup-agentic.sh scripts/upgrade.sh 2>/dev/null || true
-mkdir -p docs/specs docs/sessions
-pass "Runtime dirs: docs/specs, docs/sessions"
+mkdir -p docs/specs
+pass "Runtime dir: docs/specs"
 
 # --- 3. Workspace integrity (relationship-based, no hardcoded counts) ---
 echo ""

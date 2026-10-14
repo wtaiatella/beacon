@@ -12,7 +12,7 @@ USER_YML="$ROOT/.cursor/models.user.yml"
 TEAM_YML="$ROOT/.cursor/models.yml"
 CATALOG="$ROOT/docs/model-catalog.md"
 AGENTS_DIR="$ROOT/.cursor/agents"
-SNAPSHOT="${APPLY_MODELS_SNAPSHOT:-$ROOT/docs/sessions/.model-snapshot}"
+SNAPSHOT="${APPLY_MODELS_SNAPSHOT:-$ROOT/docs/local/.model-snapshot}"
 
 DRY_RUN=0
 FORCE=0
@@ -35,7 +35,7 @@ Bulk source: reads .cursor/models.user.yml for use_manual_models (fail-closed to
   If false → bulk mappings from .cursor/models.yml (team baseline + dynamic pipeline).
 
 Environment:
-  APPLY_MODELS_SNAPSHOT   Override default snapshot path (default: docs/sessions/.model-snapshot)
+  APPLY_MODELS_SNAPSHOT   Override default snapshot path (default: docs/local/.model-snapshot)
   APPLY_MODELS_ROOT       For tests: workspace root containing .cursor/ (optional)
 
 Valid model-id values: default, inherit, or any programmatic ID in docs/model-catalog.md.

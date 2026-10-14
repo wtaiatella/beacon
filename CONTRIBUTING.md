@@ -31,7 +31,7 @@ edit the source and re-run the script.
 
 ## What You Should NOT Commit
 
-- Session memory files (`docs/sessions/` is gitignored, except the tracked README)
+- Leftover `docs/sessions/` folders (gitignored). Run state belongs in `docs/specs/<ticket>/_run/` and is tracked with the ticket.
 - Audit logs (`docs/audit.log` is gitignored)
 - Usage event logs (`docs/usage-events.tsv` is gitignored — optional ROAD-18 granular cost rows; example schema in `docs/usage-events.example.tsv`)
 - Child repository code — `/clone` excludes each one with its own `.gitignore` entry
@@ -41,7 +41,7 @@ this workspace — see `.gitignore` for the rationale (this repo doubles as a re
 history, not just the SDD framework's dev checkout).
 - Raw API tokens, OAuth client secrets, or host-specific internal URLs that your policy keeps out of git (prefer `${env:…}` in `.cursor/mcp.json` / `.mcp.json`)
 - `.env` files, secrets, or credentials
-- **Repository-root session shims:** Do not add **`exploration`** or **`qa-artifacts`** at the workspace root (symlink or directory) to "mirror" paths under **`docs/sessions/`**. Use canonical dirs only: **`docs/sessions/<session-id>/artifacts/explorer/`** and **`.../artifacts/scanners/`** (see **`run-pipeline`** skill — no backward-compat symlinks for migrations). Root-level names are **`/exploration`** and **`/qa-artifacts`** in **`.gitignore`**; **`./scripts/tools/lint-check.sh .`** fails if the root contains disallowed session symlinks.
+- **Repository-root shims:** Do not add **`exploration`** or **`qa-artifacts`** at the workspace root. Canonical dirs are **`<ticket-folder>/_run/explorer/`** and **`<ticket-folder>/_run/scanners/`**. Root-level names are **`/exploration`** and **`/qa-artifacts`** in **`.gitignore`**; **`./scripts/tools/lint-check.sh .`** fails if the root contains those symlinks.
 
 ### For reviewers: session paths and symlinks
 

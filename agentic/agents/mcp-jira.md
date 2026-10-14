@@ -1,6 +1,6 @@
 ---
 name: mcp-jira
-description: Jira issue fetch and search via Atlassian MCP only. OPTIONAL — only scheduled when Jira is registered in docs/workspace-tools.md (via /setup-workspace) AND the ticket signals a Jira reference (e.g. a detected key) (not a default pre-plan wave member for generic SDD). Bounded briefs merge into docs/sessions/<id>/pre-plan/ for Task(plan). Use when the orchestrator needs ticket details, acceptance-style fields, or JQL-scoped search before plan or review.
+description: Jira issue fetch and search via Atlassian MCP only. OPTIONAL — only scheduled when Jira is registered in docs/workspace-tools.md (via /setup-workspace) AND the ticket signals a Jira reference (e.g. a detected key) (not a default pre-plan wave member for generic SDD). Bounded briefs merge into <ticket-folder>/_run/pre-plan/ for Task(plan). Use when the orchestrator needs ticket details, acceptance-style fields, or JQL-scoped search before plan or review.
 model: inherit
 ---
 

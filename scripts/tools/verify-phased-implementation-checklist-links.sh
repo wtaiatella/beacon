@@ -20,8 +20,8 @@ echo "verify-phased-implementation-checklist-links: repo root=$ROOT"
 test -f "$CHECKLIST" || fail "missing $CHECKLIST"
 
 # --- Required prose references (procedure + session layout) ---
-grep -q 'docs/sessions/ACTIVE_SESSION' "$CHECKLIST" \
-  || fail "checklist must mention docs/sessions/ACTIVE_SESSION"
+grep -q '_run/timeline.md' "$CHECKLIST" \
+  || fail "checklist must mention _run/timeline.md"
 grep -q 'docs/specs' "$CHECKLIST" \
   || fail "checklist must mention docs/specs"
 

@@ -46,11 +46,9 @@ agentic/models/*.yml
 .DS_Store
 **/.DS_Store
 
-# Session memory is ephemeral, per-developer scratch — not the ticket's
-# persistent history (that's docs/specs/<ticket>/_state.json + _notes.md,
-# which IS tracked). The README documents the convention and stays tracked.
-docs/sessions/*
-!docs/sessions/README.md
+# Leftover local folders from before run state moved into
+# docs/specs/<ticket>/_run/ (tracked with the ticket). New runs do not write here.
+docs/sessions/
 
 # Legacy session shim names at repository root only (ROAD-53); does not
 # affect docs/** or the tracked session README

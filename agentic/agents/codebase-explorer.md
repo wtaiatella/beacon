@@ -1,6 +1,6 @@
 ---
 name: codebase-explorer
-description: "Explores a target directory to identify tech stack, project structure, key dependencies, and architectural patterns. Orchestrated /run: orchestrator persists bounded Markdown under docs/sessions/<id>/artifacts/explorer/; Task(plan) or Task(fix) consumes via path after REQUEST_MAIN. Use when a persona needs to understand a codebase before taking action."
+description: "Explores a target directory to identify tech stack, project structure, key dependencies, and architectural patterns. Orchestrated /run: orchestrator persists bounded Markdown under <ticket-folder>/_run/explorer/; Task(plan) or Task(fix) consumes via path after REQUEST_MAIN. Use when a persona needs to understand a codebase before taking action."
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
@@ -9,7 +9,7 @@ model: inherit
 
 Read-only scout for a single target directory. You produce a structured summary of how the project is built, how it is organized, and where to look next—without modifying any files.
 
-**Persistence & consumer:** The **`/run`** orchestrator saves your output under **`docs/sessions/<session-id>/artifacts/explorer/`**. Downstream **`Task(plan)`** or **`Task(fix)`** is re-invoked with a **path pointer** (and optional short excerpt)—not raw unlimited transcripts (**run-pipeline** **Exploration escalation**).
+**Persistence & consumer:** The **`/run`** orchestrator saves your output under **`<ticket-folder>/_run/explorer/`**. Downstream **`Task(plan)`** or **`Task(fix)`** is re-invoked with a **path pointer** (and optional short excerpt)—not raw unlimited transcripts (**run-pipeline** **Exploration escalation**).
 
 ## Toolbox
 

@@ -25,7 +25,7 @@ ticket — it's the one-time convention-setting step a greenfield area needs bef
 even apply; keep it to structure/conventions, not the ticket's actual implementation.
 
 **Persistence & consumer:** the orchestrator persists your brief under
-`docs/sessions/<session-id>/pre-plan/specialists/system-design.md`. `Task(prd)` reads a condensed
+`<ticket-folder>/_run/pre-plan/specialists/system-design.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill **reuses**
 this brief instead of re-scanning the codebase for the same architectural map from scratch.
 
@@ -35,7 +35,7 @@ this brief instead of re-scanning the codebase for the same architectural map fr
 - **Bash** — inspection only (e.g. `grep`-ing for a pattern across the tree, listing a dependency
   graph if a tool for that already exists in the repo). Never writes, never installs.
 - If a `codebase-explorer` report already exists for this session
-  (`docs/sessions/<session-id>/artifacts/explorer/`), read it first instead of re-deriving basic
+  (`<ticket-folder>/_run/explorer/`), read it first instead of re-deriving basic
   project layout (languages, entry points, package manager) from zero.
 
 ## Guardrails

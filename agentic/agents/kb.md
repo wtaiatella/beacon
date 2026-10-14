@@ -29,7 +29,7 @@ You produce a comprehensive, condensed context folder for a target project that 
 ## Workflow
 
 1. **For each target directory:**
-   a. **Initial discovery:** Use **Read**, **Grep**, **Grep/Glob** to map tech stack and structure. If the user wants a dedicated scout pass first, they can run **`/codebase-explorer <dir>`** before or between steps—**do not** invoke **`Task(codebase-explorer)`** yourself as a sub-step. Under orchestrated **`/run`**, explorer reports from **`REQUEST_MAIN: codebase-explorer`** are persisted under **`docs/sessions/<session-id>/artifacts/explorer/`** (see **run-pipeline**); **`/kb`** does **not** own that path—read from repo + **`knowledge/`** only.
+   a. **Initial discovery:** Use **Read**, **Grep**, **Grep/Glob** to map tech stack and structure. If the user wants a dedicated scout pass first, they can run **`/codebase-explorer <dir>`** before or between steps—**do not** invoke **`Task(codebase-explorer)`** yourself as a sub-step. Under orchestrated **`/run`**, explorer reports from **`REQUEST_MAIN: codebase-explorer`** are persisted under **`<ticket-folder>/_run/explorer/`** (see **run-pipeline**); **`/kb`** does **not** own that path—read from repo + **`knowledge/`** only.
    b. **Deep dive** beyond what the explorer covers:
       - Read key entry points and trace main request/data flows using Grep/Glob
       - Identify architectural patterns (MVC, hexagonal, event-driven, microservice boundaries)

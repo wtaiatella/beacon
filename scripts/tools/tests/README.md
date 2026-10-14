@@ -44,7 +44,7 @@ Covers `mr-description-from-spec.sh` against `scripts/tools/tests/fixtures/mr-sp
 ./scripts/tools/tests/test-cursor-project-hash.sh
 ```
 
-Covers `cursor-project-hash.sh` encoding and `session-memory.sh write-trace-anchors` (uses a temporary session; backs up `docs/sessions/ACTIVE_SESSION`).
+Covers `cursor-project-hash.sh` encoding and `session-memory.sh write-trace-anchors` (uses a temporary ticket folder under `docs/specs/`).
 
 ## Session memory append order
 

@@ -2,7 +2,7 @@
 
 Use this checklist to validate **phased implementation**, **domain isolation**, **mutation guardrails**, and **`--resume`** behavior for **`/run`** orchestration. Authoritative procedure remains **`agentic/skills/run-pipeline/SKILL.md`** (**§ 5** — *Implementation payload construction*, **§ 6**, **Interaction with `--resume`**).
 
-**Scope:** Human or live-session verification only; Cursor does not expose a guaranteed raw **`Task`** API. Adapt capture methods to your environment (Cursor UI, exported chat, orchestrator notes, or **`docs/sessions/<id>/current.md`** excerpts).
+**Scope:** Human or live-session verification only; Cursor does not expose a guaranteed raw **`Task`** API. Adapt capture methods to your environment (Cursor UI, exported chat, orchestrator notes, or **`<ticket>/_run/timeline.md`** excerpts).
 
 ---
 
@@ -12,13 +12,13 @@ For each test run, keep a short **evidence pack** so results are auditable later
 
 | Artifact | What to record |
 |----------|----------------|
-| **Session id** | Contents of **`docs/sessions/ACTIVE_SESSION`** and path to **`docs/sessions/<id>/current.md`**. |
-| **GATE lines** | Relevant **`GATE:`** lines from **`current.md`** (copy/paste or screenshot). Multi-phase runs should show **`GATE: impl \| DONE \| phase: k \| spec: …`** per skill. |
+| **Run timeline** | Path to **`<ticket>/_run/timeline.md`**. |
+| **GATE lines** | Relevant **`GATE:`** lines from **`timeline.md`** (copy/paste or screenshot). Multi-phase runs should show **`GATE: impl \| DONE \| phase: k \| spec: …`** per skill. |
 | **Task prompt excerpt** | **Redacted** copy of the orchestrator-built **`Task(dev)`** / **`Task(sre)`** / **`Task(data)`** body (remove secrets, internal URLs, or long unrelated context). Enough to show **included** phase heading and **domain-tagged** bullets only. |
 | **Spec path & timing** | Active spec path under **`docs/specs/`**; optional **`stat`** output or IDE “last modified” **before** and **after** key gates. |
 | **Orchestration narrative** | Short note of observed order (e.g. “phase 1 §6 scrum PROCEED → patch applied → phase 2 §5 started”). |
 
-If the UI does not show full **`Task`** payloads, document that limitation and rely on **session notes**, **orchestrator self-logging** (if your team adds one line per delegation), or **`IMPL_SEGMENT_FEEDBACK:`**-style lines in **`current.md`**.
+If the UI does not show full **`Task`** payloads, document that limitation and rely on **session notes**, **orchestrator self-logging** (if your team adds one line per delegation), or **`IMPL_SEGMENT_FEEDBACK:`**-style lines in **`timeline.md`**.
 
 ---
 
@@ -43,7 +43,7 @@ If the UI does not show full **`Task`** payloads, document that limitation and r
 ### Pass criteria
 
 - No **`[sre]`** or **`[data]`** task lines appear in the **`Task(dev)`** payload for phase 1.
-- Evidence pack includes a **redacted** prompt excerpt or explicit note that UI could not expose it + alternative proof (e.g. orchestrator checklist attestation + **`current.md`** line describing slice).
+- Evidence pack includes a **redacted** prompt excerpt or explicit note that UI could not expose it + alternative proof (e.g. orchestrator checklist attestation + **`timeline.md`** line describing slice).
 
 ### Fail / document
 
@@ -70,7 +70,7 @@ If the UI does not show full **`Task`** payloads, document that limitation and r
 ### Pass criteria
 
 - Observable order: **phase 1 §5 → phase 1 §6 (PROCEED + patch) → phase 2 §5**.
-- **`GATE:`** in **`current.md`** after phase 1 **§ 6** includes something like **`GATE: impl | DONE | phase: 1 | spec: …`** (see skill **§ 6** checkpoint).
+- **`GATE:`** in **`timeline.md`** after phase 1 **§ 6** includes something like **`GATE: impl | DONE | phase: 1 | spec: …`** (see skill **§ 6** checkpoint).
 
 ### Fail / document
 
@@ -110,22 +110,22 @@ If the UI does not show full **`Task`** payloads, document that limitation and r
 
 ## Test 4 — Session resume (`/run --resume`)
 
-**Goal:** If the run **stops during phase 2 § 5** (before phase 2 **§ 6**), **`/run --resume`** continues **phase 2 § 5** using **`GATE:`** history — **without** redoing **phase 1 § 5–§ 6**, unless you are in a documented **recovery** scenario (corrupt session, manual edit of **`current.md`**, etc.).
+**Goal:** If the run **stops during phase 2 § 5** (before phase 2 **§ 6**), **`/run --resume`** continues **phase 2 § 5** using **`GATE:`** history — **without** redoing **phase 1 § 5–§ 6**, unless you are in a documented **recovery** scenario (corrupt session, manual edit of **`timeline.md`**, etc.).
 
 ### Preconditions
 
-- Two-phase spec; session **`current.md`** writable under **`docs/sessions/<id>/`**.
+- Two-phase spec; **`<ticket>/_run/timeline.md`** writable.
 - Orchestrator follows skill: after phase 1 **§ 6**, persist  
   **`GATE: impl | DONE | phase: 1 | spec: <path>`**.
 
 ### Steps
 
-1. Run **`/run`** until phase 1 **§ 6** completes and the line above exists in **`current.md`** (verify with **`grep GATE`** or read file).
+1. Run **`/run`** until phase 1 **§ 6** completes and the line above exists in **`timeline.md`** (verify with **`grep GATE`** or read file).
 2. Proceed into **phase 2 § 5**; **stop** the run **before** phase 2 **§ 6** (abort chat, cancel, or simulated failure — **not** after **`GATE: impl | DONE | phase: 2`**).
 3. Confirm the **last** **`GATE: impl | DONE`** line is still **`phase: 1`** (skill: if run stops **during** phase 2 § 5, last impl-done should remain phase 1).
 4. Run **`/run --resume`** (same branch/session as documented in skill).
 5. Observe continuation: **phase 2 § 5** work resumes; **phase 1 § 5–§ 6** are **not** repeated.
-6. Inspect **`current.md`** for **`GATE:`** lines: should still show phase 1 completion; resume narrative should align with skill **Interaction with `--resume`**.
+6. Inspect **`timeline.md`** for **`GATE:`** lines: should still show phase 1 completion; resume narrative should align with skill **Interaction with `--resume`**.
 
 ### Pass criteria
 
@@ -134,7 +134,7 @@ If the UI does not show full **`Task`** payloads, document that limitation and r
 
 ### Recovery exception (document if used)
 
-- If **`current.md`** is missing **`GATE: impl | DONE | phase: 1`** or **`ACTIVE_SESSION`** points wrong, a **full re-run** or manual repair may be required — **not** a failure of this checklist’s scenario if called out explicitly in the evidence pack.
+- If **`timeline.md`** is missing **`GATE: impl | DONE | phase: 1`**, a **full re-run** or manual repair may be required — **not** a failure of this checklist’s scenario if called out explicitly in the evidence pack.
 
 ---
 

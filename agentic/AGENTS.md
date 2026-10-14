@@ -357,25 +357,20 @@ Exact event names, matchers, and script locations are IDE-specific — see your 
 Hooks fail-open: failures log but don't block. `subagent-gate` has no override — writes to
 protected branches are always refused.
 
-## Session Memory
+## Run timeline
 
-Ephemeral scratch per session at `docs/sessions/<session-id>/current.md` (gitignored). The active `session-id` is stored in `docs/sessions/ACTIVE_SESSION`.
-- Read: `scripts/tools/session-memory.sh read`
-- Write: `scripts/tools/session-memory.sh write "DECISION: chose PostgreSQL for sessions"`
-- Clear: `scripts/tools/session-memory.sh clear`
+Each `/run` keeps its scratch in the ticket folder, at `<ticket>/_run/timeline.md` (tracked with the ticket). There is no global session id and no 24h prune. `/fix` and `/do` do not write this file.
+- Read: `scripts/tools/session-memory.sh --ticket <ticket-folder> read`
+- Write: `scripts/tools/session-memory.sh --ticket <ticket-folder> write "DECISION: chose PostgreSQL for sessions"`
+- Clear: `scripts/tools/session-memory.sh --ticket <ticket-folder> clear`
 - Categories: DECISION, QUESTION, GATE, or free-form context. Optional post-`/run` audit lines (human only): `COMMIT_SUGGESTIONS:`, `PUSH_CONFIRMED:`, `MR_TARGET_BRANCH:`, `MR_CONFIRMED:`.
-- Injected into context on session start via the `session-init` hook (includes the active session id + path).
-- **Cleanup:** stale session files (untouched >24h) are deleted at next session start; empty session dirs may be removed afterward. Not a timer — only pruned when a new session begins.
-- **Two-layer state:** this is the ephemeral, cross-session-agnostic **orchestration-run** checkpoint (crash-resume for one `/run`). It is separate from — and does not replace — each ticket's own persistent `_state.json`/`_notes.md`, which is the per-ticket, cross-session audit trail (see **Spec Format** above). Not a database. Not a replacement for the ticket folder.
-
-> **Note:** this section is under active reconsideration — see
-> `myDocs/specs/2026-10-06-eliminate-sessions-ticket-scoped-state.md`. Until that migration lands,
-> it reflects current behavior.
+- `--resume` reads the last `GATE:` line in that timeline.
+- **Two-layer state:** `_run/` is the orchestration checkpoint for one ticket. It does not replace `_state.json` / `_notes.md` (see **Spec Format** above).
 
 ## Metrics
 
 Local-only pipeline and agent metrics: `scripts/tools/metrics.sh [overview|agents|specs|gates|sessions|models|cost|export|budget-check]`.
-Aggregates data from `docs/audit.log`, `docs/sessions/`, and optional `docs/usage-events.tsv`. Nothing leaves the machine.
+Aggregates data from `docs/audit.log` and optional `docs/usage-events.tsv`. Nothing leaves the machine.
 
 ## MCP
 

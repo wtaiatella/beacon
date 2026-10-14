@@ -29,7 +29,7 @@ use, minimal logging/metrics expected) this area should adopt going forward, not
 test plan.
 
 **Persistence & consumer:** the orchestrator persists your brief under
-`docs/sessions/<session-id>/pre-plan/specialists/testing-observability.md`. `Task(prd)` reads a
+`<ticket-folder>/_run/pre-plan/specialists/testing-observability.md`. `Task(prd)` reads a
 condensed `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill
 **reuses** this brief instead of re-deriving the same test/observability map from scratch.
 
@@ -41,7 +41,7 @@ condensed `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech
   Never writes, never runs the test suite destructively (running existing tests read-only to see
   what exists is fine; do not rely on this to substitute for `repro-specialist`'s job).
 - If a `codebase-explorer` report already exists for this session
-  (`docs/sessions/<session-id>/artifacts/explorer/`), read it first instead of re-deriving basic
+  (`<ticket-folder>/_run/explorer/`), read it first instead of re-deriving basic
   project layout from zero.
 
 ## Guardrails

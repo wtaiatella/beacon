@@ -26,7 +26,7 @@ auth/input-handling pattern for this ticket's area — propose the baseline secu
 going forward, not the ticket's full solution.
 
 **Persistence & consumer:** the orchestrator persists your brief under
-`docs/sessions/<session-id>/pre-plan/specialists/security.md`. `Task(prd)` reads a condensed
+`<ticket-folder>/_run/pre-plan/specialists/security.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill **reuses**
 this brief instead of re-deriving the same threat-surface map from scratch.
 
@@ -38,7 +38,7 @@ this brief instead of re-deriving the same threat-surface map from scratch.
   a live system, never attempts an actual exploit — this is static grounding, not a penetration
   test.
 - If a `codebase-explorer` report already exists for this session
-  (`docs/sessions/<session-id>/artifacts/explorer/`), read it first instead of re-deriving basic
+  (`<ticket-folder>/_run/explorer/`), read it first instead of re-deriving basic
   project layout from zero.
 
 ## Guardrails

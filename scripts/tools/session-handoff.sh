@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Pre-plan handoff files under docs/sessions/<id>/pre-plan/.
-# Requires an active session (pipeline: session-memory.sh begin-run or new-session; hook may use init).
-# Paths are resolved via session-memory.sh session-root.
+# Pre-plan handoff files under <ticket>/_run/pre-plan/.
+# Requires --ticket (the same folder pipeline-init ensured).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -10,15 +9,11 @@ SESSION_MEMORY="$SCRIPT_DIR/session-memory.sh"
 
 iso_now() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
-ensure_active_session() {
-  if ! "$SESSION_MEMORY" active-path >/dev/null 2>&1; then
-    "$SESSION_MEMORY" init
-  fi
-}
+TICKET=""
 
 session_root_abs() {
   local rel
-  rel=$("$SESSION_MEMORY" session-root) || return 1
+  rel=$("$SESSION_MEMORY" --ticket "$TICKET" session-root) || return 1
   printf '%s/%s\n' "$ROOT" "$rel"
 }
 
@@ -50,7 +45,6 @@ cmd_write_handoff() {
   shift || true
   case "$kind" in
     merged)
-      ensure_active_session
       local base ts out
       base="$(session_root_abs)" || exit 1
       ts="$(iso_now)"
@@ -74,7 +68,6 @@ cmd_write_handoff() {
         exit 1
       }
       valid_specialist "$name" || exit 1
-      ensure_active_session
       local base ts out
       base="$(session_root_abs)" || exit 1
       ts="$(iso_now)"
@@ -100,37 +93,42 @@ cmd_write_handoff() {
 
 usage() {
   cat <<'EOF'
-Usage: session-handoff.sh write-handoff merged [content-file]
-       session-handoff.sh write-handoff specialist <name> [content-file]
+Usage: session-handoff.sh --ticket <docs/specs/...> write-handoff merged [content-file]
+       session-handoff.sh --ticket <docs/specs/...> write-handoff specialist <name> [content-file]
 
-Writes pre-plan handoff artifacts under the active session:
-  docs/sessions/<id>/pre-plan/merged-brief.md
-  docs/sessions/<id>/pre-plan/specialists/<name>.md   (kebab-case name)
+Writes pre-plan handoff artifacts under the ticket run dir:
+  <ticket>/_run/pre-plan/merged-brief.md
+  <ticket>/_run/pre-plan/specialists/<name>.md   (kebab-case name)
 
 content-file:
   - Path to a file to copy into the artifact, or omit / use - with stdin redirected.
 
-Requires: scripts/tools/session-memory.sh session-root (active session). Creates a session via init if none.
+Requires: session-memory.sh --ticket <folder> ensure already created _run/.
 
 Examples:
-  session-handoff.sh write-handoff merged /tmp/brief.md
-  ./scripts/tools/session-memory.sh session-root
-  printf '%s\n' '## Brief' | session-handoff.sh write-handoff merged -
+  session-handoff.sh --ticket docs/specs/2026-10-14-BG-1-slug write-handoff merged /tmp/brief.md
+  printf '%s\n' '## Brief' | session-handoff.sh --ticket docs/specs/2026-10-14-BG-1-slug write-handoff merged -
 EOF
 }
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ] || [ -z "${1:-}" ]; then
+  usage
+  [ -n "${1:-}" ] || exit 1
+  exit 0
+fi
+
+if [ "${1:-}" != "--ticket" ] || [ $# -lt 3 ]; then
+  echo "session-handoff: --ticket <docs/specs/...> is required" >&2
+  usage >&2
+  exit 1
+fi
+TICKET="$2"
+shift 2
 
 case "${1:-}" in
   write-handoff)
     shift
     cmd_write_handoff "$@"
-    ;;
-  --help|-h)
-    usage
-    exit 0
-    ;;
-  "")
-    usage >&2
-    exit 1
     ;;
   *)
     echo "session-handoff: unknown command: ${1:-}" >&2

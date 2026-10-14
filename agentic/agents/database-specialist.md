@@ -21,7 +21,7 @@ baseline schema conventions (naming, normalization style, how similar entities s
 this area should adopt going forward, not the ticket's full data model.
 
 **Persistence & consumer:** the orchestrator persists your brief under
-`docs/sessions/<session-id>/pre-plan/specialists/database.md`. `Task(prd)` reads a condensed
+`<ticket-folder>/_run/pre-plan/specialists/database.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill **reuses**
 this brief instead of re-deriving the same schema map from scratch.
 
@@ -33,7 +33,7 @@ this brief instead of re-deriving the same schema map from scratch.
   dump command if the repo already documents one). Never writes, never runs destructive or
   state-changing commands, never connects to a live database to mutate anything.
 - If a `codebase-explorer` report already exists for this session
-  (`docs/sessions/<session-id>/artifacts/explorer/`), read it first instead of re-deriving basic
+  (`<ticket-folder>/_run/explorer/`), read it first instead of re-deriving basic
   project layout from zero.
 
 ## Guardrails
