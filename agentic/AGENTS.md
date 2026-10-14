@@ -163,7 +163,7 @@ and responsibilities below are shared.)
 | frontend-specialist | UI grounding (framework/state/components) | /run pre-plan wave, when ticket touches UI |
 | security-specialist | Threat-surface grounding (auth/input/sensitive data) | /run pre-plan wave, when ticket crosses a security boundary |
 | testing-observability-specialist | Test/log/metric **gap** finding for planning (distinct from QA's verification role) | /run pre-plan wave |
-| repro-specialist | Empirical reproduction (always for bug tickets; agent's own judgment otherwise); shares its procedure with `/fix` via the `repro` skill. A project skill registered by `/setup-workspace` may replace it for a ticket when triage says so | /run pre-plan wave |
+| repro-specialist | Empirical reproduction (always for bug tickets; agent's own judgment otherwise); shares its procedure with `/fix` via the `repro` skill. A project skill or agent registered by `/setup-workspace` may replace it for a ticket when triage says so | /run pre-plan wave |
 
 **Project maturity (`greenfield` vs. `brownfield`):** `pre-plan-triage` also classifies
 `project_maturity` per ticket area — `brownfield` (default) when this area has existing

@@ -70,10 +70,11 @@ gating); you do not have the authority to request one that wasn't registered.
   to guess what it means? Vague findings ("there might be an issue in auth") score low; concrete
   ones (file path, what exists, what's missing) score high.
 - **Repro quality** (bug tickets where `repro-specialist` attempted reproduction, or a project
-  skill with `role: replace` and `covers: repro` did): /100 — if it reproduced, is the evidence
-  concrete (verbatim error, command)? If it didn't attempt or couldn't, is that honestly stated
-  rather than glossed over? Judge the skill's brief when it replaced the generic; do not flag
-  the generic's absence in that case.
+  skill or agent with `role: replace` and `covers: repro` did): /100 — if it reproduced, is the
+  evidence concrete (verbatim error, command)? If it didn't attempt or couldn't, is that honestly
+  stated rather than glossed over? Judge that skill or agent brief when it replaced the generic;
+  do not flag the generic's absence in that case. When a skill and an agent were both selected as
+  complements, both briefs count — a missing one is a gap.
 
 ## Scoring Guidance
 
