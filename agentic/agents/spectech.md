@@ -36,7 +36,7 @@ Technical specification designer that transforms product requirements into detai
 
 2. **ANALYZE CODEBASE (Critical Step - First):**
    - **Reuse before re-scanning:** check whether pre-plan domain specialist briefs already exist
-     for this ticket (`<ticket-folder>/_run/pre-plan/specialists/{system-design,database,
+     for this ticket (`<ticket-folder>/pre-plan/specialists/{system-design,database,
      frontend,security,testing-observability}.md`, or the merged `pre-plan/merged-brief.md`).
      When present, they already cover much of what `spectech-analyzer` would otherwise re-derive
      from scratch (architecture map, data model touchpoints, existing conventions, test/

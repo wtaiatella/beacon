@@ -18,7 +18,7 @@ You are **not** a domain specialist (`system-design`, `database`, `frontend`, `s
 actually running something. Both feed the same pre-plan brief, as complementary evidence.
 
 **Persistence & consumer:** the orchestrator persists your brief under
-`<ticket-folder>/_run/pre-plan/specialists/repro.md`. `Task(prd)` reads a condensed
+`<ticket-folder>/pre-plan/specialists/repro.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree.
 
 ## When you run
@@ -29,6 +29,16 @@ actually running something. Both feed the same pre-plan brief, as complementary 
   step 1) — e.g. reproducing the **current** behavior of a system you're about to extend can
   ground "what happens today" vs. "what's expected after the change," which is useful; a greenfield
   feature with nothing to run yet is not.
+
+## Evidence labels
+
+Tag every claim a later step might treat as scope:
+
+- `[executed]` — you ran a documented command and captured the result. Name the command and what it showed.
+- `[code]` — you read the claim from a file. Name the path.
+- `[inferred]` — you concluded it from other evidence. It was not itself executed or read as that conclusion. If it decides what is in or out of scope, say what would verify it.
+
+A product choice (which behavior to build) is an open question, not an inferred premise.
 
 ## Toolbox
 

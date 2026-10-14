@@ -45,6 +45,14 @@ grep -qE 'merge\s*\+\s*gate' "$SKILL" || fail "SKILL must document merge + gate 
 # --- merged-brief.md and summarized Pre-plan context for Task(prd) ---
 grep -q 'merged-brief.md' "$SKILL" || fail "SKILL must reference pre-plan/merged-brief.md"
 grep -qE 'summar' "$SKILL" || fail "SKILL must require summarized (not raw) Pre-plan context for Task(prd)"
+grep -q 'Unverified premises' "$SKILL" || fail "SKILL must require Unverified premises for inferred scope claims"
+grep -q 'Human check' "$SKILL" || fail "SKILL must stop for a human check when a scope premise cannot be confirmed"
+grep -q 'Need from you' "$SKILL" || fail "SKILL must say what the human must return before the flow continues"
+grep -q 'write-handoff review' "$SKILL" || fail "SKILL must persist the pre-plan review under pre-plan/"
+grep -q 'write-handoff gate' "$SKILL" || fail "SKILL must persist the pre-plan gate under pre-plan/"
+if grep -q '_run/pre-plan' "$SKILL" "$REF"; then
+  fail "pre-plan documents must live beside _run, not under it"
+fi
 
 # --- workspace router: flat orchestration lives here; pre-plan MCP detail lives in AGENTS.md (not duplicated) ---
 grep -q 'Flat orchestration' "$ROUTER" || fail "router must document Flat orchestration"

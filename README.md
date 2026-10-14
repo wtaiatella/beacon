@@ -101,7 +101,7 @@ docs/specs/{YYYY-MM-DD}-{slug}/                   # without a ticket key
 
 ## Orchestration hub
 
-Readonly specialists run **only** from the **orchestrator** (flat delegation). They write **bounded** output under `<ticket-folder>/_run/pre-plan/` (merged MCP briefs) and `<ticket-folder>/_run/`. Implementers get **least-privilege** slices — one phase, one domain, `WORKTREE_PATHS` — not full session dumps.
+Readonly specialists run **only** from the **orchestrator** (flat delegation). The orchestrator writes their **bounded** briefs under `<ticket-folder>/pre-plan/` (sibling of `_run`). Explorer, scanners, and diffs stay under `<ticket-folder>/_run/`. Implementers get **least-privilege** slices — one phase, one domain, `WORKTREE_PATHS` — not full session dumps.
 
 `Task(do)` applies mechanical edits (spec checkboxes, `_state.json`, `_notes.md`) through the **allowlisted script API**, and only **after** `Task(scrum)` authorizes it for that gate. **Finish** runs `pipeline-finish.sh` per the git/GitLab rules in `CLAUDE.md` and run-pipeline **§9**.
 
@@ -122,9 +122,9 @@ flowchart TD
         PR["plan-reviewer (folder mode)"]
     end
 
-    subgraph SESS["Bounded paths under ticket/_run/"]
-        PP["pre-plan/<br/>merged-brief.md, specialists/…"]
-        AR["explorer/, scanners/, diffs/…"]
+    subgraph SESS["Bounded paths in the ticket folder"]
+        PP["pre-plan/<br/>merged-brief.md, review.md, gate.md"]
+        AR["_run/<br/>explorer/, scanners/, diffs/…"]
     end
 
     subgraph LP["Least-privilege implementers — sliced prompts"]
@@ -304,14 +304,16 @@ The ticket folder is the run identity. Scratch lives at `<ticket-folder>/_run/` 
 
 ```text
 docs/specs/<date>-<key>-<slug>/
+├── pre-plan/                  # grounding, beside _run
+│   ├── merged-brief.md
+│   ├── review.md
+│   ├── gate.md
+│   └── specialists/
 └── _run/
     ├── timeline.md            # GATE lines, trace anchors
     ├── audit.log              # Finish audit (append-only)
     ├── attach-target.txt      # optional: multi-root writable repo root
     ├── session.code-workspace # optional: generated multi-root workspace
-    ├── pre-plan/
-    │   ├── merged-brief.md
-    │   └── specialists/
     ├── explorer/
     ├── scanners/
     └── diffs/
@@ -321,7 +323,7 @@ docs/specs/<date>-<key>-<slug>/
         └── plan/
 ```
 
-`session-memory.sh --ticket <folder> ensure` creates this tree. `/fix` and `/do` do not.
+`session-memory.sh --ticket <folder> ensure` creates `pre-plan/specialists/` and the `_run` tree. `/fix` and `/do` do not.
 
 ---
 

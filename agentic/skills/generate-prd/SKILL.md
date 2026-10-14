@@ -156,7 +156,9 @@ External services, integrations, blockers:
 
 Facts assumed to be true, **including every informed default chosen when the request was
 silent** and each resolved clarification. Recording the assumption is what lets `/prd`
-proceed without stalling on a question:
+proceed without stalling on a question. When the pre-plan brief lists **Unverified premises**,
+copy each one here and leave it unverified. Do not turn it into a decided default.
+A premise under **Resolved at gate** is copied here as `[Resolved] … (human at pre-plan gate)`:
 - User has a valid email address
 - Trial duration defaults to 14 days (industry standard; not specified by client)
 - Email delivery SLA is 99%

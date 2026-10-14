@@ -29,7 +29,8 @@ agentic/
 | `docs/reference/*-cursor-workflow.md` | Product workflows (Atlassian/GitLab/Glean) — Cursor-named historically; still shared process docs |
 | `docs/reference/nested-task-audit.md` | Shared orchestration invariant |
 | `docs/model-catalog.md` | Shared |
-| `<ticket>/_run/` | Run scratch for one ticket (timeline, pre-plan, scanners, diffs). Tracked with the ticket folder. |
+| `<ticket>/pre-plan/` | Pre-plan briefs, review, and gate. Sibling of `_run`. |
+| `<ticket>/_run/` | Run scratch for one ticket (timeline, scanners, diffs). Tracked with the ticket folder. |
 | `docs/specs/` | Tracked — ticket folders are this workspace's project history |
 
 These are **not** installed by `setup-agentic.sh`. Edit them in place under `docs/`.

@@ -25,9 +25,19 @@ ticket — it's the one-time convention-setting step a greenfield area needs bef
 even apply; keep it to structure/conventions, not the ticket's actual implementation.
 
 **Persistence & consumer:** the orchestrator persists your brief under
-`<ticket-folder>/_run/pre-plan/specialists/system-design.md`. `Task(prd)` reads a condensed
+`<ticket-folder>/pre-plan/specialists/system-design.md`. `Task(prd)` reads a condensed
 `Pre-plan context:` built from this tree; `Task(spectech)`'s `spectech-analyzer` skill **reuses**
 this brief instead of re-scanning the codebase for the same architectural map from scratch.
+
+## Evidence labels
+
+Tag every claim a later step might treat as scope:
+
+- `[executed]` — you ran a documented command and captured the result. Name the command and what it showed.
+- `[code]` — you read the claim from a file. Name the path.
+- `[inferred]` — you concluded it from other evidence. It was not itself executed or read as that conclusion. If it decides what is in or out of scope, say what would verify it.
+
+A product choice (which behavior to build) is an open question, not an inferred premise.
 
 ## Toolbox
 

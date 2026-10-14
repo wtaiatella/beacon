@@ -16,7 +16,7 @@ Output: Analysis report with recommended patterns + guidelines
 ## Reuse pre-plan grounding before re-scanning
 
 Under orchestrated `/run`, the pre-plan wave already produced domain specialist briefs
-(`<ticket-folder>/_run/pre-plan/specialists/{system-design,database,frontend,security,
+(`<ticket-folder>/pre-plan/specialists/{system-design,database,frontend,security,
 testing-observability}.md`, merged into `pre-plan/merged-brief.md`) **before** `/spectech` ever
 runs — they contain the architectural map, data-model touchpoints, existing conventions, and
 test/observability gaps for this ticket's area, gathered read-only, WHAT-before-HOW. **Read these

@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# Pre-plan handoff files under <ticket>/_run/pre-plan/.
-# Requires --ticket (the same folder pipeline-init ensured).
+# Pre-plan documents under <ticket>/pre-plan/ (sibling of _run, not inside it).
+# Requires --ticket (the ticket folder must already exist).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SESSION_MEMORY="$SCRIPT_DIR/session-memory.sh"
 
 iso_now() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
 TICKET=""
 
-session_root_abs() {
-  local rel
-  rel=$("$SESSION_MEMORY" --ticket "$TICKET" session-root) || return 1
-  printf '%s/%s\n' "$ROOT" "$rel"
+ticket_abs() {
+  if [ ! -d "$ROOT/$TICKET" ]; then
+    echo "session-handoff: ticket folder does not exist: $TICKET" >&2
+    return 1
+  fi
+  printf '%s/%s\n' "$ROOT" "$TICKET"
 }
 
 read_body() {
@@ -43,10 +44,11 @@ valid_specialist() {
 cmd_write_handoff() {
   local kind="${1:-}"
   shift || true
+  local base
+  base="$(ticket_abs)" || exit 1
   case "$kind" in
     merged)
-      local base ts out
-      base="$(session_root_abs)" || exit 1
+      local ts out
       ts="$(iso_now)"
       out="$base/pre-plan/merged-brief.md"
       mkdir -p "$(dirname "$out")"
@@ -68,8 +70,7 @@ cmd_write_handoff() {
         exit 1
       }
       valid_specialist "$name" || exit 1
-      local base ts out
-      base="$(session_root_abs)" || exit 1
+      local ts out
       ts="$(iso_now)"
       mkdir -p "$base/pre-plan/specialists"
       out="$base/pre-plan/specialists/${name}.md"
@@ -84,8 +85,38 @@ cmd_write_handoff() {
       } >"$out"
       printf '%s\n' "${out#"$ROOT"/}"
       ;;
+    review)
+      local ts out
+      ts="$(iso_now)"
+      out="$base/pre-plan/review.md"
+      mkdir -p "$(dirname "$out")"
+      {
+        printf '%s\n' '---'
+        printf '%s\n' 'kind: review'
+        printf '%s\n' "written: ${ts}"
+        printf '%s\n' '---'
+        printf '\n'
+        read_body "${1:-}"
+      } >"$out"
+      printf '%s\n' "${out#"$ROOT"/}"
+      ;;
+    gate)
+      local ts out
+      ts="$(iso_now)"
+      out="$base/pre-plan/gate.md"
+      mkdir -p "$(dirname "$out")"
+      {
+        printf '%s\n' '---'
+        printf '%s\n' 'kind: gate'
+        printf '%s\n' "written: ${ts}"
+        printf '%s\n' '---'
+        printf '\n'
+        read_body "${1:-}"
+      } >"$out"
+      printf '%s\n' "${out#"$ROOT"/}"
+      ;;
     *)
-      echo "session-handoff: first argument must be 'merged' or 'specialist'" >&2
+      echo "session-handoff: first argument must be 'merged', 'specialist', 'review', or 'gate'" >&2
       return 1
       ;;
   esac
@@ -95,19 +126,23 @@ usage() {
   cat <<'EOF'
 Usage: session-handoff.sh --ticket <docs/specs/...> write-handoff merged [content-file]
        session-handoff.sh --ticket <docs/specs/...> write-handoff specialist <name> [content-file]
+       session-handoff.sh --ticket <docs/specs/...> write-handoff review [content-file]
+       session-handoff.sh --ticket <docs/specs/...> write-handoff gate [content-file]
 
-Writes pre-plan handoff artifacts under the ticket run dir:
-  <ticket>/_run/pre-plan/merged-brief.md
-  <ticket>/_run/pre-plan/specialists/<name>.md   (kebab-case name)
+Writes pre-plan documents beside the ticket docs (not under _run/):
+  <ticket>/pre-plan/merged-brief.md
+  <ticket>/pre-plan/specialists/<name>.md   (kebab-case name)
+  <ticket>/pre-plan/review.md
+  <ticket>/pre-plan/gate.md
 
 content-file:
   - Path to a file to copy into the artifact, or omit / use - with stdin redirected.
 
-Requires: session-memory.sh --ticket <folder> ensure already created _run/.
+The ticket folder must already exist. _run/ is not required.
 
 Examples:
-  session-handoff.sh --ticket docs/specs/2026-10-14-BG-1-slug write-handoff merged /tmp/brief.md
-  printf '%s\n' '## Brief' | session-handoff.sh --ticket docs/specs/2026-10-14-BG-1-slug write-handoff merged -
+  session-handoff.sh --ticket docs/specs/2026-10-14-KEY-slug write-handoff merged /tmp/brief.md
+  printf '%s\n' '## Brief' | session-handoff.sh --ticket docs/specs/2026-10-14-KEY-slug write-handoff merged -
 EOF
 }
 

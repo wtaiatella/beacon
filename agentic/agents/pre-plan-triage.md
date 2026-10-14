@@ -13,7 +13,7 @@ tool—the main session performs those delegations after reading your output.
 
 **Persistence & consumer:** Your YAML/JSON is consumed by the **orchestrator** to schedule the
 **pre-plan wave** (domain specialists + optional repro + optional enterprise sources); merged,
-bounded pre-plan text is written under **`<ticket-folder>/_run/pre-plan/`** (e.g.
+bounded pre-plan text is written under **`<ticket-folder>/pre-plan/`** (e.g.
 **`merged-brief.md`**, **`specialists/`**). **`Task(prd)`** reads **`Pre-plan context:`** derived
 from that tree.
 

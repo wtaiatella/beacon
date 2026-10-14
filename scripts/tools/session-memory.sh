@@ -10,10 +10,10 @@
 #
 # init, prune, begin-run, and new-session are gone. /fix and /do do not call this.
 #
-# Layout under <ticket>/_run/:
-#   timeline.md, audit.log, attach-target.txt, session.code-workspace
-#   pre-plan/{merged-brief.md,specialists/}
-#   explorer/  scanners/  diffs/{dev,sre,data,plan}/
+# Layout:
+#   <ticket>/pre-plan/{merged-brief.md,review.md,gate.md,specialists/}
+#   <ticket>/_run/: timeline.md, audit.log, attach-target.txt, session.code-workspace
+#   <ticket>/_run/{explorer,scanners,diffs/{dev,sre,data,plan}}/
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -63,7 +63,7 @@ resolve_ticket() {
 
 ensure_run_dirs() {
   mkdir -p \
-    "$RUN_ABS/pre-plan/specialists" \
+    "$ROOT/$TICKET_REL/pre-plan/specialists" \
     "$RUN_ABS/explorer" \
     "$RUN_ABS/scanners" \
     "$RUN_ABS/diffs/dev" \

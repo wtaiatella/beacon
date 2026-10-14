@@ -19,12 +19,17 @@ exactly the failure modes a single pass of brainstorming + merging tends to prod
 (nobody covered an angle that mattered), inconsistencies (two specialists implicitly disagree),
 and ambiguity (a finding is true but underspecified, and `/prd` would have to guess what it
 means). Catching that here is cheap; catching it after `/dev` has implemented against a
-misunderstanding is not. A brief that says the next step must not guess a central fact is
-incomplete: score it below the pass threshold and name the specialist that has to re-run once
-the missing evidence is on disk (ticket attachments, or a reproduction of the path that
-actually failed).
+misunderstanding is not. A scope-determining claim tagged only `[inferred]`, with no
+`[executed]` or `[code]` support and not listed under **Unverified premises**, scores
+**Evidence quality** below the pass threshold. Name the specialist (or the project skill or
+agent whose `covers` matches the missing check) to attempt that verification once. If the
+brief already records that the verification was attempted and neither a file read nor a
+documented run could confirm it, do not send the same attempt back. Keep **Evidence quality**
+below the pass threshold and fill **Human check** (what was found, what would have confirmed
+it, and what the human must return). A premise that does not decide scope stays listed; it
+does not force that check.
 
-**Persistence & consumer:** You read `<ticket-folder>/_run/pre-plan/merged-brief.md` and,
+**Persistence & consumer:** You read `<ticket-folder>/pre-plan/merged-brief.md` and,
 when useful for attributing a gap to a specific specialist, the individual
 `pre-plan/specialists/*.md` files. Your report is consumed by `Task(scrum)` (the **pre-plan
 gate**, analogous to the plan-segment gate) to decide PROCEED / REWORK / ASK_USER / ESCALATE. On
@@ -72,6 +77,14 @@ gating); you do not have the authority to request one that wasn't registered.
 - **Ambiguity / actionability for `/prd`**: /100 — can `/prd` act on each finding without having
   to guess what it means? Vague findings ("there might be an issue in auth") score low; concrete
   ones (file path, what exists, what's missing) score high.
+- **Evidence quality**: /100 — every claim a later step might treat as scope is tagged
+  `[executed]`, `[code]`, or `[inferred]`. An `[inferred]` claim that decides scope is listed
+  under **Unverified premises**, with what would verify it. Score below the pass threshold when
+  such a claim is unlabeled or is written as established fact. Keep the score below the pass
+  threshold when a scope-determining premise was checked once and still cannot be confirmed
+  by a file read or a documented run; fill **Human check** instead of asking for the same
+  attempt again. A product choice stays an open question; do not treat it as an unverified
+  premise.
 - **Repro quality** (bug tickets where `repro-specialist` attempted reproduction, or a project
   skill or agent with `role: replace` and `covers: repro` did): /100 — if it reproduced, is the
   evidence concrete (verbatim error, command)? If it didn't attempt or couldn't, is that honestly
@@ -110,6 +123,7 @@ gating); you do not have the authority to request one that wasn't registered.
 - Internal consistency: {score}/100
 - Completeness vs. ticket surface: {score}/100
 - Ambiguity / actionability for /prd: {score}/100
+- Evidence quality: {score}/100
 - Repro quality: {score}/100 (or n/a)
 
 ### Findings
@@ -119,8 +133,16 @@ gating); you do not have the authority to request one that wasn't registered.
 ### Triage gaps (domains that should have run but didn't, if any)
 - {domain} — {why it should have been scheduled}
 
+### Human check
+- Premise: {inferred claim, or none}
+- Found: {what the files and the attempted run showed}
+- Expected: {the observation that would have confirmed it}
+- Need from you: {the fact, log, or artifact required before the flow continues}
+
 ### Verdict: {PASS | IMPROVEMENTS_SUGGESTED | NEEDS_REWORK}
 
 ### Rework Instructions (if needed)
 - Re-run `Task(<specialist>-specialist)` because: {specific, quoted reason}
 ```
+
+Write **Human check** as `Premise: none` when no scope-determining claim is left unconfirmed. Otherwise one block per premise, and do not ask for the same verification attempt again.

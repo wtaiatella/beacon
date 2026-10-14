@@ -40,10 +40,17 @@ merged specialist brief, before `Task(prd)` has ever run for this ticket):
    didn't name a specialist for a finding, send it back for that instead of guessing — not back
    through `pre-plan-triage` (its routing job is already done; re-triaging would duplicate the
    decision you are the authority for).
-5. **No spec file exists yet at this gate** — there is nothing in `docs/specs/` to patch. Your
-   **PROCEED** here only authorizes `Task(prd)` to proceed with the reviewed brief; it does **not**
-   touch `_state.json`/`_notes.md` (those get their first pre-plan-related entry, if any, after
-   the **plan segment** gate below, not here).
+5. **Do not patch `_state.json` or `_notes.md` at this gate.** Your **PROCEED** only authorizes
+   `Task(prd)` to proceed with the reviewed brief. Those control files get their first
+   pre-plan-related entry, if any, after the **plan segment** gate below, not here. You do not
+   write files. The orchestrator persists your decision to `<ticket-folder>/pre-plan/gate.md`.
+6. **Unverified premises:** if a scope-determining claim is only `[inferred]` and is not listed
+   as unverified, **REWORK** once so the named specialist can try to verify it. If that attempt
+   already happened and neither a file read nor a documented run confirmed it, decide
+   **ASK_USER**, not **PROCEED**. Copy the reviewer's **Human check**: what was found, what
+   would have confirmed it, and what the human must return. Do not ask which behavior to build;
+   that question belongs to `/prd`. A premise that does not decide scope may stay listed on
+   **PROCEED**.
 
 ## § 6 Implementation gate (run-pipeline § 6)
 
@@ -89,8 +96,10 @@ For **§ 6** implementation review, apply **§ 6 Implementation gate** (security
 **`/run` authorization (pre-plan gate):** Your **PROCEED** authorizes **`Task(prd)`** to run with
 the reviewed merged brief as `Pre-plan context:`. Your **REWORK** authorizes the orchestrator to
 re-invoke **only** the specialist(s) **`Task(pre-plan-reviewer)`** named (plus any triage gap it
-flagged), re-merge, and re-review — capped at **`--max-preplan-iterations`** (default 3). No spec
-file exists yet at this point; there is nothing to patch in `docs/specs/`.
+flagged), re-merge, and re-review — capped at **`--max-preplan-iterations`** (default 3). Your
+**ASK_USER** on an unconfirmed scope premise stops the flow until the human answers the **Human
+check**. Do not patch `_state.json` or `_notes.md` here. The orchestrator writes
+`pre-plan/gate.md` from this decision.
 
 **`/run` authorization (plan segment):** After **`plan-reviewer`** accepts the draft in folder mode (inner self-heal loop per **run-pipeline** **§ 3–4**, `Task(prd)`→`Task(spectech)`→`Task(tasks)`), your **PROCEED** authorizes moving to **§ 5** implementation and the orchestrator's gate-authorized batch update to the ticket folder's `tasks.md` checkboxes, `_state.json` (`prd-validated`/`spectech_profile`/`ready-for-dev`), and one `_notes.md` entry. There is no `Task(plan)` proposal mechanism in this orchestrator — `/prd`/`/spectech`/`/tasks` write their own artifacts directly; this gate only authorizes the tracking-state batch (same privilege as the post-implementation `tasks.md` checkbox update, per run-pipeline's D4).
 
@@ -115,6 +124,7 @@ Resolve spec, read frontmatter + body. Present pipeline status, scores, decision
 ## Completion Output
 
 - **Gate:** `Gate: {step}. Score: {N}% ({verdict}). Decision: {decision} ({basis}). Trend: {trajectory}. Business: {assessment}. Progress: {X}/{Y} steps.`
+- **Pre-plan gate:** `Unverified premises accepted: {only premises that do not decide scope}` or `none.` On **ASK_USER**, include the **Human check** (Found, Expected, Need from you).
 - **Sprint board:** `Sprint: {N} active specs. Health: {status}. Top priority: {slug} ({action}).`
 
 ## Error Handling

@@ -82,6 +82,8 @@ docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with Jira key (e.g. BG-10965
 docs/specs/{YYYY-MM-DD}-{slug}/                   # without ticket key
 ├── _state.json      # machine state — the ONLY control file (see Spec Format below)
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step
+├── pre-plan/        # grounding briefs, review, and gate (sibling of _run)
+├── _run/            # timeline, audit, explorer, scanners, diffs
 ├── ticket.md        # optional issue definition + comments (when present)
 ├── attachments/      # optional attachments
 ├── prd.md            # product requirements (/prd)
@@ -365,7 +367,7 @@ Each `/run` keeps its scratch in the ticket folder, at `<ticket>/_run/timeline.m
 - Clear: `scripts/tools/session-memory.sh --ticket <ticket-folder> clear`
 - Categories: DECISION, QUESTION, GATE, or free-form context. Optional post-`/run` audit lines (human only): `COMMIT_SUGGESTIONS:`, `PUSH_CONFIRMED:`, `MR_TARGET_BRANCH:`, `MR_CONFIRMED:`.
 - `--resume` reads the last `GATE:` line in that timeline.
-- **Two-layer state:** `_run/` is the orchestration checkpoint for one ticket. It does not replace `_state.json` / `_notes.md` (see **Spec Format** above).
+- **Two-layer state:** `_run/` is the orchestration checkpoint for one ticket (timeline, audit, explorer, scanners, diffs). Pre-plan documents live beside it, at `<ticket>/pre-plan/`. Neither replaces `_state.json` / `_notes.md` (see **Spec Format** above).
 
 ## Metrics
 

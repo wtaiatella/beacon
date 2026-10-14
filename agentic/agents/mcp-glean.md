@@ -1,6 +1,6 @@
 ---
 name: mcp-glean
-description: Enterprise-wide search and document retrieval via Glean MCP only. OPTIONAL — only scheduled when Glean is registered in docs/workspace-tools.md (via /setup-workspace) AND the ticket signals org-wide knowledge needs (not a default pre-plan wave member for generic SDD). Orchestrator merges bounded Glean briefs into <ticket-folder>/_run/pre-plan/ (merged-brief / specialists); Task(plan) consumes Pre-plan context. Use when the orchestrator needs organization-wide context (design docs, incidents, policies) before plan or review, bounded to a short brief.
+description: Enterprise-wide search and document retrieval via Glean MCP only. OPTIONAL — only scheduled when Glean is registered in docs/workspace-tools.md (via /setup-workspace) AND the ticket signals org-wide knowledge needs (not a default pre-plan wave member for generic SDD). Orchestrator merges bounded Glean briefs into <ticket-folder>/pre-plan/ (merged-brief / specialists); Task(plan) consumes Pre-plan context. Use when the orchestrator needs organization-wide context (design docs, incidents, policies) before plan or review, bounded to a short brief.
 model: inherit
 ---
 

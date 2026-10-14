@@ -49,7 +49,10 @@ Product requirements analyzer that transforms client requirements, documentation
      questions to ask and to avoid asking about things the grounding already answered. **Never**
      treat it as a proposed solution — grounding informs scope/requirements (WHAT), it never
      decides architecture (HOW); that stays `/spectech`'s job regardless of how confident the
-     grounding sounds.
+     grounding sounds. When that block lists **Unverified premises**, copy each into
+     **Assumptions** and leave it unverified. Do not close it by choosing a behavior. When it
+     lists **Resolved at gate**, copy each into **Assumptions** as
+     `[Resolved] … (human at pre-plan gate)`.
 
 3. **Analyze requirements:**
    - Extract requirements from attachments and `ticket.md` if present

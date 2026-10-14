@@ -25,12 +25,20 @@ sm() {
 sm ensure >/dev/null
 CM="$ROOT/$TICKET/_run/timeline.md"
 SR="$ROOT/$TICKET/_run"
-for p in pre-plan/specialists explorer scanners diffs/dev diffs/sre diffs/data diffs/plan; do
+for p in explorer scanners diffs/dev diffs/sre diffs/data diffs/plan; do
   [ -d "$SR/$p" ] || {
     echo "FAIL: missing scaffold dir $p under _run" >&2
     exit 1
   }
 done
+[ -d "$ROOT/$TICKET/pre-plan/specialists" ] || {
+  echo "FAIL: missing pre-plan/specialists beside _run" >&2
+  exit 1
+}
+[ ! -d "$SR/pre-plan" ] || {
+  echo "FAIL: pre-plan must not be created under _run" >&2
+  exit 1
+}
 
 p1=$(sm phase-security-path 1)
 p2=$(sm phase-security-path 2)
