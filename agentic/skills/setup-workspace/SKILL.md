@@ -1,6 +1,6 @@
 ---
 name: setup-workspace
-description: "Interactive workspace tool registry builder. Probes each MCP server declared in .mcp.json, discovers workspace-relevant context through AI-driven exploration, asks the user only what matters, and writes docs/workspace-tools.md. Consumed by pre-plan-triage to enhance wave routing automatically."
+description: "Interactive workspace tool registry builder. Probes each MCP server declared in .mcp.json, discovers workspace-relevant context through AI-driven exploration, asks the user only what matters, and writes docs/workspace-tools.md. Also lists project skills and project agents (outside the SDD framework) and lets the user register custom domain specialists for the pre-plan wave. Consumed by pre-plan-triage to enhance wave routing automatically."
 ---
 
 # Workspace Tool Registry — Setup Skill
@@ -9,8 +9,16 @@ description: "Interactive workspace tool registry builder. Probes each MCP serve
 
 Build or incrementally update `docs/workspace-tools.md` — the workspace-level registry of
 available MCP tools, their access status, and workspace-specific context (e.g. which Figma
-project, which Confluence space). Once registered, `pre-plan-triage` uses this context to route
-pre-plan waves with specificity, without the user having to repeat it in every prompt.
+project, which Confluence space) **plus** any custom **domain specialists** the team wants
+available to the pre-plan wave beyond the 5 built-ins (`system-design`, `database`, `frontend`,
+`security`, `testing-observability`) — e.g. a "payments-domain" or "tax-compliance" specialist
+specific to this project — **and** the project's own skills and agents (a repro skill that
+already boots this stack, an agent that knows that framework better than the generic specialist).
+Skills and agents are both catalogued because they complement each other: a skill may prepare the
+environment while an agent does the investigation. Once registered, `pre-plan-triage` uses this
+context to route pre-plan waves with specificity, without the user having to repeat it in every
+prompt. Whether each one complements or replaces a built-in is decided per ticket by triage, not
+at setup time.
 
 ## Execution context
 
@@ -22,10 +30,11 @@ and remind them to re-run `/setup-workspace <name>` when a tool's config changes
 
 ## Trigger & Input
 
-- **Trigger:** `/setup-workspace [server-name ...]` — arrives as `$ARGUMENTS`.
+- **Trigger:** `/setup-workspace [server-name ... | --specialist <name>] [--reset]` — arrives as `$ARGUMENTS`.
 - **No args:** run setup for **all** servers declared in `.mcp.json`.
-- **With names:** re-run only the listed servers (incremental update).
-- **`--reset`:** wipe the registry and start fresh for all servers.
+- **With server names:** re-run only the listed servers (incremental update).
+- **`--specialist <name>`:** register or update **one** custom domain specialist instead of an MCP server — see **Step 2 — Domain specialists**. May be combined with server names in the same invocation; each is handled by its own step.
+- **`--reset`:** wipe the registry and start fresh for all servers **and** registered specialists.
 
 ## Toolbox
 
@@ -63,7 +72,8 @@ The only invariant is the entry structure (see **Registry format** below).
    > "No MCP servers found in `~/.claude/mcp.json` (global) or `.mcp.json` (project).
    > Register servers with `claude mcp add --global <name> <command>` (global) or
    > `claude mcp add <name> <command>` (project-only), then re-run `/setup-workspace`."
-   and stop.
+   and **continue** to Step 2 (specialists, if asked) and Step 2b (project skills and agents). Do not
+   stop — a workspace with no MCP still has project skills and agents worth registering.
 
    If only one source has servers, note it inline (e.g. "Found 5 global servers, no project
    `.mcp.json`.") and continue normally.
@@ -95,7 +105,6 @@ in `.mcp.json` as hints. General heuristics (not exhaustive — adapt to what's 
 | `jira`, `atlassian`, `rovo` | `getAccessibleAtlassianResources` or `atlassianUserInfo` |
 | `confluence` | `getConfluenceSpaces` |
 | `gitlab` | `whoami` or `health_check` |
-| `arc`, `avatax` | any catalog/project list operation |
 | unknown | try `whoami`, `health_check`, `list`, or `ping` in that order |
 
 If **all attempts fail** (auth error, timeout, tool not found): mark `access: no`, record the
@@ -113,7 +122,6 @@ tool is useful in a pipeline. Examples of discovery logic (illustrative, not pre
 - **Jira** — list visible projects; note keys.
 - **Glean** — confirm the authenticated identity; no enumerable workspace config expected.
 - **GitLab** — get the authenticated user's namespace; optionally list recent projects.
-- **ARC / AvaTax RC** — list catalogs, namespaces, or schemas if an operation exists.
 
 Discovery is **bounded**: stop after 3 operations or when you have enough to present to the user.
 Never dump raw API responses into the registry.
@@ -142,29 +150,90 @@ Print a one-line confirmation: "✓ [server-name] registered."
 
 ---
 
-### Step 2 — Final report
+### Step 2 — Domain specialists (optional, `--specialist <name>`)
 
-After all servers, print a summary table:
+Only runs when the user passes `--specialist <name>` (or asks, in conversation, to add a
+project-specific pre-plan specialist). This has nothing to do with MCP servers — it registers a
+**custom** agent the team wants available to the pre-plan wave alongside the 5 built-ins
+(`system-design`, `database`, `frontend`, `security`, `testing-observability`).
+
+1. **Ask what it's for**, in plain language: "What should the `<name>` specialist ground tickets
+   in? (e.g. 'payments domain rules', 'tax compliance constraints')" — one short sentence is
+   enough; this becomes `Suggested use`.
+2. **Ask whether an agent file already exists** for it under `agentic/agents/<name>-specialist.md`
+   (or a project overlay path). If not, tell the user this registry entry alone does **not**
+   create the agent — it only tells `pre-plan-triage` to consider it; the agent file itself must
+   exist (point them at an existing domain specialist, e.g. `system-design-specialist.md`, as a
+   template: read-only, never proposes a solution, same bounded-output contract).
+3. **Write the entry** — see **Registry format** below (`## specialist: <name>`).
+4. Print: "✓ specialist `<name>` registered. `pre-plan-triage` will consider it starting next `/run`."
+
+### Step 2b — Project skills and agents (always)
+
+Runs on every invocation, including a server-only or `--specialist` run, and after `--reset`
+(the rescan repopulates both sections). This does **not** ask the user whether a skill or agent
+complements or replaces a built-in — that is `pre-plan-triage`'s call on each ticket. Catalog
+**both**. A skill and an agent are different things and often complement each other.
+
+1. **Find skill files.** Look for `SKILL.md` in these places, skipping any path that does not
+   exist:
+   - `.agents/skills/<name>/SKILL.md`
+   - `.cursor/skills/<name>/SKILL.md`
+   - for each child-repo directory listed under the `# --- clone-managed entries below` marker
+     in `.gitignore` (one relative path per non-comment line): `<repo>/.agents/skills/<name>/SKILL.md`,
+     `<repo>/.cursor/skills/<name>/SKILL.md`, and `<repo>/.claude/skills/<name>/SKILL.md`
+2. **Find agent files.** Look for `*.md` agent definitions (frontmatter `name` + `description`) in:
+   - `.agents/agents/<name>.md`
+   - `.cursor/agents/<name>.md` (files only — not the `beacon/` directory)
+   - the same two paths inside each child repo above, plus `<repo>/.claude/agents/<name>.md`
+3. **Skip the framework.** Do not register `agentic/skills/`, `agentic/agents/`,
+   `.cursor/skills/beacon/`, `.cursor/agents/beacon/`, or any file whose directory is named
+   `beacon`. Those are the SDD generics, not the project's.
+4. **Dedupe.** If the same frontmatter `name` appears in more than one of the paths above,
+   register it once and keep the `.agents/` path when that copy exists.
+5. **Read each file's frontmatter** (`name`, `description`) and the first part of the body
+   (role and what it reads and writes — stop before long templates). If `name` is missing, use the
+   directory name (skills) or the filename without `.md` (agents). `Suggested use` is the
+   description, trimmed to one sentence. `Context` is up to four sentences: what it needs as
+   input, what it writes, and which generic job it resembles (`repro`, `system-design`,
+   `database`, `frontend`, `security`, `testing-observability`, `jira-capture`, or `none`).
+   Do not decide `replace` or `complement`. That stays with `pre-plan-triage`.
+6. **Write one `## skill: <name>` section per skill and one `## agent: <name>` section per
+   agent** (see **Registry format**). If a previously registered file is gone, drop that section
+   and say so in the final report.
+7. Print one line each: "✓ skill `<name>` registered (`<path>`)." and "✓ agent `<name>` registered
+   (`<path>`)." If a kind has none, say "No project skills found." or "No project agents found."
+   and leave no sections of that kind.
+
+### Step 3 — Final report
+
+After all servers and specialists, print a summary table:
 
 ```
-| Tool           | Status      | Key config                        |
-|----------------|-------------|-----------------------------------|
-| figma          | verified ✓  | Project: "BR Tax UI Design"       |
-| confluence     | verified ✓  | Space: BR-TAX                     |
-| glean          | verified ✓  | No workspace config needed        |
-| arc            | not accessible ✗ | Auth error — check .mcp.json |
+| Tool / specialist | Kind       | Status      | Key config                  |
+|--------------------|-----------|-------------|------------------------------|
+| figma              | mcp       | verified ✓  | Project: "BR Tax UI Design"  |
+| confluence         | mcp       | verified ✓  | Space: BR-TAX                |
+| glean              | mcp       | verified ✓  | No workspace config needed   |
+| payments-domain    | specialist| registered  | Grounds tickets in payments  |
+| reproduce-issue    | skill     | registered  | Boots this stack and reproduces |
+| tax-investigator   | agent     | registered  | Investigates this framework's failures |
 ```
 
 Then remind:
 > "Registry saved to `docs/workspace-tools.md`. Re-run `/setup-workspace <name>` anytime to
-> update a specific tool. The registry is read automatically by pre-plan-triage on every `/run`."
+> update a specific tool, or `/setup-workspace --specialist <name>` to update a specialist entry.
+> Project skills and agents are refreshed on every run. The registry is read automatically by
+> pre-plan-triage on every `/run`."
 
 ---
 
 ## Registry format (`docs/workspace-tools.md`)
 
-Free-form Markdown. The file starts with a header block, then one `## <server-name>` section
-per registered server. Required fields per section; everything else is free-form.
+Free-form Markdown. The file starts with a header block, then one section per registered
+**MCP server** (`## <server-name>`), registered **domain specialist**
+(`## specialist: <name>`), discovered **project skill** (`## skill: <name>`), or discovered
+**project agent** (`## agent: <name>`). Required fields per section; everything else is free-form.
 
 ```markdown
 # Workspace Tools Registry
@@ -182,9 +251,32 @@ _Last updated: <YYYY-MM-DD> · Updated by: /setup-workspace_
 - Discovered files / projects / spaces (list only what's relevant)
 - User's selected primary resource (name + URL/key if applicable)
 - Any notes about scope or limitations
+
+---
+
+## specialist: <name>
+
+- **Agent file:** agentic/agents/<name>-specialist.md   ← or a project overlay path
+- **Suggested use:** <one sentence: when pre-plan-triage should include this specialist>
+
+---
+
+## skill: <name>
+
+- **Path:** .cursor/skills/<name>/SKILL.md   ← workspace-relative path to that SKILL.md
+- **Suggested use:** <one sentence from the skill's description>
+- **Context:** <up to four sentences: inputs, outputs, and which generic job it resembles>
+
+---
+
+## agent: <name>
+
+- **Path:** .agents/agents/<name>.md   ← workspace-relative path to that agent file
+- **Suggested use:** <one sentence from the agent's description>
+- **Context:** <up to four sentences: inputs, outputs, and which generic job it resembles>
 ```
 
-**Required field semantics:**
+**Required field semantics (MCP server sections):**
 
 | Field | Values | Purpose |
 |---|---|---|
@@ -192,10 +284,31 @@ _Last updated: <YYYY-MM-DD> · Updated by: /setup-workspace_
 | `Access` | `yes` / `no` | Whether the tool responded |
 | `Suggested use` | one sentence | Consumed by pre-plan-triage to decide if wave applies |
 
+**Required field semantics (specialist sections):**
+
+| Field | Values | Purpose |
+|---|---|---|
+| `Agent file` | path | Where `pre-plan-triage` / the orchestrator finds the agent to delegate `Task(...)` to |
+| `Suggested use` | one sentence | Consumed by `pre-plan-triage` to decide if this ticket needs it |
+
+There is no `Status`/`Access` for a specialist entry — unlike MCP servers, there's nothing to
+health-check; the entry either exists (and its agent file is assumed to exist) or it doesn't.
+
+**Required field semantics (project skill and project agent sections):**
+
+| Field | Values | Purpose |
+|---|---|---|
+| `Path` | workspace-relative path | Where triage and the orchestrator find the procedure (skill) or the persona (agent) |
+| `Suggested use` | one sentence | Short label. Triage reads this with `Context`. |
+| `Context` | up to four sentences | What it needs, what it writes, and which generic job it resembles. Triage uses this to choose `replace`, `complement`, or `skip`. Setup does not make that choice. |
+
 **Suggested use examples (adapt to what was discovered):**
-- "Activate when PRD involves UI, screens, or component design in br-tax-ui."
+- "Activate when PRD involves UI, screens, or component design in web-ui."
 - "Activate when ticket involves Migrate Standard integration or ISS retention rules."
 - "Activate for broad enterprise knowledge search when ticket context is ambiguous."
+- *(specialist)* "Activate when the ticket touches payment processing or billing cycles."
+- *(skill)* "Boots this project's services and reproduces the reported issue end to end."
+- *(agent)* "Investigates failures in this project's framework once the environment is up."
 
 ---
 
@@ -212,3 +325,5 @@ _Last updated: <YYYY-MM-DD> · Updated by: /setup-workspace_
   leave others unchanged.
 - **If `docs/` does not exist**, create it before writing.
 - **Source annotation** — in each registry entry, note whether the server came from `global` or `project` config. This helps the user know where to edit if they want to remove a server.
+- **Specialist entries never fabricate an agent.** Registering `## specialist: <name>` only tells `pre-plan-triage` to consider it; this skill does **not** create `agentic/agents/<name>-specialist.md` for the user. If the file doesn't exist yet, say so plainly and point at an existing domain specialist as a template.
+- **Skill and agent entries are a catalog, not a routing decision.** Do not ask the user, and do not write, whether one complements or replaces a built-in. Record path and description only. `pre-plan-triage` decides that per ticket. Do not drop agents because skills were found, or the reverse — they are complementary.

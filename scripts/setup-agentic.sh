@@ -4,7 +4,7 @@
 #
 # - Framework source of truth: agentic/{agents,skills,commands,hooks}
 # - Only paths recorded in each runtime's .agentic-managed manifest are pruned
-# - Files not on that manifest (project overlays, local extras) are never deleted
+# - Project skills, agents, and commands are not copied or linked
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -35,13 +35,14 @@ usage() {
 Usage: scripts/setup-agentic.sh <claude|cursor|antigravity|all> [--dry-run] [--keep-claude]
 
   claude       Install the framework as a user-level Claude plugin
-               (~/.claude/plugins/marketplaces/bcs-sdd-local, not ~/.claude/skills).
+               (~/.claude/plugins/marketplaces/beacon-sdd-local, not ~/.claude/skills).
                If that plugin is already installed and the source is unchanged,
                only refresh workspace control files (CLAUDE.md, adapter docs)
-               and drop the managed .claude/ framework mirror. Overlays stay.
-  cursor       Install + adapt entirely under .cursor/ (agents, hooks, rules,
-               skills). Also deactivates managed Claude and .agents mirrors
-               so / entries are not duplicated. Overlays stay.
+               and drop the managed .claude/ framework mirror.
+  cursor       Install + adapt entirely under .cursor/*/beacon/ (agents, hooks,
+               rules, skills) plus .cursor/hooks.json. Also deactivates managed
+               Claude and legacy .agents mirrors so / entries are not duplicated.
+               Does not copy or link project skills, agents, or commands.
   antigravity  Stub install into .agent/
   all          Run claude + cursor + antigravity (no Claude deactivation)
 
@@ -55,21 +56,25 @@ Prune policy: only removes paths previously listed in <runtime>/.agentic-managed
 that are no longer produced by this install. Unmanaged files are left untouched.
 
 Cursor adapter specifics:
-  - agents  → .cursor/agents/  (subagents / Task — these are the slash/persona entrypoints)
-  - skills  → .cursor/skills/  (path refs rewritten off .claude/; NO command→skill emission)
+  - Framework content installs under a `beacon/` subfolder inside each
+    .cursor/ directory it uses — anything outside beacon/ is structurally
+    not part of the SDD framework (no naming-prefix convention needed):
+  - agents  → .cursor/agents/beacon/  (subagents / Task — slash/persona entrypoints)
+  - skills  → .cursor/skills/beacon/  (path refs rewritten off .claude/; NO command→skill emission)
   - commands stay in the Claude plugin — Cursor does not mirror them as skills
     (avoids duplicate / entries alongside .cursor/agents/)
-  - hooks   → .cursor/hooks/ + hooks.json
+  - hooks   → .cursor/hooks/beacon/ + top-level .cursor/hooks.json
                (shared agentic/hooks/* + overlay agentic/adapters/cursor/hooks/*)
-  - rules   → .cursor/rules/*.mdc  (always-on context; Cursor equivalent of CLAUDE.md)
+  - rules   → .cursor/rules/beacon/*.mdc  (always-on context; Cursor equivalent of CLAUDE.md)
   - docs    → docs/adapters/cursor/  (from agentic/adapters/cursor/docs/)
   - by default, prune .claude/ paths listed in .claude/.agentic-managed
   - by default, prune .agents/ paths listed in .agents/.agentic-managed
-  - project overlays under .claude/ (unmanaged) are kept
+    (legacy framework copies only; other files there are left alone)
+  - does not copy or symlink project skills, agents, or commands
 
 Claude adapter:
-  - framework → ~/.claude/plugins/marketplaces/bcs-sdd-local/bcs-sdd
-    (skills, agents, commands, hooks). Slash names are /bcs-sdd:<name>.
+  - framework → ~/.claude/plugins/marketplaces/beacon-sdd-local/beacon-sdd
+    (skills, agents, commands, hooks). Slash names are /beacon-sdd:<name>.
   - skips the plugin copy when it is already installed and the source stamp matches
   - agentic/adapters/claude/CLAUDE.md → ./CLAUDE.md  (generated; edit the agentic source)
   - agentic/adapters/claude/docs/ → docs/adapters/claude/
@@ -110,7 +115,7 @@ managed_add() {
 }
 
 # Remove every path listed in a runtime's .agentic-managed (framework only).
-# Leaves unmanaged overlays intact. Clears the manifest afterward.
+# Leaves every other file intact. Clears the manifest afterward.
 deactivate_managed_runtime() {
   local runtime_root="$1"
   local label="$2"
@@ -145,7 +150,7 @@ deactivate_managed_runtime() {
       echo "# Cleared by Cursor install (framework mirror deactivated)."
       echo "# Re-run: scripts/setup-agentic.sh claude"
     } > "$manifest"
-    echo "    deactivated $label ($removed managed paths removed; overlays kept)"
+    echo "    deactivated $label ($removed managed paths removed)"
   fi
 }
 
@@ -263,8 +268,10 @@ overlay_adapter_hooks() {
 }
 
 # Rewrite Claude-oriented paths to Cursor-native locations in a tree.
-# Project overlays under .claude/skills/bcs-* (and other unmanaged paths) must keep
-# their .claude/ prefix — only rewrite skills that exist in agentic/skills/.
+# Framework content lives under a `beacon/` subfolder inside each .cursor/
+# directory (agents/skills/rules/hooks) so anything outside beacon/ is
+# structurally not part of the SDD framework — no naming-prefix convention
+# needed. This rewrite runs only on those beacon/ trees.
 adapt_cursor_paths() {
   local dest="$1"
   [[ -d "$dest" ]] || return 0
@@ -286,17 +293,18 @@ adapt_cursor_paths() {
     esac
     local tmp
     tmp="$(mktemp)"
-    # Base rewrites (agents/commands/hooks always move for Cursor)
+    # Base rewrites (framework agents/hooks move under .cursor/.../beacon/ for
+    # Cursor; commands are never mirrored into Cursor)
     sed \
-      -e 's|\.claude/agents/|.cursor/agents/|g' \
+      -e 's|\.claude/agents/|.cursor/agents/beacon/|g' \
       -e 's|\.claude/commands/|.cursor/commands/|g' \
-      -e 's|\.claude/hooks/|.cursor/hooks/|g' \
+      -e 's|\.claude/hooks/|.cursor/hooks/beacon/|g' \
       "$f" > "$tmp"
 
-    # Framework skills only: .claude/skills/<name>/ → .cursor/skills/<name>/
+    # Framework skills: .claude/skills/<name>/ → .cursor/skills/beacon/<name>/
     local name
     for name in "${skill_names[@]}"; do
-      sed -i '' -e "s|\\.claude/skills/${name}/|.cursor/skills/${name}/|g" "$tmp"
+      sed -i '' -e "s|\\.claude/skills/${name}/|.cursor/skills/beacon/${name}/|g" "$tmp"
     done
     mv "$tmp" "$f"
   done < <(find "$dest" -type f -print0 2>/dev/null)
@@ -332,51 +340,10 @@ install_adapter_docs() {
   managed_finish
 }
 
-# Point each IDE at the shared bcs-* overlays under .agents/.
-# Cursor already loads .agents/skills/. It does not load .agents/agents or
-# .agents/commands, so those are linked into .cursor/. Claude Code does not
-# load .agents/ at all, so agents, commands, and skills are linked into .claude/.
-# Skills are not linked into .cursor/skills/ (that would list each skill twice).
-link_bcs_overlays() {
-  local overlay_root="$ROOT/.agents"
-  [[ -d "$overlay_root" ]] || return 0
-
-  link_overlay_tree() {
-    local kind="$1"
-    local dest_root="$2"
-    local src_dir="$overlay_root/$kind"
-    [[ -d "$src_dir" ]] || return 0
-    local path name dest rel
-    for path in "$src_dir"/*; do
-      [[ -e "$path" ]] || continue
-      name="$(basename "$path")"
-      case "$name" in
-        bcs-*) ;;
-        *) continue ;;
-      esac
-      dest="$dest_root/$name"
-      if [[ "$DRY_RUN" -eq 1 ]]; then
-        echo "DRY: link $dest → $path"
-        continue
-      fi
-      mkdir -p "$dest_root"
-      rel="$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1], os.path.dirname(sys.argv[2])))' "$path" "$dest")"
-      ln -sfn "$rel" "$dest"
-    done
-  }
-
-  echo "    link bcs-* overlays from .agents/"
-  link_overlay_tree agents "$ROOT/.cursor/agents"
-  link_overlay_tree commands "$ROOT/.cursor/commands"
-  link_overlay_tree agents "$ROOT/.claude/agents"
-  link_overlay_tree commands "$ROOT/.claude/commands"
-  link_overlay_tree skills "$ROOT/.claude/skills"
-}
-
 # User-level Claude plugin. Not under ~/.claude/skills: on this machine that
 # path is a symlink to ~/.agents/skills, which Cursor loads as its own skills root.
-CLAUDE_PLUGIN_NAME="bcs-sdd"
-CLAUDE_MARKET_NAME="bcs-sdd-local"
+CLAUDE_PLUGIN_NAME="beacon-sdd"
+CLAUDE_MARKET_NAME="beacon-sdd-local"
 
 claude_plugin_market_root() {
   printf '%s\n' "$HOME/.claude/plugins/marketplaces/$CLAUDE_MARKET_NAME"
@@ -446,7 +413,7 @@ EOF
   cat > "$market/.claude-plugin/marketplace.json" <<EOF
 {
   "name": "$CLAUDE_MARKET_NAME",
-  "owner": { "name": "bcs" },
+  "owner": { "name": "beacon" },
   "plugins": [
     {
       "name": "$CLAUDE_PLUGIN_NAME",
@@ -533,7 +500,8 @@ install_claude() {
   install_claude_plugin
 
   # Drop the project framework mirror. Same-named files under .claude/ override
-  # the plugin, and skills there show up as a second /. Overlays stay.
+  # the plugin, and skills there show up as a second /. Only paths previously
+  # listed in .claude/.agentic-managed are removed.
   managed_begin "$ROOT/.claude"
   managed_finish
 
@@ -545,8 +513,7 @@ install_claude() {
   fi
 
   install_adapter_docs "claude"
-  link_bcs_overlays
-  echo "    done (plugin is user-level; bcs-* overlays stay in .agents/)"
+  echo "    done (plugin is user-level)"
 }
 
 install_cursor() {
@@ -560,30 +527,33 @@ install_cursor() {
     exit 1
   fi
 
-  # --- .cursor: agents + hooks + rules (+ hooks.json) ---
+  # --- .cursor: agents + hooks + rules + skills, all under a `beacon/`
+  # subfolder so anything outside beacon/ is structurally not part of the
+  # SDD framework. hooks.json itself must stay at the top-level path Cursor
+  # requires (.cursor/hooks.json) and points into .cursor/hooks/beacon/.
+  # Project skills, agents, and commands are not copied or linked.
   managed_begin "$ROOT/.cursor"
-  sync_dir_managed "$SRC/agents" "$ROOT/.cursor/agents" "agents"
-  sync_dir_managed "$SRC/hooks" "$ROOT/.cursor/hooks" "hooks"
-  overlay_adapter_hooks "cursor" "$ROOT/.cursor/hooks" "hooks"
-  sync_dir_managed "$rules_src" "$ROOT/.cursor/rules" "rules"
-  sync_dir_managed "$SRC/skills" "$ROOT/.cursor/skills" "skills"
-  apply_model_overrides "$ROOT/.cursor/agents" "cursor"
-  adapt_cursor_paths "$ROOT/.cursor/agents"
-  adapt_cursor_paths "$ROOT/.cursor/hooks"
-  adapt_cursor_paths "$ROOT/.cursor/skills"
+  sync_dir_managed "$SRC/agents" "$ROOT/.cursor/agents/beacon" "agents/beacon"
+  sync_dir_managed "$SRC/hooks" "$ROOT/.cursor/hooks/beacon" "hooks/beacon"
+  overlay_adapter_hooks "cursor" "$ROOT/.cursor/hooks/beacon" "hooks/beacon"
+  sync_dir_managed "$rules_src" "$ROOT/.cursor/rules/beacon" "rules/beacon"
+  sync_dir_managed "$SRC/skills" "$ROOT/.cursor/skills/beacon" "skills/beacon"
+  apply_model_overrides "$ROOT/.cursor/agents/beacon" "cursor"
+  adapt_cursor_paths "$ROOT/.cursor/agents/beacon"
+  adapt_cursor_paths "$ROOT/.cursor/hooks/beacon"
+  adapt_cursor_paths "$ROOT/.cursor/skills/beacon"
   # rules are authored for Cursor paths already — no .claude rewrite needed
   if [[ "$DRY_RUN" -eq 0 ]]; then
-    chmod +x "$ROOT/.cursor/hooks/"*.sh 2>/dev/null || true
+    chmod +x "$ROOT/.cursor/hooks/beacon/"*.sh 2>/dev/null || true
   fi
   copy_file_managed "$SRC/adapters/cursor/hooks.json" "$ROOT/.cursor/hooks.json" "hooks.json"
   managed_finish
 
-  # Previous installs wrote framework skills here. Cursor and Claude both
-  # discover .agents/skills/, so leave the managed tree removed.
+  # Previous installs wrote framework skills here. Remove only those managed
+  # paths. Anything else under .agents/ belongs to the project.
   if [[ -f "$ROOT/.agents/.agentic-managed" ]]; then
     deactivate_managed_runtime "$ROOT/.agents" "legacy .agents skills"
   fi
-  link_bcs_overlays
 
   install_adapter_docs "cursor"
 
@@ -614,7 +584,7 @@ install_cursor() {
     deactivate_managed_runtime "$ROOT/.claude" "Claude (.claude)"
   fi
 
-  echo "    done (agents+hooks+rules+skills→.cursor/; legacy .agents skills removed)"
+  echo "    done (agents+hooks+rules+skills→.cursor/*/beacon/; legacy .agents skills removed)"
 }
 
 install_antigravity() {
@@ -646,5 +616,25 @@ case "$TARGET" in
     exit 2
     ;;
 esac
+
+# .gitignore merge=union lives in .gitattributes (the built-in driver is
+# selected by that attribute, not by a custom merge.<name>.driver config).
+# Re-running setup restores the line if a merge dropped it.
+ensure_gitignore_merge_union() {
+  local attr="$ROOT/.gitattributes"
+  local line='.gitignore merge=union'
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "DRY: ensure '$line' in .gitattributes"
+    return
+  fi
+  if [[ -f "$attr" ]] && grep -qxF "$line" "$attr"; then
+    echo "    .gitattributes already sets .gitignore merge=union"
+    return
+  fi
+  printf '\n# Union .gitignore when merging this SDD into a project repo.\n%s\n' "$line" >> "$attr"
+  echo "    wrote .gitignore merge=union into .gitattributes"
+}
+
+ensure_gitignore_merge_union
 
 echo "OK: setup-agentic ($TARGET) finished."

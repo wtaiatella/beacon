@@ -5,12 +5,12 @@
 | Canonical | Installed to |
 |-----------|----------------|
 | `agentic/adapters/claude/CLAUDE.md` | `CLAUDE.md` (repo root, **generated**) |
-| `agentic/{agents,skills,commands,hooks}` | user plugin `bcs-sdd` (`~/.claude/plugins/marketplaces/bcs-sdd-local/bcs-sdd`) |
+| `agentic/{agents,skills,commands,hooks}` | user plugin `beacon-sdd` (`~/.claude/plugins/marketplaces/beacon-sdd-local/beacon-sdd`) |
 | `adapters/claude/settings.json` | plugin `hooks/hooks.json` (`${CLAUDE_PLUGIN_ROOT}`) |
 | `adapters/claude/docs/` | `docs/adapters/claude/` |
 
 Managed framework paths are recorded in `.claude/.agentic-managed`. Prune only touches that list.
-Project overlays (`bcs-*`) under `.claude/` are tracked in git and never pruned by setup.
+Setup does not copy or link project skills, agents, or commands.
 
 ## Always-on context
 
@@ -22,8 +22,7 @@ Scripts under `agentic/hooks/` are dual-protocol (Claude Code + Cursor). Claude 
 event names + matchers in `settings.json`; Cursor wiring is `adapters/cursor/hooks.json`.
 Shared payload/response normalization lives in `hooks/lib/hook-protocol.js`.
 
-## Project overlays
+## Project skills, agents, and commands
 
-Any agents/commands/skills **not** installed from `agentic/` (and therefore absent from
-`.agentic-managed`) are left untouched by setup. Keep project overlays in the runtime dir;
-do not add them under `agentic/`.
+Anything **not** installed from `agentic/` is left untouched. Keep it in the project;
+do not add it under `agentic/`. Setup does not symlink it into an IDE runtime.

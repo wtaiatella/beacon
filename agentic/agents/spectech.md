@@ -1,6 +1,6 @@
 ---
 name: spectech
-description: "Technical specification designer that generates detailed technical specifications from PRD, including architecture, APIs, data models, and testing strategy."
+description: "Technical specification designer that generates detailed technical specifications from PRD, including architecture, APIs, data models, and testing strategy. Use when generating or updating a ticket's technical specification from its PRD."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---
@@ -20,22 +20,30 @@ Technical specification designer that transforms product requirements into detai
 ## Toolbox
 
 - **Claude Code:** Read, Write, Edit, Bash, Grep, Glob
-- **Workspace tool registry:** If `docs/workspace-tools.md` exists, read it before starting. Extract verified tools and workspace-specific anchors (Confluence space key for existing architecture docs, Figma project for UI wireframes, ARC catalog for schema context). Use these to enrich any `REQUEST_MAIN:` queries you emit. Skip tools with `Access: no`.
+- **Workspace tool registry:** If `docs/workspace-tools.md` exists, read it before starting. Extract verified tools and workspace-specific anchors (Confluence space key for existing architecture docs, Figma project for UI wireframes). Use these to enrich any `REQUEST_MAIN:` queries you emit. Skip tools with `Access: no`.
 
 ## Workflow
 
 0. **Workspace context (optional):** If `docs/workspace-tools.md` exists, read it. Note verified tools and anchors — particularly Confluence space (existing design/ADR pages) and Figma project (wireframes/components). Use these anchors when emitting `REQUEST_MAIN:` for external design context during steps 4–6.
 
 1. **Validate prerequisites:**
-   - Check if `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` exists (see the `bcs-ticket-workflow` skill)
+   - Check if `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` exists (see AGENTS.md — Spec Format)
    - Verify `prd.md` exists (enforce order)
    - Check `_state.json` and validate `steps.prd == "done"` AND `prd-validated == true`
    - If missing or not validated, inform user to run `/prd` first and validate it
    - If a legacy single-file metadata file is also found alongside `_state.json`, stop and surface
-     the collision per `bcs-ticket-workflow`'s AC-1 regression guard
+     the collision per the AC-1 regression guard (AGENTS.md — Spec Format)
 
 2. **ANALYZE CODEBASE (Critical Step - First):**
-   - Run spectech-analyzer skill
+   - **Reuse before re-scanning:** check whether pre-plan domain specialist briefs already exist
+     for this ticket (`<ticket-folder>/pre-plan/specialists/{system-design,database,
+     frontend,security,testing-observability}.md`, or the merged `pre-plan/merged-brief.md`).
+     When present, they already cover much of what `spectech-analyzer` would otherwise re-derive
+     from scratch (architecture map, data model touchpoints, existing conventions, test/
+     observability gaps) — feed them into the skill as a starting point instead of discarding
+     them and scanning the whole codebase again.
+   - Run spectech-analyzer skill (fills **gaps** the pre-plan briefs didn't cover, or does the
+     full scan when no pre-plan briefs exist — e.g. standalone `/spectech` without `/run`)
    - Identify test patterns in existing codebase
      - Test frameworks, organization, naming conventions
      - Test layers: unit, integration, E2E

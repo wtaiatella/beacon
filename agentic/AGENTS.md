@@ -10,7 +10,7 @@
 > differs per tool): exact invocation mechanics (slash command → plugin/agent wiring), the model
 > (`model:` frontmatter vs. dynamic per-step override) selection table, and the hooks table (exact
 > event/matcher names differ between Claude Code and Cursor). See `CLAUDE.md` (Claude Code) or
-> `.cursor/rules/00-workspace-router.mdc` (Cursor) for those.
+> `.cursor/rules/beacon/00-workspace-router.mdc` (Cursor) for those.
 >
 > This file never contains content specific to a **target/child repository** (tech stack, that
 > project's own conventions, a developer's personal working style for that codebase). That belongs
@@ -33,13 +33,13 @@ handled by CI/CD. All code produced here is committed, pushed, and merged throug
 **One control-file convention, one orchestrator front end:** every ticket folder carries exactly
 one machine-readable control file, `_state.json`, plus a human-readable `_notes.md` — never
 `context.json`. The required orchestrator (`/run`) always starts at `/prd` → `/spectech` → `/tasks`;
-there is no `/plan` and no single-`spec.md`-producing mode in this repo. See the `bcs-ticket-workflow`
-skill for the full folder/schema contract.
+there is no `/plan` and no single-`spec.md`-producing mode in this repo. See **Spec Format
+(ticket-folder contract)** below for the full folder/schema contract.
 
 **Canonical framework source:** edit SDD agents/skills/commands/hooks under `agentic/` (not scanned
 by IDEs). Install into a runtime with `scripts/setup-agentic.sh claude|cursor|antigravity|all`.
-Project overlays stay in the IDE runtime dirs (outside `agentic/`) and are never pruned by setup
-unless they appear on that runtime's `.agentic-managed` manifest.
+Project skills, agents, and commands stay outside `agentic/`. Setup does not copy or link them,
+and prunes a path only when that runtime's `.agentic-managed` manifest lists it.
 
 ## Personas
 
@@ -62,10 +62,10 @@ unless they appear on that runtime's `.agentic-managed` manifest.
 | /rebase | Multi-repo git-sync (utility) | — (thin command) | `[repo ...] [ticket-key]` (empty args: infer one conversation ticket and its repo — `_state.json` fallback — else all child repos) |
 | /kb-refresh | Standalone: incremental multi-repo KB refresh | — (thin command) | `[repo ...]` |
 | /kb-concentrator | Standalone: global cross-repo KB concentrator | — (thin command) | `[flow-or-topic hint]` |
-| /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --reset]` |
+| /setup-workspace | Workspace tool registry setup | — (main loop + `setup-workspace` skill) | `[server-name ... \| --specialist <name> \| --reset]` |
 
-Project overlays are optional and **outside** the SDD required path — keep them in the IDE
-runtime dirs; SDD personas must not depend on them.
+Project skills, agents, and commands are optional and **outside** the SDD required path.
+SDD personas must not depend on them. Setup does not place them.
 
 `scrum` is **read-only**. All other persona subagents are write-capable. Personas escalate helpers,
 enterprise MCP, or human decisions with `REQUEST_MAIN:` / `QUESTION:` / `ASK_USER` /
@@ -80,8 +80,10 @@ Every unit of work — a support ticket or a feature — lives in one **ticket w
 ```
 docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with Jira key (e.g. BG-10965)
 docs/specs/{YYYY-MM-DD}-{slug}/                   # without ticket key
-├── _state.json      # machine state — the ONLY control file (see bcs-ticket-workflow skill)
+├── _state.json      # machine state — the ONLY control file (see Spec Format below)
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step
+├── pre-plan/        # grounding briefs, review, and gate (sibling of _run)
+├── _run/            # timeline, audit, explorer, scanners, diffs
 ├── ticket.md        # optional issue definition + comments (when present)
 ├── attachments/      # optional attachments
 ├── prd.md            # product requirements (/prd)
@@ -129,8 +131,8 @@ control, reused unchanged.
 (multi-repo git-sync), `/kb-refresh` / `/kb-concentrator` (knowledge), `/setup-workspace`
 (tool registry). These share the workspace but are not steps of `/run`.
 
-**Project overlays (optional, outside SDD):** project-specific commands/agents/skills kept in the
-IDE runtime dirs (not under `agentic/`). They may write extra files into a ticket folder when used,
+**Project skills, agents, and commands (optional, outside SDD):** kept by the project, not under
+`agentic/`, and not installed by setup. They may write extra files into a ticket folder when used,
 but **SDD personas and the required orchestrator must not require them**.
 
 ## Supporting Subagents
@@ -151,7 +153,27 @@ and responsibilities below are shared.)
 | dev-reviewer | Code quality reviewer | /run (after /dev) |
 | sre-reviewer | Infra quality reviewer | /run (after /sre) |
 | data-reviewer | Data quality reviewer | /run (after /data) |
-| pre-plan-triage | Pre-plan context router | /run (before the PRD/Spectech/Tasks segment) |
+| pre-plan-triage | Pre-plan context router (also classifies `project_maturity`: greenfield/brownfield) | /run (before the PRD/Spectech/Tasks segment) |
+| pre-plan-reviewer | Pre-plan grounding critic (gaps/inconsistency/ambiguity, before `/prd` ever runs) | /run (after the pre-plan merge, before `Task(prd)`) |
+
+**Pre-plan domain specialists (read-only; the default, always-available pre-plan grounding — no MCP/config required):**
+
+| Name | Role | Used By |
+|------|------|---------|
+| system-design-specialist | Architecture grounding (modules/boundaries touched; root-cause for bugs) | /run pre-plan wave |
+| database-specialist | Persistence grounding (tables/migrations/constraints) | /run pre-plan wave, when ticket touches data |
+| frontend-specialist | UI grounding (framework/state/components) | /run pre-plan wave, when ticket touches UI |
+| security-specialist | Threat-surface grounding (auth/input/sensitive data) | /run pre-plan wave, when ticket crosses a security boundary |
+| testing-observability-specialist | Test/log/metric **gap** finding for planning (distinct from QA's verification role) | /run pre-plan wave |
+| repro-specialist | Empirical reproduction (always for bug tickets; agent's own judgment otherwise); shares its procedure with `/fix` via the `repro` skill. A project skill or agent registered by `/setup-workspace` may replace it for a ticket when triage says so | /run pre-plan wave |
+
+**Project maturity (`greenfield` vs. `brownfield`):** `pre-plan-triage` also classifies
+`project_maturity` per ticket area — `brownfield` (default) when this area has existing
+code/conventions to ground in, `greenfield` when it genuinely has none. This is a **second,
+orthogonal axis** to which specialists are routed: it does not add agents, it switches each
+routed specialist's **mode** between "ground in what exists" (brownfield) and "propose the
+baseline convention for this area" (greenfield, a one-time bootstrap, not the ticket's full
+solution). Keeps the specialist catalog small instead of multiplying agents per project phase.
 
 **Front-end personas (write-capable):**
 
@@ -161,10 +183,14 @@ and responsibilities below are shared.)
 | spectech | Technical specification designer | /spectech command |
 | tasks | Task breakdown specialist | /tasks command |
 
-**Enterprise MCP specialists (read-only):** `mcp-arc`, `mcp-confluence`, `mcp-gitlab`, `mcp-jira`,
-`mcp-glean`. Persona subagents must **not** call enterprise MCP tools directly; they emit a
-`REQUEST_MAIN:` escalation with a specialist label and query, and the main loop runs the matching
-`mcp-*` subagent and feeds the bounded result back.
+**Enterprise MCP specialists (read-only, optional/opt-in — not default pre-plan sources):**
+`mcp-confluence`, `mcp-jira`, `mcp-glean` are only scheduled by `pre-plan-triage` when **both**
+registered with `Access: yes` in `docs/workspace-tools.md` (via `/setup-workspace`) **and**
+signaled by the ticket text — a fresh workspace schedules none of them by default, which is
+correct, not degraded. `mcp-gitlab` is not a pre-plan source at all; it's invoked mid-run for
+branch/MR metadata. Persona subagents must **not** call enterprise MCP tools directly; they emit
+a `REQUEST_MAIN:` escalation with a specialist label and query, and the main loop runs the
+matching `mcp-*` subagent and feeds the bounded result back.
 
 > **Flat orchestration (a runtime constraint, not just a convention):** subagents cannot spawn
 > further subagents. Only the **main conversation loop** schedules the next delegation — it invokes
@@ -189,6 +215,8 @@ and responsibilities below are shared.)
 - **`--resume`:** resume from last successful step after a failure
 - **`--max-iterations N`:** override implementation/review rework caps
 - **`--max-plan-iterations N`:** override the PRD/Spectech/Tasks ↔ plan-reviewer loop caps (default 3)
+- **`--max-preplan-iterations N`:** override the pre-plan merge ↔ pre-plan-reviewer self-heal loop caps, before `Task(prd)` ever runs (default 3; independent of `--max-plan-iterations`)
+- **`--pre-plan` / `--plan` / `--dev` / `--finish`:** mutually exclusive **checkpoint** flags — run normally (from the start, or `--resume`d) through the end of the named stage, then stop with `STAGE COMPLETE: <name>` instead of continuing (`--finish` is the non-early-stop case, ending in the normal `PIPELINE: COMPLETE`). Pass `--resume` on every staged invocation after the first for a ticket. See the `run-pipeline` skill — **Staged execution (checkpoint flags)**.
 - **Escape hatches:** /fix (bugs), /do (quick tasks) — **Ticket-folder amendment:** re-run `/prd`/`/spectech`/`/tasks` over the existing folder with "changes"
 
 **Branch gate timing (important, non-default from a naive reading):** branch awareness at the
@@ -214,16 +242,16 @@ parallel working copies. See the `run-pipeline` skill — **§1**, **§5 Pre-che
   "other-manual" at Finish, pass **`--no-commit`**. Never raw `git commit`. Mid-pipeline never pushes.
 - **Push:** the main loop may run `git push` (including `--force-with-lease` when a confirmed history rewrite requires it) after an explicit user "Yes" to a push prompt. Never auto-push silently — except `/rebase`.
 - **Exception — `/rebase`:** invoking `/rebase` **is** that consent. When a ticket key is given, checkout (or create a local tracking branch from an existing `origin` ref) without a second Yes — never invent a branch that does not exist on origin. After a clean rebase of a non-protected working branch, push with `git push --force-with-lease` (or `git push -u` when there is no upstream). Do not ask for a second Yes. Do not push on conflict, dirty-tree skip, failed pull, or when the current branch is the main/default. Never `--force` / `-f` without lease. Never push to `main` / `master` / `develop` / `development` / `release/*`.
-- Each branch creation and each mutating GitLab action (MR create/update, write API) requires **explicit user confirmation at that step** — except `/rebase` creating a local branch that already exists on `origin`. Once confirmed, the main loop performs MR create/update via the GitLab MCP, always presenting the MR title/body for review first. See the `bcs-gitlab-mr-from-spec` skill and `scripts/tools/mr-description-from-spec.sh` for body content. `/rebase` (multi-repo git-sync) never creates or updates an MR via GitLab API and never transitions a Jira ticket.
+- Each branch creation and each mutating GitLab action (MR create/update, write API) requires **explicit user confirmation at that step** — except `/rebase` creating a local branch that already exists on `origin`. Once confirmed, the main loop performs MR create/update via the GitLab MCP, always presenting the MR title/body for review first. See `scripts/tools/mr-description-from-spec.sh` for body content. `/rebase` (multi-repo git-sync) never creates or updates an MR via GitLab API and never transitions a Jira ticket.
 - GitLab operations use the **GitLab MCP** as the primary tool, run only after the user confirms. `glab` is **not** used in this workspace (not authenticated); do not suggest it.
 
 ## Confidence Scoring
 
 - Per-persona reviewers emit 0–100% scores including spec alignment
 - /scrum (PO/SM/PM) evaluates at each gate with business judgment
-- **≥ threshold (default 75%):** PROCEED
-- **50–74%:** ASK_USER
-- **< 50%:** REWORK (automatic)
+- **≥ threshold (default 90%):** PROCEED
+- **Below threshold, first miss:** REWORK (automatic)
+- **Below threshold after at least one rework:** ASK_USER
 - **Max loops hit:** ESCALATE
 - /scrum may override defaults when business context warrants
 - Threshold is per-gate; document overrides in the ticket folder or session notes when non-default
@@ -231,19 +259,39 @@ parallel working copies. See the `run-pipeline` skill — **§1**, **§5 Pre-che
 
 ## Spec Format (ticket-folder contract)
 
-- Path: `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — one folder per ticket
-- Control file: `_state.json` (machine-readable — schema below) + `_notes.md` (human-readable running log). **`context.json` is never created** — see the `bcs-ticket-workflow` skill's AC-1 regression guard: any step that finds both files in the same folder must stop and surface the collision.
-- `_state.json.steps` is an **open** string-keyed map: the required orchestrator's six keys (`prd`, `spectech`, `tasks`, `implement`, `code_review`, `summary`), or a standalone piece's own key (e.g. `ticket_intake`, `impact_analysis`, `repro`, `flowchart_check`, `build_test`, `proof`). Values: `pending | in_progress | done | blocked | skipped`.
+This section is the **single source of truth** for the `_state.json`/`_notes.md` control-file
+contract — every piece that touches a ticket folder reads this instead of re-describing the
+schema.
+
+- **Path/naming convention:** `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or
+  `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — one folder per ticket, date-prefixed, with a
+  short kebab-case slug. If a step needs to create the folder, it uses this convention.
+- **Control files:** `_state.json` (machine-readable) + `_notes.md` (human-readable running log).
+  **`context.json` is never created.**
+- **AC-1 regression guard:** any step that finds both `context.json` and `_state.json` in the same
+  folder must stop and surface the collision — never silently prefer one.
+- **`_state.json` schema:** `ticket_key` (or `null` when there is none), `slug`, `repo`/`branch`
+  (multi-repo, when applicable), `commit_policy` (see **Git and GitLab mutations**), and `steps` —
+  an **open** string-keyed map: the required orchestrator's six keys (`prd`, `spectech`, `tasks`,
+  `implement`, `code_review`, `summary`), or a standalone piece's own key (e.g. `ticket_intake`,
+  `impact_analysis`, `repro`, `flowchart_check`, `build_test`, `proof`). Step values: `pending |
+  in_progress | done | blocked | skipped`.
+- **`_notes.md` — Auditability convention:** append-only running log; one entry per state-changing
+  step (timestamp, acting persona/step, decision or outcome, and where to resume). Every step that
+  updates `_state.json` appends a matching `_notes.md` entry.
+- **Stop-gate / HITL rules:** a persona blocked on a genuine question or a low-confidence decision
+  surfaces it via `QUESTION:` / `ASK_USER` / `APPROVAL_NEEDED:` (see **Flat orchestration** above)
+  and records the gate in `_notes.md` rather than guessing.
 - `prd.md`, `spectech.md`, `tasks.md` — three separate files (never merged); `spectech.md`'s frontmatter declares `profile: lean|standard|full`.
 - Domain tags on `tasks.md` checkboxes: `[dev]`, `[sre]`, `[data]`; multi-repo: `[dev:repo]`
 - Phases for cross-repo dependencies
 - Shorthand: full folder path, slug match, `latest`, or a Jira key that resolves to/creates a folder
 
-See the `bcs-ticket-workflow` skill for the full `_state.json` schema, `_notes.md` convention, and stop-gate/HITL rules — every piece that touches a ticket folder's control file reads this one skill instead of re-describing the schema.
-
 ## Multi-Repo
 
-- Target repos are cloned as subdirectories of the workspace root and are gitignored (per-developer, not tracked)
+- Target repos are cloned as subdirectories of the workspace root; `/clone` excludes each one from
+  this workspace's own history by appending a `.gitignore` entry (they are their own git repos —
+  never tracked as part of the workspace)
 - Add one with **`/clone <git-url> [target-dir]`** — clones into the root and registers it in the inventory
 - The inventory (repo name + current branch) is detected dynamically and injected into context on session start — no need to list repos manually
 - Scope tables in specs list involved repos
@@ -258,16 +306,16 @@ See the `bcs-ticket-workflow` skill for the full `_state.json` schema, `_notes.m
 
 ## Knowledge Base
 
-**Preferred source of curated context is ARC MCP (AvaTax Release Central)** — see `docs/reference/arc-mcp-workflow.md`. `/prd` uses ARC first when configured (in-session, standalone use — see the `run-pipeline` skill's ARC lanes). The local `/kb` knowledge base below is the **fallback** for repos not onboarded to ARC.
-
-> **Note:** ARC is Avalara-specific and is being phased out of the core pre-plan flow in favor of
-> generic, codebase-grounded pre-plan specialists — see
-> `myDocs/specs/2026-10-06-generic-pre-plan-specialists.md` if that migration has landed yet in
-> your checkout. Until then, this section reflects current behavior.
+**Per-ticket grounding comes from the pre-plan domain specialists** (`system-design-specialist`,
+`database-specialist`, `frontend-specialist`, `security-specialist`,
+`testing-observability-specialist`) — always available, no MCP, no setup, read the current code
+on demand for every ticket. The local `/kb` knowledge base below is a **separate, optional**
+mechanism for **persistent, cross-ticket** context (architecture overview, conventions) that
+doesn't change per ticket — it complements, not replaces, the domain specialists.
 
 Structured project context at `knowledge/{project-name}/` (tracked in git, shared across the team).
 - Folder per project: `_index.md` (always loaded, ~50 lines) + section files loaded on demand (architecture, api, data-models, dependencies, infrastructure, conventions)
-- Built by `/kb <target-dir>` — expensive, manual, full-rebuild-per-project. Run on first onboarding or after major restructuring.
+- Built by `/kb <target-dir>` — optional, somewhat expensive, manual, full-rebuild-per-project. Run on first onboarding or after major restructuring.
 - **Incremental, multi-repo-aware refresh:** `/kb-refresh` (standalone) — for every child repo, pulls the main branch and diff-classifies what changed to decide which `knowledge/{project}/` need updating; distinct from `/kb`'s manual full rebuild.
 - **Cross-repo, system-level view:** `/kb-concentrator` (standalone) — maintains `knowledge/global-kb/`, the aggregated view of how projects call into each other (end-to-end flows, integration boundaries). Typically chained after `/kb-refresh`.
 - Consumed by `/prd` (loads index + relevant sections, falls back to codebase-explorer if KB absent)
@@ -276,18 +324,20 @@ Structured project context at `knowledge/{project-name}/` (tracked in git, share
 ## Skills
 
 Framework skills ship under `agentic/skills/` (installed per-IDE — see your adapter file for exact
-paths). Project overlay skills are named `bcs-*` and kept outside `agentic/`.
+paths). Optional project-specific skills (if a team adds any) are kept outside `agentic/`
+and must never be required by a core SDD persona or by the required orchestrator. Setup does
+not copy or link them.
 
-- **bcs-ticket-workflow** — *(project overlay)* single source of truth for the `_state.json` schema, `_notes.md` convention, and stop-gate/HITL rules; every piece that touches a ticket folder reads this instead of re-describing the schema
 - **run-pipeline** — /run (the authoritative end-to-end orchestration workflow the main loop follows — PRD/Spectech/Tasks segment → implement → review → QA → summary)
 - **generate-prd** / **generate-spectech** / **generate-tasks** — the `/prd`/`/spectech`/`/tasks` personas' normative document templates, adapted to read/write `_state.json`+`_notes.md`
 - **prd-validator** / **prd-discovery** — supporting skills for `/prd` (implicit-requirements/scope validation; brainstorm phase), adapted to the same control-file contract
 - **generate-spec** — retained only as a reference for `plan-reviewer.md`'s single-file-mode completeness check (unchanged persona, FR-7); nothing in this repo produces single-file specs anymore
+- **spectech-analyzer** — /spectech (reuses pre-plan domain specialist briefs before re-scanning the codebase; combines test-harness-analyzer + architecture-detailer)
+- **repro** — shared reproduce-the-symptom procedure, used by both `/fix` and the pre-plan `repro-specialist` so there is one implementation, not two
 - **review-report** — /qa (structured QA + security narrative)
 - **deploy-checklist** — /sre (CI/CD coverage checklist, 5-tier: dev/qa/int/sbx/prd)
 - **confidence-scoring** — reviewers + /scrum (per-domain weights, sub-scores, trend analysis, calibration)
-- **knowledge-base** — /kb (output structure; DEPRECATED for new projects in favor of ARC MCP — fallback only)
-- **bcs-gitlab-mr-from-spec** — *(project overlay)* /summary + finish (spec-driven MR body text for user-run GitLab actions; no autonomous commit/push/MR)
+- **knowledge-base** — /kb (output structure; optional and infrequent — the per-ticket pre-plan domain specialists cover most day-to-day grounding needs without it)
 - **kb-refresh** / **kb-concentrator** — standalone, incremental multi-repo KB tooling (see Knowledge Base above); thin utility commands, same shape as `/clone`
 - **clone** / **rebase** / **setup-workspace** — workspace utilities (child-repo clone; multi-repo git-sync; MCP tool registry)
 
@@ -309,31 +359,26 @@ Exact event names, matchers, and script locations are IDE-specific — see your 
 Hooks fail-open: failures log but don't block. `subagent-gate` has no override — writes to
 protected branches are always refused.
 
-## Session Memory
+## Run timeline
 
-Ephemeral scratch per session at `docs/sessions/<session-id>/current.md` (gitignored). The active `session-id` is stored in `docs/sessions/ACTIVE_SESSION`.
-- Read: `scripts/tools/session-memory.sh read`
-- Write: `scripts/tools/session-memory.sh write "DECISION: chose PostgreSQL for sessions"`
-- Clear: `scripts/tools/session-memory.sh clear`
+Each `/run` keeps its scratch in the ticket folder, at `<ticket>/_run/timeline.md` (tracked with the ticket). There is no global session id and no 24h prune. `/fix` and `/do` do not write this file.
+- Read: `scripts/tools/session-memory.sh --ticket <ticket-folder> read`
+- Write: `scripts/tools/session-memory.sh --ticket <ticket-folder> write "DECISION: chose PostgreSQL for sessions"`
+- Clear: `scripts/tools/session-memory.sh --ticket <ticket-folder> clear`
 - Categories: DECISION, QUESTION, GATE, or free-form context. Optional post-`/run` audit lines (human only): `COMMIT_SUGGESTIONS:`, `PUSH_CONFIRMED:`, `MR_TARGET_BRANCH:`, `MR_CONFIRMED:`.
-- Injected into context on session start via the `session-init` hook (includes the active session id + path).
-- **Cleanup:** stale session files (untouched >24h) are deleted at next session start; empty session dirs may be removed afterward. Not a timer — only pruned when a new session begins.
-- **Two-layer state:** this is the ephemeral, cross-session-agnostic **orchestration-run** checkpoint (crash-resume for one `/run`). It is separate from — and does not replace — each ticket's own persistent `_state.json`/`_notes.md`, which is the per-ticket, cross-session audit trail (see the `bcs-ticket-workflow` skill). Not a database. Not a replacement for the ticket folder.
-
-> **Note:** this section is under active reconsideration — see
-> `myDocs/specs/2026-10-06-eliminate-sessions-ticket-scoped-state.md`. Until that migration lands,
-> it reflects current behavior.
+- `--resume` reads the last `GATE:` line in that timeline.
+- **Two-layer state:** `_run/` is the orchestration checkpoint for one ticket (timeline, audit, explorer, scanners, diffs). Pre-plan documents live beside it, at `<ticket>/pre-plan/`. Neither replaces `_state.json` / `_notes.md` (see **Spec Format** above).
 
 ## Metrics
 
 Local-only pipeline and agent metrics: `scripts/tools/metrics.sh [overview|agents|specs|gates|sessions|models|cost|export|budget-check]`.
-Aggregates data from `docs/audit.log`, `docs/sessions/`, and optional `docs/usage-events.tsv`. Nothing leaves the machine.
+Aggregates data from `docs/audit.log` and optional `docs/usage-events.tsv`. Nothing leaves the machine.
 
 ## MCP
 
 Servers are configured per-IDE (see your adapter file); teams add or remove them as needed. All personas work without MCP — it is never required for the core flow.
 
-Enterprise MCP access is **mediated through the read-only `mcp-*` specialist subagents** (`mcp-arc`, `mcp-confluence`, `mcp-gitlab`, `mcp-jira`, `mcp-glean`), scheduled only by the main loop. Persona subagents never call enterprise MCP tools directly; they escalate with `REQUEST_MAIN: <specialist> <query>` and the main loop runs the matching specialist. When ARC MCP is configured, `/prd` prefers it for AvaTax/project/schema context.
+Enterprise MCP access is **mediated through the read-only `mcp-*` specialist subagents** (`mcp-confluence`, `mcp-gitlab`, `mcp-jira`, `mcp-glean`), scheduled only by the main loop. Persona subagents never call enterprise MCP tools directly; they escalate with `REQUEST_MAIN: <specialist> <query>` and the main loop runs the matching specialist. `mcp-confluence`/`mcp-jira`/`mcp-glean` are **optional, opt-in** pre-plan sources (registered via `/setup-workspace`, gated by `pre-plan-triage` — see **Pipeline**); `mcp-gitlab` is used mid-run for branch/MR metadata, not as a pre-plan source.
 
 ## Error Protocol
 
@@ -347,4 +392,4 @@ Enterprise MCP access is **mediated through the read-only `mcp-*` specialist sub
 8. **Hook failure:** fail-open; log; do not block
 9. **Orchestration failure:** /run stops and reports; QA loops capped at 3; review loops at 2; surface last step and suggested next action
 10. **Reviewer override:** log actor, reason, and prior score for audit trail
-11. **Two control files detected (`context.json` + `_state.json`):** stop and surface the collision — never silently prefer one (AC-1 regression guard, per the `bcs-ticket-workflow` skill)
+11. **Two control files detected (`context.json` + `_state.json`):** stop and surface the collision — never silently prefer one (AC-1 regression guard, per **Spec Format** above)

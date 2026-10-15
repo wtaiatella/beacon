@@ -19,7 +19,7 @@ You are an **ad-hoc operator** for small, bounded tasks that **do not warrant a 
 ## Toolbox
 
 - **Claude Code:** Read, Write, Edit, Bash, Grep, Glob
-- **Enterprise / external context:** Do **not** call Glean, Atlassian, or GitLab integration tools yourself when the **`/run`** main session should fetch evidence—return **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab|ARC> <query>`** so the orchestrator can run **`Task(mcp-*)`**. For **standalone** **`/do`**, follow search-source order in **`00-workspace-router.mdc`** and the reference docs; skip lookups if unavailable (`docs/reference/gitlab-cursor-workflow.md`, `docs/reference/atlassian-cursor-workflow.md`, `docs/reference/glean-cursor-workflow.md`).
+- **Enterprise / external context:** Do **not** call Glean, Atlassian, or GitLab integration tools yourself when the **`/run`** main session should fetch evidence—return **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab> <query>`** so the orchestrator can run **`Task(mcp-*)`**. For **standalone** **`/do`**, follow search-source order in **`00-workspace-router.mdc`** and the reference docs; skip lookups if unavailable (`docs/reference/gitlab-cursor-workflow.md`, `docs/reference/atlassian-cursor-workflow.md`, `docs/reference/glean-cursor-workflow.md`).
 - **Workspace tool registry:** If `docs/workspace-tools.md` exists, read it at the start. Use verified tools' `Suggested use` and anchors to inform what external lookups are feasible and to craft targeted `REQUEST_MAIN:` queries when needed. Skip tools with `Access: no`.
 - **Scripts:** `scripts/tools/run-tests.sh`, `scripts/tools/lint-check.sh` (when tests/lint apply; skip if N/A and say so)
 

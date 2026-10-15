@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ROAD-55: scan .cursor agent/skill markdown for instructional shell one-liners.
+ROAD-55: scan agentic agent/skill markdown for instructional shell one-liners.
 
 Forbidden substrings (outside fenced code blocks) unless exempt — see
 lint-check.sh header for policy and CONTRIBUTING.md for allowlist usage.
@@ -8,8 +8,8 @@ lint-check.sh header for policy and CONTRIBUTING.md for allowlist usage.
 Exemptions:
   - Lines inside markdown fenced blocks (``` ... ```).
   - Lines containing HTML: <!-- lint:allow-subagent-shell -->
-  - Lines that only document first-party scripts (pipeline-finish, git-inspect,
-    query-transcript, audit-session-trace).
+  - Lines that only document first-party scripts (pipeline-finish, pipeline-commit,
+    git-inspect, query-transcript, audit-session-trace).
   - Lines that are clearly prohibition / negation prose (do not, never, etc.).
 """
 from __future__ import annotations
@@ -31,6 +31,7 @@ ALLOW_LINE = re.compile(r"lint:allow-subagent-shell")
 # If the line mentions these, it is documenting allowed tooling / finish path — allow.
 PATH_EXEMPT = (
     "pipeline-finish",
+    "pipeline-commit",
     "git-inspect.sh",
     "query-transcript.py",
     "audit-session-trace",
@@ -54,8 +55,8 @@ PROSE_NEGATION = re.compile(
 
 def iter_markdown_files(root: Path) -> list[Path]:
     out: list[Path] = []
-    agents = root / ".cursor" / "agents"
-    skills = root / ".cursor" / "skills"
+    agents = root / "agentic" / "agents"
+    skills = root / "agentic" / "skills"
     if agents.is_dir():
         out.extend(sorted(agents.glob("*.md")))
     if skills.is_dir():
@@ -114,8 +115,8 @@ def main() -> int:
         return 0
 
     print(
-        "Error: Forbidden subagent shell patterns in .cursor/agents/*.md or "
-        ".cursor/skills/**/*.md (ROAD-55).",
+        "Error: Forbidden subagent shell patterns in agentic/agents/*.md or "
+        "agentic/skills/**/*.md (ROAD-55).",
         file=sys.stderr,
     )
     print(

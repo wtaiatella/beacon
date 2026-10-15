@@ -9,9 +9,9 @@ Two ideas sit on top of each other:
 - **SDD** (Spec-Driven Development) makes **specs** authoritative: scope, architecture, acceptance criteria, and phases live in `prd.md` / `spectech.md` / `tasks.md` inside a **ticket folder** under `docs/specs/`, not only in chat history.
 - **GSD** (thin vertical slices) keeps each implementation phase **small and independently testable** — a gate between phases instead of one monolithic "do everything" change.
 
-**Flat orchestration** and **least-privilege slices** exist so the system does not recreate the **infinite delegation loops** common in unconstrained multi-agent setups — where one agent spawns another, which spawns another, until context explodes and accountability vanishes. **Only** the `/run` **main session** schedules `Task(prd|spectech|tasks|dev|sre|data|qa|...)`, readonly specialists, and gates; **personas do not nest `Task` on other personas** (flat orchestration — a hard property of the Claude Code / Cursor agent runtime, not just a convention here). Implementers receive **least-privilege** work: **one phase**, **one domain** (e.g. `dev` vs `sre`), and `WORKTREE_PATHS` when needed — not full merged MCP dumps or whole-session transcripts. Readonly specialists write **bounded** artifacts under `docs/sessions/<id>/`. That structure keeps delegation **finite**, prompts **scoped**, and handoffs **explicit**.
+**Flat orchestration** and **least-privilege slices** exist so the system does not recreate the **infinite delegation loops** common in unconstrained multi-agent setups — where one agent spawns another, which spawns another, until context explodes and accountability vanishes. **Only** the `/run` **main session** schedules `Task(prd|spectech|tasks|dev|sre|data|qa|...)`, readonly specialists, and gates; **personas do not nest `Task` on other personas** (flat orchestration — a hard property of the Claude Code / Cursor agent runtime, not just a convention here). Implementers receive **least-privilege** work: **one phase**, **one domain** (e.g. `dev` vs `sre`), and `WORKTREE_PATHS` when needed — not full merged MCP dumps or whole-session transcripts. Readonly specialists write **bounded** artifacts under `<ticket-folder>/_run/`. That structure keeps delegation **finite**, prompts **scoped**, and handoffs **explicit**.
 
-**In one line:** `/run <ticket-folder | JIRA-KEY>` loads **[run-pipeline](agentic/skills/run-pipeline/SKILL.md)**: `/prd` → `/spectech` → `/tasks` → implement → review → QA → summary, with gates and least-privilege artifacts under `docs/sessions/<id>/`.
+**In one line:** `/run <ticket-folder | JIRA-KEY>` loads **[run-pipeline](agentic/skills/run-pipeline/SKILL.md)**: `/prd` → `/spectech` → `/tasks` → implement → review → QA → summary, with gates and least-privilege artifacts under `<ticket-folder>/_run/`.
 
 ---
 
@@ -53,17 +53,17 @@ Procedure: [run-pipeline skill](agentic/skills/run-pipeline/SKILL.md) · [human-
 The SDD framework (agents, skills, commands, hooks) has **one canonical source**: `agentic/`. It is **installed** into whichever IDE runtime(s) you use — nothing under `.claude/` or `.cursor/` that came from `agentic/` should be hand-edited; edit the source and reinstall.
 
 ```bash
-scripts/setup-agentic.sh claude   # → user-level Claude plugin `bcs-sdd` (/bcs-sdd:<name>) + root CLAUDE.md
+scripts/setup-agentic.sh claude   # → user-level Claude plugin `beacon-sdd` (/beacon-sdd:<name>) + root CLAUDE.md
 scripts/setup-agentic.sh cursor   # → .cursor/{agents,hooks,hooks.json,rules,skills}
 scripts/setup-agentic.sh all      # claude + cursor (+ antigravity stub)
 ```
 
 | Layer | Canonical source | Claude Code | Cursor |
 |---|---|---|---|
-| Personas / subagents | `agentic/agents/` | `bcs-sdd` plugin subagents (Task tool) | `.cursor/agents/` |
-| Commands | `agentic/commands/` | `/bcs-sdd:<name>` slash commands | — (Cursor does not mirror commands as skills) |
-| Skills | `agentic/skills/` | `bcs-sdd` plugin skills | `.cursor/skills/` |
-| Hooks | `agentic/hooks/` + `agentic/adapters/<ide>/hooks/` | `bcs-sdd` plugin `hooks/hooks.json` | `.cursor/hooks.json` + `.cursor/hooks/` |
+| Personas / subagents | `agentic/agents/` | `beacon-sdd` plugin subagents (Task tool) | `.cursor/agents/beacon/` |
+| Commands | `agentic/commands/` | `/beacon-sdd:<name>` slash commands | — (Cursor does not mirror commands as skills) |
+| Skills | `agentic/skills/` | `beacon-sdd` plugin skills | `.cursor/skills/beacon/` |
+| Hooks | `agentic/hooks/` + `agentic/adapters/<ide>/hooks/` | `beacon-sdd` plugin `hooks/hooks.json` | `.cursor/hooks.json` + `.cursor/hooks/beacon/` |
 | **Shared SDD contract** | `agentic/AGENTS.md` | root `AGENTS.md` (generated; imported via `@AGENTS.md` in `CLAUDE.md`) | root `AGENTS.md` (generated; read natively) |
 | Always-on identity (IDE-specific wiring only) | `agentic/adapters/claude/CLAUDE.md` | root `CLAUDE.md` (generated — do not edit) | — |
 | Always-on identity (IDE-specific wiring only) | `agentic/adapters/cursor/rules/00-workspace-router.mdc` | — | `.cursor/rules/00-workspace-router.mdc` (generated) |
@@ -75,7 +75,7 @@ Cursor-flavored copy of the same rules. `CLAUDE.md` and `00-workspace-router.mdc
 what genuinely differs per tool: exact invocation mechanics, model-selection tables, and hook
 event/matcher names.
 
-**Project overlays** (`bcs-*`, optional, team- or repo-specific) live outside `agentic/` in the IDE runtime dirs (`.claude/`, `.cursor/`, or the shared `.agents/` tree that both read from) and are **never required** by the core SDD personas or the `/run` orchestrator. Full setup details: [agentic/docs/setup.md](agentic/docs/setup.md).
+**Project skills, agents, and commands** live outside `agentic/`, wherever that project keeps them. Setup does not copy or symlink them. They are **never required** by the core SDD personas or the `/run` orchestrator. Full setup details: [agentic/docs/setup.md](agentic/docs/setup.md).
 
 ---
 
@@ -95,13 +95,13 @@ docs/specs/{YYYY-MM-DD}-{slug}/                   # without a ticket key
 └── summary.md           # post-pipeline handoff narrative (/summary)
 ```
 
-`prd.md`, `spectech.md`, and `tasks.md` are **three separate, right-sized files — never merged into one `spec.md`**. There is **no `/plan` command and no single-file spec mode** in this repo; the required front end of `/run` is always `/prd` → `/spectech` → `/tasks`. `_state.json` + `_notes.md` is the **only** control-file pair — if a folder ever contains `context.json` too, that is a regression to report, not something to silently resolve. Full schema: the `bcs-ticket-workflow` project skill.
+`prd.md`, `spectech.md`, and `tasks.md` are **three separate, right-sized files — never merged into one `spec.md`**. There is **no `/plan` command and no single-file spec mode** in this repo; the required front end of `/run` is always `/prd` → `/spectech` → `/tasks`. `_state.json` + `_notes.md` is the **only** control-file pair — if a folder ever contains `context.json` too, that is a regression to report, not something to silently resolve. Full schema: see `agentic/AGENTS.md` — **Spec Format**.
 
 ---
 
 ## Orchestration hub
 
-Readonly specialists run **only** from the **orchestrator** (flat delegation). They write **bounded** output under `docs/sessions/<id>/pre-plan/` (merged MCP briefs) and `docs/sessions/<id>/artifacts/`. Implementers get **least-privilege** slices — one phase, one domain, `WORKTREE_PATHS` — not full session dumps.
+Readonly specialists run **only** from the **orchestrator** (flat delegation). The orchestrator writes their **bounded** briefs under `<ticket-folder>/pre-plan/` (sibling of `_run`). Explorer, scanners, and diffs stay under `<ticket-folder>/_run/`. Implementers get **least-privilege** slices — one phase, one domain, `WORKTREE_PATHS` — not full session dumps.
 
 `Task(do)` applies mechanical edits (spec checkboxes, `_state.json`, `_notes.md`) through the **allowlisted script API**, and only **after** `Task(scrum)` authorizes it for that gate. **Finish** runs `pipeline-finish.sh` per the git/GitLab rules in `CLAUDE.md` and run-pipeline **§9**.
 
@@ -113,17 +113,18 @@ flowchart TD
 
     subgraph RO["Readonly specialists — only the orchestrator schedules Task(...)"]
         PT[pre-plan-triage]
-        W1["Wave 1: Task(mcp-glean) · Task(mcp-arc)"]
-        W2["Wave 2: Task(mcp-jira) · Task(mcp-confluence) · Task(mcp-gitlab)"]
+        DS["Domain specialists: system-design · database ·<br/>frontend · security · testing-observability"]
+        RP["repro-specialist (bug: always; else agent's judgment)"]
+        W2["Optional, gated: Task(mcp-jira) · Task(mcp-confluence) · Task(mcp-glean)"]
         CE[codebase-explorer]
         SV[spec-validator]
         SS[security-scanner]
         PR["plan-reviewer (folder mode)"]
     end
 
-    subgraph SESS["Bounded paths under docs/sessions/(session-id)/"]
-        PP["pre-plan/<br/>merged-brief.md, specialists/…"]
-        AR["artifacts/<br/>explorer/, scanners/, diffs/…"]
+    subgraph SESS["Bounded paths in the ticket folder"]
+        PP["pre-plan/<br/>merged-brief.md, review.md, gate.md"]
+        AR["_run/<br/>explorer/, scanners/, diffs/…"]
     end
 
     subgraph LP["Least-privilege implementers — sliced prompts"]
@@ -142,7 +143,7 @@ flowchart TD
     MA -->|Task slice| IMPL
     MA -->|Task| QA
 
-    PT & W1 & W2 --> PP
+    PT & DS & RP & W2 --> PP
     CE & SV & SS & PR --> AR
 
     MA -->|"Task(do) after scrum PROCEED"| QTP
@@ -155,9 +156,9 @@ flowchart TD
 
 ## Pipeline state machine (`/run`)
 
-**§1** repo/branch awareness (read-only; soft "switch for analysis or stay?" prompt — **not** a hard gate) → **§2** `pipeline-init.sh` → **Pre-plan** (optional MCP: Wave 1 Glean/ARC → merge + gate → Wave 2 Jira/Confluence/GitLab) → **§3–4** `Task(prd)` → `Task(spectech)` → `Task(tasks)`, then `plan-reviewer` (folder mode) ↔ `Task(scrum)` self-heal loop → **§5 pre-check** (hard branch gate: protected branch? stop — abort / stay / create + approve a name; default **no worktree**, plain checkout) → **§5** per-phase implementation (`Task(dev|sre|data)`) → **§6** implementation review (`*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or on REWORK) → **§7.0** QA prep (`spec-validator` + `security-scanner`) → **§7** `Task(qa)` → **§7.1** final `Task(scrum)` → **§8** `Task(summary)` → **§9** `pipeline-finish.sh` (commit / push / MR prompts).
+**§1** repo/branch awareness (read-only; soft "switch for analysis or stay?" prompt — **not** a hard gate) → **§2** `pipeline-init.sh` → **Pre-plan** (domain specialists + repro, always; optional Jira/Confluence/Glean only if registered + signaled) → **§3–4** `Task(prd)` → `Task(spectech)` → `Task(tasks)`, then `plan-reviewer` (folder mode) ↔ `Task(scrum)` self-heal loop → **§5 pre-check** (hard branch gate: protected branch? stop — abort / stay / create + approve a name; default **no worktree**, plain checkout) → **§5** per-phase implementation (`Task(dev|sre|data)`) → **§6** implementation review (`*-reviewer` + `security-scanner` → `Task(scrum)`; repeat per phase or on REWORK) → **§7.0** QA prep (`spec-validator` + `security-scanner`) → **§7** `Task(qa)` → **§7.1** final `Task(scrum)` → **§8** `Task(summary)` → **§9** `pipeline-finish.sh` (commit / push / MR prompts).
 
-**Why the branch gate sits at §5, not §1:** `/prd` → `/spectech` → `/tasks` only write the ticket folder (`docs/specs/<ticket>/…`, gitignored) — there's no risk in drafting the spec while the working repo is on its protected/default branch, and that's often the *correct* branch to analyze from. The first actual write to the working repo is §5, so that's where the hard gate (and branch-name approval) belongs. Worktrees are **opt-in only** — the default is a single checkout on whichever branch the §5 gate resolves.
+**Why the branch gate sits at §5, not §1:** `/prd` → `/spectech` → `/tasks` only write the ticket folder (`docs/specs/<ticket>/…`, in the workspace root — not a child/target repo, so `subagent-gate` doesn't apply) — there's no risk in drafting the spec while the working repo is on its protected/default branch, and that's often the *correct* branch to analyze from. The first actual write to a child/target repo is §5, so that's where the hard gate (and branch-name approval) belongs. Worktrees are **opt-in only** — the default is a single checkout on whichever branch the §5 gate resolves.
 
 | Kind | Meaning |
 |---|---|
@@ -181,20 +182,22 @@ stateDiagram-v2
         session snapshot, memory read
     end note
 
-    PreTriage --> Wave1 : Task(pre-plan-triage)
-    Wave1 --> MergeGate : Wave 1 or skip
-    note right of Wave1
-        Pre-plan context (optional MCP)
-        Wave 1: Task(mcp-glean), Task(mcp-arc)
-        only if triage lists them
+    PreTriage --> DomainWave : Task(pre-plan-triage)
+    DomainWave --> EnterpriseWave : domain specialists + repro (parallel)
+    note right of DomainWave
+        Pre-plan (domain specialists +
+        optional MCP) — always: system-design,
+        database, frontend, security,
+        testing-observability (as relevant),
+        repro-specialist (bug: always)
     end note
 
-    MergeGate --> Wave2 : merge + gate
-    Wave2 --> PrdSpectechTasks : Wave 2 or skip
-    note right of Wave2
-        Wave 2: Task(mcp-jira),
-        Task(mcp-confluence), Task(mcp-gitlab)
-        when gated; merged-brief → §3
+    EnterpriseWave --> PrdSpectechTasks : merged-brief → §3
+    note right of EnterpriseWave
+        Jira/Confluence/Glean — ONLY if
+        registered in docs/workspace-tools.md
+        (via /setup-workspace) AND signaled
+        by the ticket. Empty is the default.
     end note
 
     PrdSpectechTasks --> BranchGate : §4 plan-reviewer pass, scrum PROCEED
@@ -295,31 +298,32 @@ sequenceDiagram
 
 ---
 
-## Session directory anatomy
+## Run directory anatomy
 
-**Active session pointer:** `docs/sessions/ACTIVE_SESSION` is a **plain-text file** (one line: the session id). Scripts resolve `docs/sessions/<session-id>/current.md` from that id.
+The ticket folder is the run identity. Scratch lives at `<ticket-folder>/_run/` and is tracked with the ticket.
 
 ```text
-docs/sessions/
-├── ACTIVE_SESSION             # one line: active session id (plain file, not a symlink)
-└── <session-id>/
-    ├── current.md             # timeline, GATE lines, trace anchors
-    ├── context-audit.log      # Finish audit (append-only)
+docs/specs/<date>-<key>-<slug>/
+├── pre-plan/                  # grounding, beside _run
+│   ├── merged-brief.md
+│   ├── review.md
+│   ├── gate.md
+│   └── specialists/
+└── _run/
+    ├── timeline.md            # GATE lines, trace anchors
+    ├── audit.log              # Finish audit (append-only)
     ├── attach-target.txt      # optional: multi-root writable repo root
     ├── session.code-workspace # optional: generated multi-root workspace
-    ├── pre-plan/
-    │   ├── merged-brief.md
-    │   └── specialists/       # glean, arc, jira, confluence, gitlab + mid-run files
-    └── artifacts/
-        ├── explorer/          # Task(codebase-explorer) reports
-        ├── scanners/          # §7.0 spec-validator, security-scanner
-        └── diffs/
-            ├── dev/
-            ├── sre/
-            └── data/
+    ├── explorer/
+    ├── scanners/
+    └── diffs/
+        ├── dev/
+        ├── sre/
+        ├── data/
+        └── plan/
 ```
 
-`docs/sessions/` is **gitignored** — local scratch per clone. No backward-compatibility symlinks are created when artifact paths move (hard cutover to canonical paths only).
+`session-memory.sh --ticket <folder> ensure` creates `pre-plan/specialists/` and the `_run` tree. `/fix` and `/do` do not.
 
 ---
 
@@ -331,7 +335,7 @@ scripts/setup-agentic.sh claude   # or: cursor | all
 ```
 
 - **Prerequisites:** Node.js ≥ 18, git, and the IDE(s) you use (Claude Code and/or Cursor).
-- **Target repos:** clone the app repo(s) you'll modify as subdirectories of the workspace root (gitignored, per-developer) — or use multi-root attach (`scripts/tools/attach-project.sh`) for a separate `PROJECTS_ROOT`.
+- **Target repos:** clone the app repo(s) you'll modify as subdirectories of the workspace root via `/clone` (each gets its own `.gitignore` entry — it's a separate git repo, never tracked as part of this workspace) — or use multi-root attach (`scripts/tools/attach-project.sh`) for a separate `PROJECTS_ROOT`.
 - **Optional MCP:** see [MCP configuration](#mcp-configuration) below.
 - Re-run `scripts/setup-agentic.sh <claude|cursor|all>` any time `agentic/` changes — generated trees are overwritten, never hand-edited.
 
@@ -368,7 +372,7 @@ Orchestration and `Task(do)` call **allowlisted** scripts only — not raw arbit
 | `/qa` | QA and security lead — cross-domain review report; blocks on Critical/High. | `qa` |
 | `/scrum` | PO / SM / PM gate — PROCEED / REWORK / ASK_USER / ESCALATE at every gate. | `scrum` (read-only) |
 | `/summary` | Post-pipeline handoff narrative — `summary.md`. | `summary` |
-| `/kb` | Local knowledge-base builder (fallback when ARC MCP isn't onboarded). | `kb` |
+| `/kb` | Optional, persistent cross-ticket knowledge-base builder (complements the per-ticket pre-plan domain specialists). | `kb` |
 | `/fix` | **Escape hatch** — debugger for a target dir + symptom, outside the full pipeline. | `fix` |
 | `/do` | **Escape hatch** — ad-hoc operator; mechanical work via the Zero-Trust script API. | `do` |
 | `/clone` | Utility — register a child repo in the multi-repo inventory. | — (thin command) |
@@ -395,6 +399,8 @@ Utilities (`/clone`, `/rebase`, `/kb-refresh`, `/kb-concentrator`, `/setup-works
 | `--branch [name]` | Suggests a branch name — you still approve creation on protected branches |
 | `--max-iterations N` | Cap implementation/review rework loops (default 3) |
 | `--max-plan-iterations N` | Cap the PRD/Spectech/Tasks ↔ plan-reviewer self-heal loop (default 3) |
+| `--max-preplan-iterations N` | Cap the pre-plan merge ↔ pre-plan-reviewer self-heal loop, before `Task(prd)` ever runs (default 3) |
+| `--pre-plan` / `--plan` / `--dev` / `--finish` | Mutually exclusive **checkpoint** flags — run through the end of that stage, then stop (`STAGE COMPLETE: <name>`) instead of continuing. Pass `--resume` on every staged call after the first. |
 
 ---
 
@@ -420,11 +426,11 @@ Hooks **fail open** except the Cursor `subagent-gate` hook (no writes on protect
 ## Session memory and metrics
 
 ```bash
-scripts/tools/session-memory.sh read
+scripts/tools/session-memory.sh --ticket <ticket-folder> read
 scripts/tools/metrics.sh overview
 ```
 
-Local-only; aggregates `docs/audit.log`, `docs/sessions/`, and optional `docs/usage-events.tsv`. Nothing leaves the machine.
+Local-only; aggregates `docs/audit.log` and optional `docs/usage-events.tsv`. Nothing leaves the machine.
 
 ---
 
@@ -432,8 +438,8 @@ Local-only; aggregates `docs/audit.log`, `docs/sessions/`, and optional `docs/us
 
 - **Claude Code:** project-level `.mcp.json` is the shared, optional baseline (teams add/remove entries; empty by default — MCP is never required for the core flow).
 - **Cursor:** personal `~/.cursor/mcp.json` (or project `.cursor/mcp.json`) — see [cursor-mcp](docs/reference/cursor-mcp.md). GitLab MCP is typically stdio `@zereight/mcp-gitlab` — see [gitlab-cursor-workflow](docs/reference/gitlab-cursor-workflow.md).
-- Enterprise MCP access (GitLab, Atlassian, Glean, ARC) is **mediated** through the readonly `mcp-*` specialist subagents, scheduled only by the `/run` main session. Persona subagents never call enterprise MCP tools directly — they escalate with `REQUEST_MAIN: <specialist> <query>`.
-- Other integrations: [glean-cursor-workflow](docs/reference/glean-cursor-workflow.md), [ARC](docs/reference/arc-mcp-workflow.md).
+- Enterprise MCP access (GitLab, Jira, Confluence, Glean) is **mediated** through the readonly `mcp-*` specialist subagents, scheduled only by the `/run` main session. Persona subagents never call enterprise MCP tools directly — they escalate with `REQUEST_MAIN: <specialist> <query>`. Jira/Confluence/Glean are **optional, opt-in** pre-plan sources — register them via `/setup-workspace`; the default, always-available pre-plan grounding comes from the local domain specialists instead (no MCP required).
+- Other integrations: [glean-cursor-workflow](docs/reference/glean-cursor-workflow.md).
 
 ---
 
@@ -485,7 +491,7 @@ default. See [model-catalog](docs/model-catalog.md).
 
 ## Extending the workspace
 
-Add agents under `agentic/agents/`, skills under `agentic/skills/`, commands under `agentic/commands/`, hooks under `agentic/hooks/` (or the per-IDE `agentic/adapters/<ide>/hooks/`) — then reinstall with `scripts/setup-agentic.sh <claude|cursor|all>`. Project-specific overlays that should **not** become part of the shared framework stay directly in the IDE runtime dirs. See [CONTRIBUTING.md](CONTRIBUTING.md) and `scripts/upgrade.sh`.
+Add agents under `agentic/agents/`, skills under `agentic/skills/`, commands under `agentic/commands/`, hooks under `agentic/hooks/` (or the per-IDE `agentic/adapters/<ide>/hooks/`) — then reinstall with `scripts/setup-agentic.sh <claude|cursor|all>`. Project-specific skills, agents, and commands stay in the project and are not installed by that script. See [CONTRIBUTING.md](CONTRIBUTING.md) and `scripts/upgrade.sh`.
 
 ---
 

@@ -6,8 +6,6 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
 export HOOK_DIR="$DIR"
 export HOOK_INPUT="$(cat || true)"
-mkdir -p "$ROOT/docs/sessions"
-
 REPOS_OUT=""
 for d in "$ROOT"/*/; do
   [ -e "$d/.git" ] || continue
@@ -30,22 +28,7 @@ if [ -f "$ROOT/scripts/tools/sync-vscode-git-repos.sh" ]; then
   bash "$ROOT/scripts/tools/sync-vscode-git-repos.sh" >/dev/null 2>&1 || true
 fi
 
-SESSION_META=""
-if [ -f "$ROOT/scripts/tools/session-memory.sh" ]; then
-  bash "$ROOT/scripts/tools/session-memory.sh" prune 2>/dev/null || true
-  bash "$ROOT/scripts/tools/session-memory.sh" init 2>/dev/null || true
-  AP=$(bash "$ROOT/scripts/tools/session-memory.sh" active-path 2>/dev/null) || AP=""
-  AID=""
-  if [ -f "$ROOT/docs/sessions/ACTIVE_SESSION" ]; then
-    AID=$(head -n 1 "$ROOT/docs/sessions/ACTIVE_SESSION" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  fi
-  if [ -n "$AID" ] && [ -n "$AP" ]; then
-    SESSION_META="Session ID: ${AID}
-Active session file (workspace-relative): ${AP}"
-  elif [ -n "$AID" ]; then
-    SESSION_META="Session ID: ${AID}"
-  fi
-fi
+SESSION_META="Run state lives in the ticket folder (_run/), not in a global session."
 
 SPEC_OUT=""
 if [ -f "$ROOT/scripts/tools/spec-status.sh" ]; then
@@ -54,12 +37,7 @@ else
   SPEC_OUT="Active specs in docs/specs/: (scripts/tools/spec-status.sh not found — run setup if applicable)"
 fi
 
-MEM_OUT=""
-if [ -f "$ROOT/scripts/tools/session-memory.sh" ]; then
-  MEM_OUT=$(bash "$ROOT/scripts/tools/session-memory.sh" read 2>&1) || MEM_OUT="${MEM_OUT} (exit $?)"
-else
-  MEM_OUT="(scripts/tools/session-memory.sh not found — run setup if applicable)"
-fi
+MEM_OUT="Open the ticket folder and read _run/timeline.md. There is no global session file."
 
 ACTIVE_HEADER="=== Active session ==="
 if [ ! -f "$ROOT/scripts/tools/session-memory.sh" ]; then

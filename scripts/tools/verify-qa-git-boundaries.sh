@@ -7,10 +7,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-SKILL=".cursor/skills/run-pipeline/SKILL.md"
-QA_AGENT=".cursor/agents/qa.md"
-SUMMARY_AGENT=".cursor/agents/summary.md"
-RULE_GL=".cursor/rules/git-gitlab-mutations.mdc"
+SKILL="agentic/skills/run-pipeline/SKILL.md"
+QA_AGENT="agentic/agents/qa.md"
+SUMMARY_AGENT="agentic/agents/summary.md"
+RULE_GL="agentic/adapters/cursor/rules/git-gitlab-mutations.mdc"
 
 echo "verify-qa-git-boundaries: repo root=$ROOT"
 
@@ -61,7 +61,7 @@ grep -qE 'minimal delegation bundle|§[[:space:]]*8' "$SUMMARY_AGENT" \
   || fail "summary.md must document minimal delegation bundle / § 8 slicing"
 
 # --- git-gitlab-mutations.mdc: push after explicit Yes; MR user-run ---
-grep -qE 'explicit[[:space:]]+\*\*Yes\*\*|explicit Yes' "$RULE_GL" \
+grep -qE 'explicit[[:space:]]+(user[[:space:]]+)?\*\*Yes\*\*|explicit[[:space:]]+(user[[:space:]]+)?Yes' "$RULE_GL" \
   || fail "rule must require explicit Yes for push"
 grep -qE 'user-run|user to run|commands themselves' "$RULE_GL" \
   || fail "rule must state MR / mutating GitLab as user-run"

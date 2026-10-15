@@ -12,7 +12,7 @@ Canonical setup guide. Installed tooling comes from **`agentic/`**; IDE runtimes
 
 ```bash
 # from repo root
-scripts/setup-agentic.sh claude        # → user plugin bcs-sdd + root CLAUDE.md
+scripts/setup-agentic.sh claude        # → user plugin beacon-sdd + root CLAUDE.md
 scripts/setup-agentic.sh cursor        # → .cursor/ (agents, hooks, rules, skills)
 scripts/setup-agentic.sh all           # claude + cursor (+ antigravity stub)
 scripts/setup-agentic.sh cursor --dry-run
@@ -23,22 +23,24 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 
 | Runtime | Outputs |
 |---------|---------|
-| Claude | user plugin `bcs-sdd` (`/bcs-sdd:<name>`), root `CLAUDE.md`. Project `.claude/` keeps `bcs-*` overlays only |
-| Cursor | `.cursor/{agents,hooks,hooks.json,rules,skills}` |
+| Claude | user plugin `beacon-sdd` (`/beacon-sdd:<name>`), root `CLAUDE.md`. Setup does not copy or link project skills, agents, or commands into `.claude/` |
+| Cursor | framework content under `.cursor/{agents,hooks,rules,skills}/beacon/` (gitignored). `.cursor/hooks.json` is generated at the top level. Project files elsewhere under `.cursor/` stay tracked |
 | Docs | `docs/adapters/{claude,cursor}/` |
+
+`.gitattributes` sets `.gitignore merge=union` so merging this SDD into a project keeps both ignore files. `scripts/setup-agentic.sh` restores that line if a merge removed it.
 
 ### What stays tracked
 
 - `agentic/` — SDD source of truth
-- `.claude/**/bcs-*` — project overlays (not part of SDD)
+- project skills, agents, and commands, wherever the project keeps them — not installed or linked by setup
 - `.mcp.json` — shared MCP baseline (optional; not generated yet)
 - `docs/` — shared product/process docs (see `agentic/docs/README.md`)
 
 ## After install
 
-**Claude Code:** open the repo; confirm root `CLAUDE.md` exists and `/bcs-sdd:prd` (etc.) resolve from the user plugin. Third-party import in Cursor stays off, or those commands also appear in Cursor.
+**Claude Code:** open the repo; confirm root `CLAUDE.md` exists and `/beacon-sdd:prd` (etc.) resolve from the user plugin. Third-party import in Cursor stays off, or those commands also appear in Cursor.
 
-**Cursor:** Settings → Rules (always-apply workspace rules); confirm agents under `.cursor/agents/` and skills under `.cursor/skills/`; Hooks from `.cursor/hooks.json`. Leave **Include Third-Party Plugins, Skills, and Other Configs** off.
+**Cursor:** Settings → Rules (always-apply workspace rules); confirm agents under `.cursor/agents/beacon/` and skills under `.cursor/skills/beacon/` (anything outside `beacon/` in those directories is not part of the SDD framework); Hooks from `.cursor/hooks.json`. Leave **Include Third-Party Plugins, Skills, and Other Configs** off.
 
 ## Local action audit (per IDE)
 
@@ -90,7 +92,7 @@ No audit hook until a Claude-specific strategy is added under `agentic/adapters/
 
 ## Dual-IDE note
 
-Default `cursor` install **deactivates** the managed Claude framework mirror under `.claude/` (overlays `bcs-*` remain) so `/` is not duplicated. Use `--keep-claude` or `all` if you need both mirrors populated.
+Default `cursor` install **deactivates** the managed Claude framework mirror under `.claude/` (only paths listed in `.claude/.agentic-managed`) so `/` is not duplicated. Use `--keep-claude` or `all` if you need both mirrors populated.
 
 ## Edit workflow
 

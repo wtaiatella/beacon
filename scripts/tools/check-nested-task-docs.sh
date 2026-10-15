@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Optional warnings-only scan for nested-delegation regression phrases in .cursor/agents.
+# Optional warnings-only scan for nested-delegation regression phrases in agentic/agents.
 # lint-workspace-agents.sh validates frontmatter only — this script does not duplicate that.
 #
 # Behavior: print WARN lines if historical nested-risk wording reappears; always exit 0 (CI non-blocking).
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-AGENTS_DIR="$ROOT/.cursor/agents"
+AGENTS_DIR="$ROOT/agentic/agents"
 
 echo "── Nested Task doc regression check (warnings-only) ──"
 
@@ -35,6 +35,6 @@ for f in "$AGENTS_DIR"/*.md; do
 done
 
 if [[ "$WARN" -eq 0 ]]; then
-  echo "OK No nested-delegation regression phrases in .cursor/agents/"
+  echo "OK No nested-delegation regression phrases in agentic/agents/"
 fi
 exit 0

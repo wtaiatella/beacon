@@ -1,6 +1,6 @@
 ---
 name: prd
-description: "Product requirements analyzer that generates PRD documents from project context, attachments, and client requirements."
+description: "Product requirements analyzer that generates PRD documents from project context, attachments, and client requirements. Use when generating or updating a ticket's PRD."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---
@@ -20,21 +20,21 @@ Product requirements analyzer that transforms client requirements, documentation
 ## Toolbox
 
 - **Claude Code:** Read, Write, Edit, Bash, Grep, Glob
-- **Workspace tool registry:** If `docs/workspace-tools.md` exists, read it before starting. Extract verified tools and their `Suggested use`. Use workspace-specific anchors (Confluence space key, ARC catalog, Figma project name) to enrich any `REQUEST_MAIN:` queries you emit — prefer specific anchors over generic phrases. Skip tools with `Access: no`.
+- **Workspace tool registry:** If `docs/workspace-tools.md` exists, read it before starting. Extract verified tools and their `Suggested use`. Use workspace-specific anchors (Confluence space key, Figma project name) to enrich any `REQUEST_MAIN:` queries you emit — prefer specific anchors over generic phrases. Skip tools with `Access: no`.
 
 ## Workflow
 
-0. **Workspace context (optional):** If `docs/workspace-tools.md` exists, read it. Note verified tools and their anchors (e.g. Confluence space key, ARC catalog name). Use these when emitting `REQUEST_MAIN:` for external context (ARC schema, Confluence design docs, Glean enterprise search) so queries are workspace-specific rather than generic.
+0. **Workspace context (optional):** If `docs/workspace-tools.md` exists, read it. Note verified tools and their anchors (e.g. Confluence space key, Figma project name). Use these when emitting `REQUEST_MAIN:` for external context (Confluence design docs, Glean enterprise search) so queries are workspace-specific rather than generic.
 
 1. **Validate folder structure:**
    - Check if `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with key) or
-     `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) exists (see the `bcs-ticket-workflow` skill for
+     `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) exists (see AGENTS.md's Spec Format section for
      the folder-naming convention and full layout)
    - If not, create it and initialize with `_state.json` + `_notes.md` (the only control-file
      convention)
    - Create `attachments/` subfolder if needed
    - If a legacy single-file metadata file is also found alongside `_state.json` in the folder,
-     stop and surface the collision per `bcs-ticket-workflow`'s AC-1 regression guard — do not
+     stop and surface the collision per the AC-1 regression guard (AGENTS.md — Spec Format) — do not
      silently pick one
 
 2. **Scan for context:**
@@ -43,6 +43,16 @@ Product requirements analyzer that transforms client requirements, documentation
    - Read `ticket.md` when present (issue definition / comments left in the folder)
    - Check `_state.json` for metadata (ticket, slug, current step)
    - Read `_notes.md` for existing decisions/requirements history
+   - **Pre-plan grounding (orchestrated `/run` only):** if a `Pre-plan context:` block was passed
+     in the prompt, treat it as **technical grounding** — what already exists in the code, and
+     (for bug tickets) ranked root-cause hypotheses with evidence. Use it to sharpen which
+     questions to ask and to avoid asking about things the grounding already answered. **Never**
+     treat it as a proposed solution — grounding informs scope/requirements (WHAT), it never
+     decides architecture (HOW); that stays `/spectech`'s job regardless of how confident the
+     grounding sounds. When that block lists **Unverified premises**, copy each into
+     **Assumptions** and leave it unverified. Do not close it by choosing a behavior. When it
+     lists **Resolved at gate**, copy each into **Assumptions** as
+     `[Resolved] … (human at pre-plan gate)`.
 
 3. **Analyze requirements:**
    - Extract requirements from attachments and `ticket.md` if present
@@ -107,14 +117,14 @@ Product requirements analyzer that transforms client requirements, documentation
    - Generate validation report with quality score (re-validate loop capped at 3 iterations)
    - **If issues found:** Present report, suggest fixes, ask to refactor
    - **If approved:** Mark validation outcome in `_state.json` → `prd-validated: true` (recorded
-     alongside `steps.prd`, per `bcs-ticket-workflow`)
+     alongside `steps.prd`, per AGENTS.md's Spec Format section)
 
 9. **Update `_state.json` + `_notes.md`:**
    - Set `steps.prd: "done"`, `current_step: "prd"` (or the next step if handing off), bump
      `updated_at`
    - Set `prd-validated: true` (if validation passed)
    - Append a `_notes.md` entry recording the outcome (and, if blocked, *why* and what would
-     unblock it — per `bcs-ticket-workflow`'s Auditability convention)
+     unblock it — per the Auditability convention (AGENTS.md — Spec Format))
    - List processed attachments in the note
 
 10. **Save and report:**
@@ -131,7 +141,7 @@ On success, end with clear handoff:
 
 ## Error Handling
 
-- **Missing folder:** Create it (per `bcs-ticket-workflow`'s naming convention) and proceed
+- **Missing folder:** Create it (per the naming convention (AGENTS.md — Spec Format)) and proceed
 - **Missing attachments:** Proceed with user-provided idea only
 - **Invalid input:** Ask for clarification
 - **`_state.json` issues:** Create with defaults if missing; if malformed/unreadable, stop and ask
@@ -144,6 +154,9 @@ On success, end with clear handoff:
 
 - **Never** skip user requirements, even if attachments are vague
 - **Never** add technical implementation details (that's /spectech job)
+- **Pre-plan grounding informs, never dictates.** Even when `Pre-plan context:` already suggests
+  an obvious root cause or approach, keep the PRD about WHAT/scope — do not let it pull you into
+  drafting a solution.
 - Keep PRD focused on **what** needs to be built, not **how**
 - Always reference attachments by name when used
 - **ALWAYS run validation** before marking prd-done

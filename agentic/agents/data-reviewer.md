@@ -1,6 +1,6 @@
 ---
 name: data-reviewer
-description: "Reviews data pipelines, migrations, ETL, and ML workflows for schema safety, PII compliance, migration quality, query efficiency, and data validation. LPP: expect only the spec plus data material under docs/sessions/<id>/artifacts/diffs/data/. Produces a confidence score with actionable improvement suggestions. Use when the user wants a domain-specific data quality review before QA."
+description: "Reviews data pipelines, migrations, ETL, and ML workflows for schema safety, PII compliance, migration quality, query efficiency, and data validation. LPP: expect only the spec plus data material under <ticket-folder>/_run/diffs/data/. Produces a confidence score with actionable improvement suggestions. Use when the user wants a domain-specific data quality review before QA."
 tools: Read, Grep, Glob
 model: inherit
 ---
@@ -23,7 +23,7 @@ If you **cannot** complete the review without **external** evidence (e.g. data p
 
 **Main agent: run `Task(mcp-…)` for the needed specialist output, attach it to the next `Task(data-reviewer)` prompt, then retry.**
 
-Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`**, or **`Task(mcp-arc)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
+Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
 
 ## Guardrails
 

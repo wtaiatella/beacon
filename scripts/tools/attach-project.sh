@@ -10,20 +10,17 @@ ENV_LOCAL="$ROOT/.env.local"
 
 usage() {
   cat <<EOF
-Usage: attach-project.sh [options]
+Usage: attach-project.sh --ticket <docs/specs/...> [options]
 
   Interactive: load \$ROOT/.env.local (if present), ensure PROJECTS_ROOT is set
   (prompt once and persist PROJECTS_ROOT=<absolute> to .env.local), list immediate
   subdirectories of PROJECTS_ROOT with Bash select,   then write:
-    docs/sessions/<session-id>/session.code-workspace
-    docs/sessions/<session-id>/attach-target.txt   (one line: absolute target root — ROAD-48 trace anchors)
+    <ticket>/_run/session.code-workspace
+    <ticket>/_run/attach-target.txt   (one line: absolute target root)
   and launch Cursor on that file.
 
-Session id order (single supported flow):
-  1. If docs/sessions/ACTIVE_SESSION exists and names a directory under docs/sessions/<id>/,
-     use that <id> (same session as pipeline / hooks).
-  2. Otherwise run:  $SM begin-run attach
-     to allocate a new session and set ACTIVE_SESSION.
+  --ticket is required. The ticket folder must already exist. This script runs
+  session-memory.sh ensure so _run/ exists. There is no global session id.
 
 Paths are canonicalized with pwd -P before JSON generation.
 
@@ -89,22 +86,6 @@ HDR
   PROJECTS_ROOT="$pr"
 }
 
-# Align with session-memory.sh is_valid_session_id — reject path traversal in ACTIVE_SESSION.
-is_valid_session_id() {
-  local id="${1:-}"
-  [ -n "$id" ] || return 1
-  case "$id" in
-    *..*|*/*|*\\*)
-      return 1
-      ;;
-  esac
-  if [ "${#id}" -gt 128 ]; then
-    return 1
-  fi
-  [[ "$id" =~ ^[A-Za-z0-9._-]+$ ]] || return 1
-  return 0
-}
-
 # Populated by collect_subdirs (global for Bash 3.2 select menu).
 paths=()
 
@@ -117,26 +98,27 @@ collect_subdirs() {
   done < <(find "$base" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | LC_ALL=C sort)
 }
 
-resolve_session_id() {
-  local sid=""
-  if [ -f "$ROOT/docs/sessions/ACTIVE_SESSION" ]; then
-    sid=$(head -n 1 "$ROOT/docs/sessions/ACTIVE_SESSION" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    if [ -n "$sid" ] && is_valid_session_id "$sid" && [ -d "$ROOT/docs/sessions/$sid" ]; then
-      printf '%s' "$sid"
-      return 0
-    fi
-  fi
-  "$SM" begin-run attach
-}
-
 NO_CURSOR=0
+TICKET=""
 while [ $# -gt 0 ]; do
   case "$1" in
+    --ticket)
+      [ $# -ge 2 ] || { echo "attach-project: --ticket requires a value" >&2; exit 1; }
+      TICKET="$2"
+      shift 2
+      ;;
     --no-cursor) NO_CURSOR=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "attach-project: unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac
 done
+
+if [ -z "$TICKET" ]; then
+  echo "attach-project: --ticket <docs/specs/...> is required" >&2
+  usage >&2
+  exit 1
+fi
+"$SM" --ticket "$TICKET" ensure >/dev/null
 
 ensure_projects_root
 collect_subdirs "$PROJECTS_ROOT"
@@ -170,9 +152,7 @@ done
 TARGET_ROOT="$(cd "$TARGET_RAW" && pwd -P)"
 ORCH_ROOT="$ROOT"
 
-session_id="$(resolve_session_id)"
-session_dir="$ROOT/docs/sessions/$session_id"
-mkdir -p "$session_dir"
+session_dir="$ROOT/$TICKET/_run"
 out="$session_dir/session.code-workspace"
 
 "$GEN" "$ORCH_ROOT" "$TARGET_ROOT" "$out"

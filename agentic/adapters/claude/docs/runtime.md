@@ -18,17 +18,17 @@ Install:
 scripts/setup-agentic.sh claude
 ```
 
-Project overlays (`bcs-*`) are **not** in `agentic/`; they live under `.claude/` and are
-tracked separately. The Cursor adapter may deactivate the managed Claude framework mirror
-to avoid duplicate slash entries — overlays are kept.
+Project skills, agents, and commands are **not** in `agentic/`. Setup does not copy or link
+them. The Cursor adapter may deactivate the managed Claude framework mirror (paths listed in
+`.claude/.agentic-managed` only) to avoid duplicate slash entries.
 
 ## vs Cursor
 
 | Concern | Claude | Cursor |
 |---------|--------|--------|
 | Always-on | root `CLAUDE.md` | `.cursor/rules/*.mdc` |
-| Personas | plugin `bcs-sdd` (`/bcs-sdd:<name>`) | `.cursor/agents` |
-| Skills | plugin `bcs-sdd` | `.cursor/skills` |
+| Personas | plugin `beacon-sdd` (`/beacon-sdd:<name>`) | `.cursor/agents` |
+| Skills | plugin `beacon-sdd` | `.cursor/skills` |
 | Hooks config | `.claude/settings.json` | `.cursor/hooks.json` |
 | Hook I/O | Claude Pre/PostToolUse | Cursor events (dual-protocol scripts) |
 

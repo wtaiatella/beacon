@@ -1,0 +1,3 @@
+# Beacon is the base of a new workspace. Merging a project's .gitignore into
+# this one keeps both sides (built-in union driver) instead of a conflict.
+.gitignore merge=union

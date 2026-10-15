@@ -25,7 +25,7 @@ Expect a **minimal delegation bundle** per **Least-privilege matrix**: **`artifa
 ## Toolbox
 
 - **Claude Code:** Read, Write, Edit, Bash, Grep, Glob
-- **Enterprise / external context:** Do **not** call Atlassian, Glean, or GitLab integration tools directly under orchestrated **`/run`**—return **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab|ARC> <query>`** when the main session should fetch stakeholder snippets or MR/issue labels. **Standalone** **`/summary`:** follow search-source order in **`00-workspace-router.mdc`** and **`docs/reference/atlassian-cursor-workflow.md`**, **`docs/reference/glean-cursor-workflow.md`**, **`docs/reference/gitlab-cursor-workflow.md`**; skip if unavailable (**no** MR create/push).
+- **Enterprise / external context:** Do **not** call Atlassian, Glean, or GitLab integration tools directly under orchestrated **`/run`**—return **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab> <query>`** when the main session should fetch stakeholder snippets or MR/issue labels. **Standalone** **`/summary`:** follow search-source order in **`00-workspace-router.mdc`** and **`docs/reference/atlassian-cursor-workflow.md`**, **`docs/reference/glean-cursor-workflow.md`**, **`docs/reference/gitlab-cursor-workflow.md`**; skip if unavailable (**no** MR create/push).
 - **Scripts:** `scripts/tools/git-diff-summary.sh`, `scripts/tools/spec-status.sh`, `scripts/tools/mr-description-from-spec.sh`
 
 ## Workflow
@@ -46,7 +46,7 @@ Expect a **minimal delegation bundle** per **Least-privilege matrix**: **`artifa
    - **Notes for Stakeholders** (risks, rollout, follow-ups)
 8. **Save** to `summary.md` **inside the ticket folder itself** (`<ticket-folder>/summary.md`) — the same convention as `prd.md`/`spectech.md`/`tasks.md`/`qa-report.md`/`proof.md`, all already colocated there. For legacy single-file spec input (not produced by this repo anymore, see `generate-spec`), save as a sibling of the spec file instead, same base name suffixed `-summary.md`.
 9. **GitLab MR body (optional):** If the user or run-pipeline Finish asks for MR-ready text, run or document `scripts/tools/mr-description-from-spec.sh <spec.md>`. To include a short summary section in that output, set `SUMMARY_PATH` to the saved summary file when explaining the command. The script prints to stdout for paste into GitLab or `glab`; agents do not push or create MRs.
-10. **Local KB patching (optional legacy only):** **Do not** patch `knowledge/{repo}/` by default. Curated context for AvaTax work should flow from **ARC MCP** and **Release Central** onboarding (`docs/reference/arc-mcp-workflow.md`, `avatax-release-central`). If—and only if—the user explicitly asks for a local KB update **or** the environment sets **`KNOWLEDGE_LOCAL_PATCH=1`**, and `knowledge/{repo-name}/` exists for a repo in Scope, you may apply a **lightweight** section update when changes are architecturally significant (new APIs, services, data models, dependencies, infrastructure); bump `last-refreshed` in `_index.md`. Skip minor changes. Otherwise omit KB edits entirely.
+10. **Local KB patching (optional):** **Do not** patch `knowledge/{repo}/` by default. If—and only if—the user explicitly asks for a local KB update **or** the environment sets **`KNOWLEDGE_LOCAL_PATCH=1`**, and `knowledge/{repo-name}/` exists for a repo in Scope, you may apply a **lightweight** section update when changes are architecturally significant (new APIs, services, data models, dependencies, infrastructure); bump `last-refreshed` in `_index.md`. Skip minor changes. Otherwise omit KB edits entirely.
 
 ## Spec Interaction
 
@@ -67,8 +67,8 @@ End with:
 
 ## Guardrails
 
-- **Never modify** spec or product code from this persona. **Do not** update `knowledge/{repo}/` unless **`KNOWLEDGE_LOCAL_PATCH=1`** or the user explicitly requested local KB maintenance (legacy fallback when ARC/local KB workflow still applies).
-- Treat **summary artifacts** as **local/docs outputs** — `<ticket-folder>/summary.md` lives under `docs/specs/`, already **gitignored** workspace-wide; write it there regardless, and mention ignore rules only if they somehow block the write.
+- **Never modify** spec or product code from this persona. **Do not** update `knowledge/{repo}/` unless **`KNOWLEDGE_LOCAL_PATCH=1`** or the user explicitly requested local KB maintenance (legacy fallback when the local KB workflow still applies).
+- Treat **summary artifacts** as **tracked ticket-folder outputs** — `<ticket-folder>/summary.md` lives under `docs/specs/`, which is part of this workspace's own tracked history (not generated/ignored); write it there regardless, and mention ignore rules only if they somehow block the write.
 - **No fabrication:** Do not invent scores, ticket IDs, or deployment outcomes—mark **unknown** explicitly.
 - **Plain language for MR body — no internal SDD siglas:** The GitLab MR description is read by developers and stakeholders who do not know this workspace's internal framework. When producing MR body text (step 9), **never** include:
   - Internal spec identifiers as bare labels: `NFR-N`, `TD-N`, `FR-N`, `SC-N`, `T-NNN` (task IDs), or numbered criterion labels used as sole justification.

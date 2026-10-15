@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Blocking doc checks for /run pre-plan: flat orchestration, wave skips, merge+gate,
-# merged brief handoff. Modeled after verify-mcp-arc-orchestration-docs.sh.
+# Blocking doc checks for /run pre-plan: flat orchestration, the enterprise
+# wave's empty-by-default skip, merge+gate before Task(prd), merged brief
+# handoff. Terminology matches the current generic domain-specialist +
+# gated-enterprise-wave design (no more Task(plan) or a separate "Wave 1"
+# enterprise breadth pass — see agentic/agents/pre-plan-triage.md).
 # Run from repo root: ./scripts/tools/verify-preplan-orchestration-docs.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-SKILL=".cursor/skills/run-pipeline/SKILL.md"
-ROUTER=".cursor/rules/00-workspace-router.mdc"
+SKILL="agentic/skills/run-pipeline/SKILL.md"
+ROUTER="agentic/adapters/cursor/rules/00-workspace-router.mdc"
+AGENTS_MD="agentic/AGENTS.md"
 REF="docs/run-pipeline-reference.md"
 
 echo "verify-preplan-orchestration-docs: repo root=$ROOT"
@@ -20,30 +24,40 @@ fail() {
 
 test -f "$SKILL" || fail "missing $SKILL"
 test -f "$ROUTER" || fail "missing $ROUTER"
+test -f "$AGENTS_MD" || fail "missing $AGENTS_MD"
 test -f "$REF" || fail "missing $REF"
 
 # --- run-pipeline SKILL: forbid plan-nested Task(mcp-*) for /run pre-plan ---
 grep -q 'nested' "$SKILL" || fail "SKILL must discuss nested vs flat pre-plan MCP"
-grep -q 'Task(plan)' "$SKILL" || fail "SKILL must mention Task(plan) in pre-plan context"
+grep -q 'Task(prd)' "$SKILL" || fail "SKILL must mention Task(prd) in pre-plan context"
 grep -qE '`Task\(mcp-\*\)`|Task\(mcp-' "$SKILL" || fail "SKILL must mention Task(mcp-*) or Task(mcp-…) for pre-plan"
-grep -qE 'not nested inside|must not.*nest|/plan` must not' "$SKILL" \
-  || fail "SKILL must forbid nesting Task(mcp-*) inside Task(plan) for /run pre-plan"
+grep -qE 'not nested inside|must not.*nest|/prd` must not' "$SKILL" \
+  || fail "SKILL must forbid nesting Task(mcp-*) inside Task(prd) for /run pre-plan"
 
-# --- Wave 1 omitted when triage lists neither glean nor arc ---
-grep -q 'Skip Wave 1' "$SKILL" || fail "SKILL must document Skip Wave 1 when wave1 empty"
-grep -q 'neither' "$SKILL" || fail "SKILL must state Wave 1 skip when triage lists neither glean nor arc"
-grep -qE 'glean|arc' "$SKILL" || fail "SKILL must name glean and/or arc for Wave 1 triage"
+# --- Enterprise wave omitted when triage lists none of jira/confluence/glean ---
+grep -qE 'empty is the common case|wave2_sources.*empty' "$SKILL" \
+  || fail "SKILL must document that the enterprise wave is skipped when wave2_sources is empty"
+grep -qE 'jira|confluence|glean' "$SKILL" || fail "SKILL must name jira/confluence/glean for the enterprise wave"
 
-# --- merge + gate before Wave 2 ---
-grep -q 'merge + gate' "$SKILL" || fail "SKILL must document merge + gate before Wave 2"
+# --- merge + gate before Task(prd) ---
+grep -qE 'merge\s*\+\s*gate' "$SKILL" || fail "SKILL must document merge + gate before Task(prd)"
 
-# --- merged-brief.md and summarized Pre-plan context for Task(plan) ---
+# --- merged-brief.md and summarized Pre-plan context for Task(prd) ---
 grep -q 'merged-brief.md' "$SKILL" || fail "SKILL must reference pre-plan/merged-brief.md"
-grep -qE 'summar' "$SKILL" || fail "SKILL must require summarized (not raw) Pre-plan context for Task(plan)"
+grep -qE 'summar' "$SKILL" || fail "SKILL must require summarized (not raw) Pre-plan context for Task(prd)"
+grep -q 'Unverified premises' "$SKILL" || fail "SKILL must require Unverified premises for inferred scope claims"
+grep -q 'Human check' "$SKILL" || fail "SKILL must stop for a human check when a scope premise cannot be confirmed"
+grep -q 'Need from you' "$SKILL" || fail "SKILL must say what the human must return before the flow continues"
+grep -q 'write-handoff review' "$SKILL" || fail "SKILL must persist the pre-plan review under pre-plan/"
+grep -q 'write-handoff gate' "$SKILL" || fail "SKILL must persist the pre-plan gate under pre-plan/"
+if grep -q '_run/pre-plan' "$SKILL" "$REF"; then
+  fail "pre-plan documents must live beside _run, not under it"
+fi
 
-# --- workspace router: flat orchestration for pre-plan MCP ---
+# --- workspace router: flat orchestration lives here; pre-plan MCP detail lives in AGENTS.md (not duplicated) ---
 grep -q 'Flat orchestration' "$ROUTER" || fail "router must document Flat orchestration"
-grep -q 'Pre-plan MCP' "$ROUTER" || fail "router must document Pre-plan MCP specialists / flat gather"
+grep -qE 'Pre-plan domain specialists|mcp-confluence.*mcp-gitlab.*mcp-jira|REQUEST_MAIN' "$AGENTS_MD" \
+  || fail "AGENTS.md must document the pre-plan wave / enterprise MCP specialists (router defers here by design)"
 
 # --- run-pipeline-reference: nested vs flat section ---
 grep -q 'Nested vs flat' "$REF" || fail "docs/run-pipeline-reference.md must contain Nested vs flat"

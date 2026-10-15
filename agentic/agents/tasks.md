@@ -1,6 +1,6 @@
 ---
 name: tasks
-description: "Task breakdown specialist that generates granular task lists from technical specs, including phases, estimations, and implementation strategy."
+description: "Task breakdown specialist that generates granular task lists from technical specs, including phases, estimations, and implementation strategy. Use when breaking a technical specification into a task list."
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 ---
@@ -20,12 +20,12 @@ Task breakdown specialist that transforms technical specifications into actionab
 ## Workflow
 
 1. **Validate prerequisites:**
-   - Check if `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` exists (see the `bcs-ticket-workflow` skill)
+   - Check if `docs/specs/{YYYY-MM-DD}-ticket-{slug}/` exists (see AGENTS.md — Spec Format)
    - Verify `spectech.md` exists (enforce order)
    - Check `_state.json` and validate `steps.spectech == "done"`
    - If missing, inform user to run `/spectech` first
    - If a legacy single-file metadata file is also found alongside `_state.json`, stop and surface
-     the collision per `bcs-ticket-workflow`'s AC-1 regression guard
+     the collision per the AC-1 regression guard (AGENTS.md — Spec Format)
 
 2. **Read and analyze context:**
    - Read `prd.md` (for acceptance criteria and scope)

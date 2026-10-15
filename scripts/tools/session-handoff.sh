@@ -1,25 +1,21 @@
 #!/usr/bin/env bash
-# Pre-plan handoff files under docs/sessions/<id>/pre-plan/.
-# Requires an active session (pipeline: session-memory.sh begin-run or new-session; hook may use init).
-# Paths are resolved via session-memory.sh session-root.
+# Pre-plan documents under <ticket>/pre-plan/ (sibling of _run, not inside it).
+# Requires --ticket (the ticket folder must already exist).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SESSION_MEMORY="$SCRIPT_DIR/session-memory.sh"
 
 iso_now() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
-ensure_active_session() {
-  if ! "$SESSION_MEMORY" active-path >/dev/null 2>&1; then
-    "$SESSION_MEMORY" init
-  fi
-}
+TICKET=""
 
-session_root_abs() {
-  local rel
-  rel=$("$SESSION_MEMORY" session-root) || return 1
-  printf '%s/%s\n' "$ROOT" "$rel"
+ticket_abs() {
+  if [ ! -d "$ROOT/$TICKET" ]; then
+    echo "session-handoff: ticket folder does not exist: $TICKET" >&2
+    return 1
+  fi
+  printf '%s/%s\n' "$ROOT" "$TICKET"
 }
 
 read_body() {
@@ -36,23 +32,23 @@ read_body() {
 }
 
 valid_specialist() {
-  case "$1" in
-    glean|arc|jira|confluence|gitlab) return 0 ;;
-    *)
-      echo "session-handoff: invalid specialist '$1' (expected: glean, arc, jira, confluence, gitlab)" >&2
-      return 1
-      ;;
-  esac
+  # Built-ins (system-design, repro, jira, …) and project skill names are
+  # kebab-case. Reject path separators so a name cannot escape specialists/.
+  if [[ "$1" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]]; then
+    return 0
+  fi
+  echo "session-handoff: invalid specialist '$1' (expected kebab-case, e.g. repro, jira, reproduce-issue)" >&2
+  return 1
 }
 
 cmd_write_handoff() {
   local kind="${1:-}"
   shift || true
+  local base
+  base="$(ticket_abs)" || exit 1
   case "$kind" in
     merged)
-      ensure_active_session
-      local base ts out
-      base="$(session_root_abs)" || exit 1
+      local ts out
       ts="$(iso_now)"
       out="$base/pre-plan/merged-brief.md"
       mkdir -p "$(dirname "$out")"
@@ -74,9 +70,7 @@ cmd_write_handoff() {
         exit 1
       }
       valid_specialist "$name" || exit 1
-      ensure_active_session
-      local base ts out
-      base="$(session_root_abs)" || exit 1
+      local ts out
       ts="$(iso_now)"
       mkdir -p "$base/pre-plan/specialists"
       out="$base/pre-plan/specialists/${name}.md"
@@ -91,8 +85,38 @@ cmd_write_handoff() {
       } >"$out"
       printf '%s\n' "${out#"$ROOT"/}"
       ;;
+    review)
+      local ts out
+      ts="$(iso_now)"
+      out="$base/pre-plan/review.md"
+      mkdir -p "$(dirname "$out")"
+      {
+        printf '%s\n' '---'
+        printf '%s\n' 'kind: review'
+        printf '%s\n' "written: ${ts}"
+        printf '%s\n' '---'
+        printf '\n'
+        read_body "${1:-}"
+      } >"$out"
+      printf '%s\n' "${out#"$ROOT"/}"
+      ;;
+    gate)
+      local ts out
+      ts="$(iso_now)"
+      out="$base/pre-plan/gate.md"
+      mkdir -p "$(dirname "$out")"
+      {
+        printf '%s\n' '---'
+        printf '%s\n' 'kind: gate'
+        printf '%s\n' "written: ${ts}"
+        printf '%s\n' '---'
+        printf '\n'
+        read_body "${1:-}"
+      } >"$out"
+      printf '%s\n' "${out#"$ROOT"/}"
+      ;;
     *)
-      echo "session-handoff: first argument must be 'merged' or 'specialist'" >&2
+      echo "session-handoff: first argument must be 'merged', 'specialist', 'review', or 'gate'" >&2
       return 1
       ;;
   esac
@@ -100,37 +124,46 @@ cmd_write_handoff() {
 
 usage() {
   cat <<'EOF'
-Usage: session-handoff.sh write-handoff merged [content-file]
-       session-handoff.sh write-handoff specialist <name> [content-file]
+Usage: session-handoff.sh --ticket <docs/specs/...> write-handoff merged [content-file]
+       session-handoff.sh --ticket <docs/specs/...> write-handoff specialist <name> [content-file]
+       session-handoff.sh --ticket <docs/specs/...> write-handoff review [content-file]
+       session-handoff.sh --ticket <docs/specs/...> write-handoff gate [content-file]
 
-Writes pre-plan handoff artifacts under the active session:
-  docs/sessions/<id>/pre-plan/merged-brief.md
-  docs/sessions/<id>/pre-plan/specialists/<name>.md   (name: glean|arc|jira|confluence|gitlab)
+Writes pre-plan documents beside the ticket docs (not under _run/):
+  <ticket>/pre-plan/merged-brief.md
+  <ticket>/pre-plan/specialists/<name>.md   (kebab-case name)
+  <ticket>/pre-plan/review.md
+  <ticket>/pre-plan/gate.md
 
 content-file:
   - Path to a file to copy into the artifact, or omit / use - with stdin redirected.
 
-Requires: scripts/tools/session-memory.sh session-root (active session). Creates a session via init if none.
+The ticket folder must already exist. _run/ is not required.
 
 Examples:
-  session-handoff.sh write-handoff merged /tmp/brief.md
-  ./scripts/tools/session-memory.sh session-root
-  printf '%s\n' '## Brief' | session-handoff.sh write-handoff merged -
+  session-handoff.sh --ticket docs/specs/2026-10-14-KEY-slug write-handoff merged /tmp/brief.md
+  printf '%s\n' '## Brief' | session-handoff.sh --ticket docs/specs/2026-10-14-KEY-slug write-handoff merged -
 EOF
 }
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ] || [ -z "${1:-}" ]; then
+  usage
+  [ -n "${1:-}" ] || exit 1
+  exit 0
+fi
+
+if [ "${1:-}" != "--ticket" ] || [ $# -lt 3 ]; then
+  echo "session-handoff: --ticket <docs/specs/...> is required" >&2
+  usage >&2
+  exit 1
+fi
+TICKET="$2"
+shift 2
 
 case "${1:-}" in
   write-handoff)
     shift
     cmd_write_handoff "$@"
-    ;;
-  --help|-h)
-    usage
-    exit 0
-    ;;
-  "")
-    usage >&2
-    exit 1
     ;;
   *)
     echo "session-handoff: unknown command: ${1:-}" >&2

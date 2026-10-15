@@ -1,6 +1,6 @@
 ---
 name: dev-reviewer
-description: "Reviews code implementation for quality, patterns, complexity, standards compliance, test coverage, and error handling. LPP: expect only the spec plus dev material under docs/sessions/<id>/artifacts/diffs/dev/—not other domains' diff trees or MCP briefs. Produces a confidence score with actionable improvement suggestions. Use when you want a domain-specific code quality review before QA."
+description: "Reviews code implementation for quality, patterns, complexity, standards compliance, test coverage, and error handling. LPP: expect only the spec plus dev material under <ticket-folder>/_run/diffs/dev/—not other domains' diff trees or MCP briefs. Produces a confidence score with actionable improvement suggestions. Use when you want a domain-specific code quality review before QA."
 tools: Read, Grep, Glob
 model: inherit
 ---
@@ -23,7 +23,7 @@ If you **cannot** complete the review without **external** evidence (e.g. MR/iss
 
 **Main agent: run `Task(mcp-…)` for the needed specialist output, attach it to the next `Task(dev-reviewer)` prompt, then retry.**
 
-Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`**, or **`Task(mcp-arc)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
+Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
 
 ## Guardrails
 

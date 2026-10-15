@@ -5,9 +5,9 @@
 > Cursor equivalent: `agentic/adapters/cursor/rules/*.mdc` → `.cursor/rules/` via `setup-agentic.sh cursor`.
 >
 > Framework SDD lives under `agentic/{agents,skills,commands,hooks}` and is installed as the
-> user-level Claude plugin `bcs-sdd` (`/bcs-sdd:<name>`). Project overlays (`bcs-*`) live in
-> `.agents/` and are linked into `.claude/` so Claude Code can see them. Cursor installs the
-> same framework under `.cursor/`, including skills, and reads overlay skills from `.agents/skills/`.
+> user-level Claude plugin `beacon-sdd` (`/beacon-sdd:<name>`). Project skills, agents, and
+> commands stay with the project; setup does not copy or link them. Cursor installs the same
+> framework under a `beacon/` subfolder inside each `.cursor/` directory it uses.
 
 @AGENTS.md
 
@@ -18,9 +18,9 @@ Everything below is **specific to Claude Code** and intentionally lives only her
 
 ## Personas — Claude Code invocation
 
-Personas are invoked as plugin slash commands (`/bcs-sdd:<name>`). Each command is a **thin
-delegator**: typing `/bcs-sdd:prd …` hands the invocation to the matching persona **subagent** in
-the `bcs-sdd` plugin via the Task tool. The subagent does the work and returns a structured result;
+Personas are invoked as plugin slash commands (`/beacon-sdd:<name>`). Each command is a **thin
+delegator**: typing `/beacon-sdd:prd …` hands the invocation to the matching persona **subagent** in
+the `beacon-sdd` plugin via the Task tool. The subagent does the work and returns a structured result;
 when it needs a read-only helper or a human decision it escalates back to the main loop (see
 **Flat orchestration** in `AGENTS.md`).
 
@@ -56,7 +56,7 @@ Claude Code.
 
 ## Hooks (Claude Code wiring)
 
-Registered in the `bcs-sdd` plugin `hooks/hooks.json`. Scripts live in that plugin and use
+Registered in the `beacon-sdd` plugin `hooks/hooks.json`. Scripts live in that plugin and use
 `${CLAUDE_PLUGIN_ROOT}`. See `AGENTS.md` — **Hooks** for what each one does; this table is the
 Claude Code-specific event wiring:
 

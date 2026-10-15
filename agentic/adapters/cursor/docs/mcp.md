@@ -6,8 +6,6 @@ For **Jira / Confluence** (read-only onboarding, auth, troubleshooting), see **[
 
 For **Glean** (optional enterprise search, org-wide institutional context), see **[glean-cursor-workflow.md](glean-cursor-workflow.md)**.
 
-For **ARC** (optional AvaTax Release Central MCP, project-scoped curated knowledge and schema search), see **[arc-mcp-workflow.md](arc-mcp-workflow.md)**.
-
 ## Integration quick reference
 
 | Optional integration | Primary doc |
@@ -16,7 +14,6 @@ For **ARC** (optional AvaTax Release Central MCP, project-scoped curated knowled
 | GitLab (stdio `@zereight/mcp-gitlab` → SCM `/api/v4`) | [gitlab-cursor-workflow.md](gitlab-cursor-workflow.md) |
 | Atlassian Rovo (Jira / Confluence read) | [atlassian-cursor-workflow.md](atlassian-cursor-workflow.md) |
 | Glean (enterprise search) | [glean-cursor-workflow.md](glean-cursor-workflow.md) |
-| ARC (AvaTax Release Central knowledge base) | [arc-mcp-workflow.md](arc-mcp-workflow.md) |
 
 ## What MCP Does
 
@@ -41,9 +38,9 @@ MCP connects Cursor to external tools and data sources. MCP servers expose capab
 
 ### Framework repo (agentic-workspace) conventions
 
-- **Committed** `.cursor/mcp.json` usually lists **optional** servers (GitLab, Atlassian Rovo, Glean, ARC) with **canonical** or **env-based** URLs — **no** API tokens or OAuth secrets in git. Use **`${env:NAME}`** in **`url`**, **`headers`**, and **`auth`** fields where teams need machine-specific or tenant-specific values (e.g. **`ARC_MCP_TOKEN`** for ARC—see **[arc-mcp-workflow.md](arc-mcp-workflow.md)**).
+- **Committed** `.cursor/mcp.json` usually lists **optional** servers (GitLab, Atlassian Rovo, Glean) with **canonical** or **env-based** URLs — **no** API tokens or OAuth secrets in git. Use **`${env:NAME}`** in **`url`**, **`headers`**, and **`auth`** fields where teams need machine-specific or tenant-specific values.
 - **Local overrides:** Developers may add blocks or change URLs **without** committing (or use **global** `~/.cursor/mcp.json`) so internal hostnames stay off the default branch.
-- **Agent behavior:** Personas **degrade gracefully** when MCP is missing; see **`00-workspace-router.mdc`** and **[atlassian-cursor-workflow.md](atlassian-cursor-workflow.md)**, **[glean-cursor-workflow.md](glean-cursor-workflow.md)**, **[gitlab-cursor-workflow.md](gitlab-cursor-workflow.md)**, **[arc-mcp-workflow.md](arc-mcp-workflow.md)**.
+- **Agent behavior:** Personas **degrade gracefully** when MCP is missing; see **`00-workspace-router.mdc`** and **[atlassian-cursor-workflow.md](atlassian-cursor-workflow.md)**, **[glean-cursor-workflow.md](glean-cursor-workflow.md)**, **[gitlab-cursor-workflow.md](gitlab-cursor-workflow.md)**.
 
 ### STDIO Server (Local)
 
@@ -140,7 +137,7 @@ Cursor can present **multiple-choice questions** via the **`AskQuestion`** tool 
 | **Plan mode** | `AskQuestion` is commonly available for structured checkpoints. |
 | **Agent mode** | Availability may **vary** by Cursor version and model; there are [community requests](https://forum.cursor.com/t/allow-askquestion-tool-calls-in-agent-mode-or-any-mode/152517) to make `AskQuestion` consistently available outside Plan mode. |
 
-**Run-pipeline Finish:** orchestrators should **prefer `AskQuestion`** for commit-message options (including **do not commit** and **manual**), push yes/no, and MR yes/no when the tool is present; **fall back** to numbered chat prompts if not. **Selecting a suggested commit message** is treated as consent to run **`git commit`** with that message (see **`.cursor/skills/run-pipeline/SKILL.md`** § 9). **Push** and **MR** remain user-confirmed suggestions only — no autonomous `git push` or GitLab writes.
+**Run-pipeline Finish:** orchestrators should **prefer `AskQuestion`** for commit-message options (including **do not commit** and **manual**), push yes/no, and MR yes/no when the tool is present; **fall back** to numbered chat prompts if not. **Selecting a suggested commit message** is treated as consent to run **`git commit`** with that message (see **`.cursor/skills/beacon/run-pipeline/SKILL.md`** § 9). **Push** and **MR** remain user-confirmed suggestions only — no autonomous `git push` or GitLab writes.
 
 ## Using MCP in Chat
 

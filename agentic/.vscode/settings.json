@@ -1,12 +1,7 @@
 {
     "git.autoRepositoryDetection": true,
     "git.repositoryScanMaxDepth": 2,
-    "git.scanRepositories": [
-      "br-tax-devops",
-      "br-tax-engine",
-      "br-tax-ui",
-      "ticket-dashboard"
-    ],
+    "git.scanRepositories": [],
     "scm.repositories.visible": 10
   }
   

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Append GATE: / impl | / FAILURE: lines via session-memory.sh from workspace root (no cd chains).
-# Resolves ACTIVE_SESSION through session-memory.sh (fails if no session when writing).
+# Writes through session-memory.sh --ticket (fails if the ticket timeline is missing).
 # Bash 3.2+ compatible.
 set -euo pipefail
 
@@ -10,7 +10,7 @@ SM="$ROOT/scripts/tools/session-memory.sh"
 
 usage() {
   cat <<'EOF'
-Usage: log-gate.sh <subcommand> [args ...]
+Usage: log-gate.sh --ticket <docs/specs/...> <subcommand> [args ...]
 
 Subcommands (run-pipeline telemetry):
   plan-attempt <n> <spec-path>
@@ -41,14 +41,28 @@ All writes go through scripts/tools/session-memory.sh from repo root.
 EOF
 }
 
+TICKET=""
+
 ensure_session() {
-  if ! "$SM" active-path >/dev/null 2>&1; then
-    echo "log-gate: no active session — run pipeline-init / session-memory begin-run first" >&2
+  if ! "$SM" --ticket "$TICKET" active-path >/dev/null 2>&1; then
+    echo "log-gate: no timeline for $TICKET — run pipeline-init --ticket first" >&2
     exit 1
   fi
 }
 
 cd "$ROOT"
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ -z "${1:-}" ]; then
+  usage
+  exit 0
+fi
+if [ "${1:-}" != "--ticket" ] || [ $# -lt 2 ]; then
+  echo "log-gate: --ticket <docs/specs/...> is required" >&2
+  usage >&2
+  exit 1
+fi
+TICKET="$2"
+shift 2
 
 cmd="${1:-}"
 if [ -z "$cmd" ] || [ "$cmd" = "-h" ] || [ "$cmd" = "--help" ]; then
@@ -61,17 +75,17 @@ case "$cmd" in
   plan-attempt)
     [ $# -eq 2 ] || { echo "log-gate: plan-attempt <n> <spec-path>" >&2; exit 1; }
     ensure_session
-    "$SM" write "GATE: plan | ATTEMPT $1 | spec: $2"
+    "$SM" --ticket "$TICKET" write "GATE: plan | ATTEMPT $1 | spec: $2"
     ;;
   plan-review-gate)
     [ $# -eq 3 ] || { echo "log-gate: plan-review-gate <score> <decision> <attempts>" >&2; exit 1; }
     ensure_session
-    "$SM" write "GATE: plan-review | $1% | $2 | attempts: $3"
+    "$SM" --ticket "$TICKET" write "GATE: plan-review | $1% | $2 | attempts: $3"
     ;;
   plan-done)
     [ $# -eq 1 ] || { echo "log-gate: plan-done <spec-path>" >&2; exit 1; }
     ensure_session
-    "$SM" write "GATE: plan | DONE | spec: $1"
+    "$SM" --ticket "$TICKET" write "GATE: plan | DONE | spec: $1"
     ;;
   impl-start)
     PHASE=""
@@ -94,9 +108,9 @@ case "$cmd" in
     [ -n "$DOM" ] || { echo "log-gate: impl-start requires --domain" >&2; exit 1; }
     ensure_session
     if [ -n "$PHASE" ]; then
-      "$SM" write "impl | START | phase: $PHASE | domain: $DOM"
+      "$SM" --ticket "$TICKET" write "impl | START | phase: $PHASE | domain: $DOM"
     else
-      "$SM" write "impl | START | domain: $DOM"
+      "$SM" --ticket "$TICKET" write "impl | START | domain: $DOM"
     fi
     ;;
   impl-done)
@@ -134,7 +148,7 @@ case "$cmd" in
     if [ -n "$DOMAINS" ]; then
       LINE="$LINE | domains: $DOMAINS"
     fi
-    "$SM" write "$LINE"
+    "$SM" --ticket "$TICKET" write "$LINE"
     ;;
   impl-review-gate)
     SCORE=""
@@ -180,7 +194,7 @@ case "$cmd" in
     if [ -n "$ATT" ]; then
       LINE="$LINE | attempts: $ATT"
     fi
-    "$SM" write "$LINE"
+    "$SM" --ticket "$TICKET" write "$LINE"
     ;;
   impl-phase-done)
     SPEC=""
@@ -203,15 +217,15 @@ case "$cmd" in
     [ -n "$SPEC" ] || { echo "log-gate: impl-phase-done requires --spec" >&2; exit 1; }
     ensure_session
     if [ -n "$PHASE" ]; then
-      "$SM" write "GATE: impl | DONE | phase: $PHASE | spec: $SPEC"
+      "$SM" --ticket "$TICKET" write "GATE: impl | DONE | phase: $PHASE | spec: $SPEC"
     else
-      "$SM" write "GATE: impl | DONE | spec: $SPEC"
+      "$SM" --ticket "$TICKET" write "GATE: impl | DONE | spec: $SPEC"
     fi
     ;;
   final-scrum)
     [ $# -eq 1 ] || { echo "log-gate: final-scrum <decision>" >&2; exit 1; }
     ensure_session
-    "$SM" write "GATE: final-scrum | $1"
+    "$SM" --ticket "$TICKET" write "GATE: final-scrum | $1"
     ;;
   failure)
     [ $# -ge 2 ] || { echo "log-gate: failure <step> <message...>" >&2; exit 1; }
@@ -219,7 +233,7 @@ case "$cmd" in
     shift
     MSG="$*"
     ensure_session
-    "$SM" write "FAILURE: $STEP | $MSG"
+    "$SM" --ticket "$TICKET" write "FAILURE: $STEP | $MSG"
     ;;
   manual-gate-context)
     [ $# -ge 2 ] || { echo "log-gate: manual-gate-context <segment> <message...>" >&2; exit 1; }
@@ -227,12 +241,12 @@ case "$cmd" in
     shift
     REST="$*"
     ensure_session
-    "$SM" write "MANUAL_GATE_CONTEXT: $SEG | $REST"
+    "$SM" --ticket "$TICKET" write "MANUAL_GATE_CONTEXT: $SEG | $REST"
     ;;
   write-raw)
     [ $# -ge 1 ] || { echo 'log-gate: write-raw "<line>"' >&2; exit 1; }
     ensure_session
-    "$SM" write "$*"
+    "$SM" --ticket "$TICKET" write "$*"
     ;;
   *)
     echo "log-gate: unknown subcommand: $cmd" >&2

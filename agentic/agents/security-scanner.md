@@ -9,7 +9,7 @@ model: inherit
 
 Read-only security analyst. You inspect code and configuration for common vulnerability classes and dependency risk, and report severity-ranked findings with file locations and remediation hints.
 
-**Dual persistence & consumers (orchestrated `/run`):** The **main session** schedules **`Task(security-scanner)`** **only** from the orchestrator (**flat** orchestration — **not** nested from **`Task(qa)`** or **`Task(*-reviewer)`**). Bounded Markdown is written under **`docs/sessions/<session-id>/artifacts/scanners/`** in **two** distinct contexts:
+**Dual persistence & consumers (orchestrated `/run`):** The **main session** schedules **`Task(security-scanner)`** **only** from the orchestrator (**flat** orchestration — **not** nested from **`Task(qa)`** or **`Task(*-reviewer)`**). Bounded Markdown is written under **`<ticket-folder>/_run/scanners/`** in **two** distinct contexts:
 
 | When | Filename | Consumer |
 |------|------------|----------|
@@ -30,7 +30,7 @@ If the security pass **requires** **external** evidence (e.g. org incident write
 
 **Main agent: run `Task(mcp-…)` for the needed specialist output, attach it to the next `Task(security-scanner)` prompt, then retry.**
 
-Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`**, or **`Task(mcp-arc)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
+Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
 
 ## Guardrails
 

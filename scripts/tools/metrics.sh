@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 AUDIT="$ROOT/docs/audit.log"
-SESSIONS="$ROOT/docs/sessions"
+SESSIONS="$ROOT/docs/specs"
 
 usage() {
   cat <<'EOF'
@@ -21,7 +21,7 @@ Commands:
   models        Model tier usage, distribution, and escalation frequency
   --help, -h    Show this help
 
-All metrics are derived from local files (docs/audit.log, docs/sessions/).
+All metrics are derived from local files (docs/audit.log, docs/specs/*/ _run/).
 Nothing leaves the machine.
 EOF
 }
@@ -34,7 +34,7 @@ esac
 # --- helpers ---
 
 no_data() {
-  echo "No data found. Metrics are derived from docs/audit.log and docs/sessions/."
+  echo "No data found. Metrics are derived from docs/audit.log and ticket _run/ timelines."
   echo "Run some pipelines first, then check back."
   exit 0
 }
@@ -44,7 +44,7 @@ audit_lines() {
 }
 
 session_gate_lines() {
-  find "$SESSIONS" -name '*.md' -type f 2>/dev/null | while read -r f; do
+  find "$SESSIONS" -path '*/_run/*' -name '*.md' -type f 2>/dev/null | while read -r f; do
     grep -h '^\- .*|.*GATE:' "$f" 2>/dev/null || true
     grep -h '^\- .*|.*DECISION:' "$f" 2>/dev/null || true
     grep -h '^\- .*|.*PIPELINE:' "$f" 2>/dev/null || true

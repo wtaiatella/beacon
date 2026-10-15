@@ -1,7 +1,7 @@
 # Agentic documentation map
 
 Canonical docs for the SDD framework and IDE adapters live under **`agentic/`**.
-Runtime IDE trees (`.claude/`, `.cursor/`, `.agents/`) and root `CLAUDE.md` are **generated**.
+Runtime IDE trees (`.claude/`, `.cursor/**/beacon/`, `.agents/` framework leftovers) and root `CLAUDE.md` are **generated**. Project files elsewhere under `.cursor/` stay tracked.
 
 ## Layout
 
@@ -25,11 +25,13 @@ agentic/
 | Path | Why |
 |------|-----|
 | `docs/run-pipeline-reference.md` | Shared pipeline human reference (not IDE-specific) |
-| `docs/reference/arc-*.md`, `mcp-servers-inventory.md` | Enterprise / product context |
+| `docs/reference/mcp-servers-inventory.md` | Enterprise / product context |
 | `docs/reference/*-cursor-workflow.md` | Product workflows (Atlassian/GitLab/Glean) — Cursor-named historically; still shared process docs |
 | `docs/reference/nested-task-audit.md` | Shared orchestration invariant |
-| `docs/model-catalog.md`, `docs/arc-onboarding.md` | Shared |
-| `docs/sessions/`, `docs/specs/` | Runtime / local (mostly gitignored) |
+| `docs/model-catalog.md` | Shared |
+| `<ticket>/pre-plan/` | Pre-plan briefs, review, and gate. Sibling of `_run`. |
+| `<ticket>/_run/` | Run scratch for one ticket (timeline, scanners, diffs). Tracked with the ticket folder. |
+| `docs/specs/` | Tracked — ticket folders are this workspace's project history |
 
 These are **not** installed by `setup-agentic.sh`. Edit them in place under `docs/`.
 
@@ -41,7 +43,7 @@ These are **not** installed by `setup-agentic.sh`. Edit them in place under `doc
 | `docs/adapters/claude/` | from `adapters/claude/docs/` | pruned if was managed* |
 | `docs/adapters/cursor/` | — | from `adapters/cursor/docs/` |
 | `.claude/*` framework | agents/skills/commands/hooks | deactivated by default |
-| `.cursor/*` including `.cursor/skills` | — | full Cursor runtime |
+| `.cursor/**/beacon/` | — | Cursor framework runtime. Project skills outside `beacon/` stay tracked. `hooks.json` is regenerated at `.cursor/hooks.json` |
 
 \*Doc installs use `docs/adapters/.agentic-managed` so only generated adapter doc trees are pruned.
 

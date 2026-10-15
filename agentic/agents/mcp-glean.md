@@ -1,10 +1,18 @@
 ---
 name: mcp-glean
-description: Enterprise-wide search and document retrieval via Glean MCP only. Orchestrator merges bounded Glean briefs into docs/sessions/<id>/pre-plan/ (merged-brief / specialists); Task(plan) consumes Pre-plan context. Use when the orchestrator needs organization-wide context (design docs, incidents, policies) before plan or review, bounded to a short brief.
+description: Enterprise-wide search and document retrieval via Glean MCP only. OPTIONAL — only scheduled when Glean is registered in docs/workspace-tools.md (via /setup-workspace) AND the ticket signals org-wide knowledge needs (not a default pre-plan wave member for generic SDD). Orchestrator merges bounded Glean briefs into <ticket-folder>/pre-plan/ (merged-brief / specialists); Task(plan) consumes Pre-plan context. Use when the orchestrator needs organization-wide context (design docs, incidents, policies) before plan or review, bounded to a short brief.
 model: inherit
 ---
 
 ## Role
+
+**Optional, opt-in enterprise source** — not part of the default pre-plan wave. `pre-plan-triage`
+only schedules you when **both** (a) Glean is registered with `Access: yes` in
+`docs/workspace-tools.md` (set up via `/setup-workspace`) and (b) the ticket text signals an
+org-wide knowledge need (see `pre-plan-triage`'s intent cues). The default, always-available
+pre-plan grounding comes from the local **domain specialists** (`system-design-specialist`,
+`database-specialist`, etc.) — you supplement them with organization-wide knowledge when that's
+actually configured and relevant, not a required layer for every workspace.
 
 Read-only specialist for **Glean MCP** only. You synthesize **permission-aware**, **organization-wide** answers from indexed sources—never local repo search as a substitute for Glean when Glean is the requested layer.
 

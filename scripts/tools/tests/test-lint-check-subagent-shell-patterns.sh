@@ -7,17 +7,17 @@ LINT="$ROOT/scripts/tools/lint-check.sh"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-mkdir -p "$TMP/clean/.cursor/agents" "$TMP/clean/.cursor/skills/sample"
-printf '%s\n' '# Fixture' >"$TMP/clean/.cursor/agents/dev.md"
-printf '%s\n' '# Fixture' >"$TMP/clean/.cursor/skills/sample/SKILL.md"
+mkdir -p "$TMP/clean/agentic/agents" "$TMP/clean/agentic/skills/sample"
+printf '%s\n' '# Fixture' >"$TMP/clean/agentic/agents/dev.md"
+printf '%s\n' '# Fixture' >"$TMP/clean/agentic/skills/sample/SKILL.md"
 
 echo "── lint-check.sh subagent shell guard: clean isolated tree ──"
 "$LINT" "$TMP/clean"
 echo "OK clean tree passes"
 
-mkdir -p "$TMP/bad/.cursor/agents"
+mkdir -p "$TMP/bad/agentic/agents"
 # Intentional violation: instructional inline python3 -c outside fences / exemptions.
-printf '%s\n' 'Use python3 -c "import json" to parse transcripts.' >"$TMP/bad/.cursor/agents/bad-fixture.md"
+printf '%s\n' 'Use python3 -c "import json" to parse transcripts.' >"$TMP/bad/agentic/agents/bad-fixture.md"
 
 echo "── lint-check.sh subagent shell guard: expect failure on fixture ──"
 set +e

@@ -7,7 +7,8 @@ alwaysApply: true
 
 > Cursor always-on project context (equivalent role to root `CLAUDE.md` for Claude Code).
 > Canonical SDD source lives under `agentic/`; install with `scripts/setup-agentic.sh cursor`.
-> Project overlays (`bcs-*`) stay in IDE runtime dirs and are **outside** the required orchestrator.
+> Project skills, agents, and commands stay with the project. Setup does not copy or link
+> them, and they are **outside** the required orchestrator.
 >
 > The **shared, IDE-agnostic** SDD contract (workspace identity, ticket folder, personas, pipeline,
 > confidence scoring, multi-repo, knowledge base, skills, hooks (purpose), session memory, metrics,
@@ -19,21 +20,27 @@ alwaysApply: true
 
 | Kind | Path |
 |------|------|
-| Subagents / personas | `.cursor/agents/` |
-| Framework skills | `.cursor/skills/` |
-| Project overlays | `.agents/{agents,commands,skills}/bcs-*` (Cursor skills load from here; agents and commands are linked into `.cursor/`) |
-| Hooks | `.cursor/hooks.json` + `.cursor/hooks/` |
+| Subagents / personas | `.cursor/agents/beacon/` |
+| Framework skills | `.cursor/skills/beacon/` |
+| Project skills, agents, commands | Wherever the project keeps them. Setup does not copy or link them. |
+| Hooks | `.cursor/hooks.json` + `.cursor/hooks/beacon/` |
 | Canonical source | `agentic/` (edit here, then re-run setup) |
 
 ## Personas — Cursor invocation
 
-Invoke via Task / agent defs under `.cursor/agents/`, or slash skills where present (e.g. `/run` →
-`.cursor/skills/run`). See `AGENTS.md` for the full persona table (roles, inputs).
+Invoke via Task / agent defs under `.cursor/agents/beacon/`, or slash skills where present (e.g.
+`/run` → `.cursor/skills/beacon/run`). See `AGENTS.md` for the full persona table (roles, inputs).
 
 ## Flat orchestration
 
 Subagents must not nest Task. Main session only. `/run` follows
-`.cursor/skills/run-pipeline/SKILL.md`.
+`agentic/skills/run-pipeline/SKILL.md`.
+
+**Spec updates are `Task(do)`-only:** the main session never directly patches a spec file
+(`apply_patch`, bulk search-replace, or any other direct edit) for checkbox/status/`_state.json`
+bookkeeping. Personas return **Proposed spec updates**; once the matching `Task(scrum)` gate
+returns **PROCEED**, the orchestrator delegates a batched `Task(do)` to apply them — `Task(scrum)`
+PROCEED authorizes `Task(do)`, never a direct orchestrator patch.
 
 ## Model Selection (Cursor)
 
@@ -43,7 +50,7 @@ override mechanisms exist here:
 
 - **Per-install (own file, same mechanism as Claude Code):** `agentic/models/cursor.yml` (copy from
   `agentic/models/example.yml`, gitignored) — `scripts/setup-agentic.sh cursor` rewrites the
-  installed `.cursor/agents/*.md` copy's `model:` line for any agent listed. Claude Code reads its
+  installed `.cursor/agents/beacon/*.md` copy's `model:` line for any agent listed. Claude Code reads its
   **own** `agentic/models/claude.yml` — same checkout, independent overrides per IDE.
 - **Dynamic per-step (Cursor-only, pre-existing):** `.cursor/models.yml` (team baseline) or
   `.cursor/models.user.yml` (`use_manual_models: true` for manual assignment), applied at runtime

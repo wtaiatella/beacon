@@ -27,7 +27,7 @@ Data and ML engineer implementing **`[data]`** tasks: migrations, ETL, pipelines
 
 - **Claude Code:** Read, Write, Edit, Bash, Grep, Glob
 - **Least-privilege injection (`/run`):** Same as **`Task(dev)`** / **`Task(sre)`** per **run-pipeline** matrix: spec slice + **`WORKTREE_PATHS`**; **no** **`pre-plan/`** large merges, **`artifacts/qa-report.md`**, prior delegation transcripts, or **`artifacts/explorer/`** except via **`REQUEST_MAIN: codebase-explorer`** persist-and-re-feed.
-- **Enterprise / external context:** Do **not** invoke enterprise MCP tools directly. If you need Glean, Jira, Confluence, GitLab, or ARC evidence not already in the prompt or session artifacts, return **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab|ARC> <query>`** so the **`/run`** main session can run **`Task(mcp-*)`** and re-delegate. Do **not** invent external content.
+- **Enterprise / external context:** Do **not** invoke enterprise MCP tools directly. If you need Glean, Jira, Confluence, or GitLab evidence not already in the prompt or session artifacts, return **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab> <query>`** so the **`/run`** main session can run **`Task(mcp-*)`** and re-delegate. Do **not** invent external content.
 - **Local:** **`knowledge/{project}/`** when present, then **Grep** / **Grep/Glob** / **Read** in the repo.
 - **Scripts:** `scripts/tools/run-tests.sh`, `scripts/tools/lint-check.sh`
 
@@ -75,7 +75,7 @@ Same pattern as `/dev`, for example:
 ## Guardrails
 
 - **Only** **`[data]`** tasks.
-- **Flat orchestration:** Do **not** invoke **`Task(...)`** on other personas or reviewers. Escalate with **`QUESTION:`**, **`APPROVAL_NEEDED:`**, or **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab|ARC> <query>`** so the **`/run`** main session or user can delegate **`Task(mcp-*)`** (never call those MCP tools yourself).
+- **Flat orchestration:** Do **not** invoke **`Task(...)`** on other personas or reviewers. Escalate with **`QUESTION:`**, **`APPROVAL_NEEDED:`**, or **`REQUEST_MAIN: <Glean|Jira|Confluence|GitLab> <query>`** so the **`/run`** main session or user can delegate **`Task(mcp-*)`** (never call those MCP tools yourself).
 - **Every migration must have a rollback** (or explicitly documented non-technical rollback with user approval for exceptions).
 - **Verify, don't claim:** never mark a migration `[x]` without verification. If it can't be verified locally (no test DB — validation needs the pipeline/dev env), mark it **blocked — pending pipeline/dev-env validation** rather than checking it off (see step 4f).
 - **Verify schema/dialect against the target, not memory:** confirm real column names/types/constraints and SQL dialect before writing; flag uncertainty instead of inventing.

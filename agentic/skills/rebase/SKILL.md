@@ -12,9 +12,9 @@ orchestrator's sequence (FR-10, FR-12).
 
 **Scope (FR-12):** git-sync only. Deliberately out of scope here:
 
-- **No MR creation/update** — MR body/creation stays with the user via the `bcs-gitlab-mr-from-spec`
-  skill (generates MR body text only) plus user-confirmed GitLab MCP actions. A git push that
-  updates an already-open MR's source branch is git-sync, not an MR API mutation.
+- **No MR creation/update** — MR body/creation stays with the user: `scripts/tools/mr-description-from-spec.sh`
+  generates MR body text only, and any actual create/update goes through user-confirmed GitLab MCP
+  actions. A git push that updates an already-open MR's source branch is git-sync, not an MR API mutation.
 - **No Jira status transitions.**
 - **No ticket-folder lookup except no-arg fallback** — a Jira key in `$ARGUMENTS` is used only
   to **resolve a git branch** (see **Ticket branch**). Empty `$ARGUMENTS` may infer **at most
@@ -36,7 +36,7 @@ Do not ask again for those confirmations after a clean run.
     as the exact branch name; skip ticket-key globbing. At most **one** of {ticket key, explicit
     branch}.
   - **Repo name:** anything else — exact child-folder name or unambiguous prefix (`engine` →
-    `br-tax-engine`). If it does not match any child repo, **stop immediately** and list the
+    `payments-api`). If it does not match any child repo, **stop immediately** and list the
     repos that do exist rather than silently doing nothing.
 
 | Invocation | Scope | Working branch |
@@ -68,7 +68,7 @@ Resolve **which child repo(s)** to rebase, in order. The first source that yield
 existing child-folder names wins.
 
 1. **Conversation changes (preferred).** Where did this ticket's work land?
-   - Child-repo paths written or committed in this conversation (`br-tax-engine/…`).
+   - Child-repo paths written or committed in this conversation (`payments-api/…`).
    - Explicit repo the user/session treated as the implementation target.
    - Ignore incidental mentions (docs-only paths, stash of another ticket, related Jira keys).
    - Multi-repo tickets: include every child repo that actually received changes.
@@ -80,8 +80,8 @@ existing child-folder names wins.
 3. **Unresolved repo** → stop-gate. Do **not** rebase every clone. Ask the user which repo, or
    to pass `/rebase <repo> <ticket>`.
 
-Announce, e.g. `inferred ticket BG-11374 from conversation; repo br-tax-engine (conversation
-changes)` or `… repo br-tax-engine (_state.json)`.
+Announce, e.g. `inferred ticket BG-11374 from conversation; repo payments-api (conversation
+changes)` or `… repo payments-api (_state.json)`.
 
 **C. Branch** for each resolved repo: run **Ticket branch** with the inferred key. If
 `_state.json.branch` is non-empty and that ref exists locally or on `origin`, use it as the

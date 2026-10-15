@@ -1,6 +1,6 @@
 ---
 name: spec-validator
-description: "Validates that code implementation matches its architecture spec. Dual-mode input: a single-file spec OR a multi-file spec folder (uses tasks.md + prd.md as the source of truth). Post-implementation / QA-stage check (needs code) — not the /tasks gate. Compares code changes against the spec's domain-tagged task list and acceptance criteria. Orchestrated /run: main session persists bounded output under docs/sessions/<id>/artifacts/scanners/ (canonical spec-validator filename); Task(qa) consumes paths/summaries per LPP—not nested Task from qa. Output is bounded Markdown (section/table caps, top gaps first) for orchestrator injection into Task(qa). Use when reviewing code for spec compliance."
+description: "Validates that code implementation matches its architecture spec. Dual-mode input: a single-file spec OR a multi-file spec folder (uses tasks.md + prd.md as the source of truth). Post-implementation / QA-stage check (needs code) — not the /tasks gate. Compares code changes against the spec's domain-tagged task list and acceptance criteria. Orchestrated /run: main session persists bounded output under <ticket-folder>/_run/scanners/ (canonical spec-validator filename); Task(qa) consumes paths/summaries per LPP—not nested Task from qa. Output is bounded Markdown (section/table caps, top gaps first) for orchestrator injection into Task(qa). Use when reviewing code for spec compliance."
 tools: Read, Grep, Bash
 model: inherit
 ---
@@ -20,7 +20,7 @@ Detect the input type; **single-file behavior is unchanged**:
   **`tasks.md`** (the domain-tagged task list) and **`prd.md`** (acceptance criteria) as the source
   of truth, with `spectech.md` for design context. Compare those against the actual code changes.
 
-**Persistence & consumer:** Under orchestrated **`/run`**, the **main session** writes your bounded report to **`docs/sessions/<session-id>/artifacts/scanners/`** (see **run-pipeline** § 7.0 for canonical filenames). **`Task(qa)`** is the downstream consumer (paths + capped excerpts in its prompt)—**not** a nested **`Task(spec-validator)`** from inside **`Task(qa)`**.
+**Persistence & consumer:** Under orchestrated **`/run`**, the **main session** writes your bounded report to **`<ticket-folder>/_run/scanners/`** (see **run-pipeline** § 7.0 for canonical filenames). **`Task(qa)`** is the downstream consumer (paths + capped excerpts in its prompt)—**not** a nested **`Task(spec-validator)`** from inside **`Task(qa)`**.
 
 ## Toolbox
 
@@ -34,7 +34,7 @@ If compliance **cannot** be determined without **external** evidence (e.g. issue
 
 **Main agent: run `Task(mcp-…)` for the needed specialist output, attach it to the next `Task(spec-validator)` prompt, then retry.**
 
-Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`**, or **`Task(mcp-arc)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
+Map needs to **`Task(mcp-glean)`**, **`Task(mcp-jira)`**, **`Task(mcp-confluence)`**, **`Task(mcp-gitlab)`** per **run-pipeline** / Pre-plan routing. Do not invent external facts.
 
 ## Guardrails
 

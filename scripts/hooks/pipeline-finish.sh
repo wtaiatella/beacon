@@ -9,30 +9,17 @@ trap '' PIPE
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 AUDIT_PY="$ROOT/scripts/tools/audit-session-trace.py"
-ACTIVE_SESSION_FILE="$ROOT/docs/sessions/ACTIVE_SESSION"
+TICKET=""
 ATTACH_TARGET_NAME="attach-target.txt"
 
-# ROAD-48: when docs/sessions/<id>/attach-target.txt exists with a valid directory line, git
-# add/commit/push run in that target clone; otherwise the orchestrator repo root (backward compatible).
+# When <ticket>/_run/attach-target.txt names a directory, git add/commit/push run there.
 resolve_git_root() {
-  if [ ! -f "$ACTIVE_SESSION_FILE" ]; then
+  if [ -z "$TICKET" ]; then
     printf '%s\n' "$ROOT"
     return 0
   fi
-  local id
-  id=$(head -n 1 "$ACTIVE_SESSION_FILE" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  if [ -z "${id:-}" ]; then
-    printf '%s\n' "$ROOT"
-    return 0
-  fi
-  case "$id" in
-    *..*|*/*|*\\*)
-      printf '%s\n' "$ROOT"
-      return 0
-      ;;
-  esac
   local attach_file line gr
-  attach_file="$ROOT/docs/sessions/$id/$ATTACH_TARGET_NAME"
+  attach_file="$ROOT/$TICKET/_run/$ATTACH_TARGET_NAME"
   if [ ! -f "$attach_file" ]; then
     printf '%s\n' "$ROOT"
     return 0
@@ -56,8 +43,8 @@ Usage: pipeline-finish.sh [--no-commit] [--commit-message <msg> | --commit-file 
   --commit-file <path>     Like -m but uses git commit -F <path> (for messages with quotes/newlines).
   --push true|false        Default false. Push only if explicitly true (matches §9 explicit Yes).
 
-Git steps run in the orchestrator workspace root by default. When docs/sessions/<active-id>/attach-target.txt
-exists (ROAD-48 multi-root attach), git add/commit/push run in the target directory named on the first line;
+Git steps run in the orchestrator workspace root by default. When --ticket is set and
+<ticket>/_run/attach-target.txt exists, git add/commit/push run in the target directory named on the first line;
 if that path is missing or not a directory, pipeline-finish exits with an error before git.
 
 Mirrors Automatic commit execution: git status first; if nothing to commit when a commit was requested,
@@ -73,6 +60,7 @@ EOF
 }
 
 NO_COMMIT=0
+TICKET=""
 COMMIT_MSG=""
 COMMIT_FILE=""
 PUSH="false"
@@ -88,6 +76,11 @@ while [ $# -gt 0 ]; do
   fi
   case "$1" in
     --) end_of_opts=1; shift ;;
+    --ticket)
+      [ $# -ge 2 ] || { echo "pipeline-finish: --ticket requires a value" >&2; exit 1; }
+      TICKET="$2"
+      shift 2
+      ;;
     --no-commit) NO_COMMIT=1; shift ;;
     --commit-message)
       [ $# -ge 2 ] || { echo "pipeline-finish: --commit-message requires a value" >&2; exit 1; }
@@ -180,6 +173,9 @@ fi
 echo "=== audit-session-trace ==="
 cd "$ROOT"
 AUDIT_CMD=(python3 "$AUDIT_PY")
+if [ -n "$TICKET" ]; then
+  AUDIT_CMD+=(--ticket "$TICKET")
+fi
 if [ -n "$PRE_AUDIT_DELAY" ]; then
   AUDIT_CMD+=(--pre-audit-delay-seconds "$PRE_AUDIT_DELAY")
 fi

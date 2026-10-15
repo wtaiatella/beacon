@@ -5,42 +5,35 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 SM="$ROOT/scripts/tools/session-memory.sh"
 SH="$ROOT/scripts/tools/session-handoff.sh"
-backup="$ROOT/docs/sessions/.test-active-session-backup.$$"
-
-if [ -f "$ROOT/docs/sessions/ACTIVE_SESSION" ]; then
-  cp "$ROOT/docs/sessions/ACTIVE_SESSION" "$backup"
-else
-  : >"$backup"
-fi
+TICKET="docs/specs/test-handoff-$$"
 
 cleanup() {
-  if [ -f "$backup" ]; then
-    if [ -s "$backup" ]; then
-      cat "$backup" >"$ROOT/docs/sessions/ACTIVE_SESSION"
-    else
-      rm -f "$ROOT/docs/sessions/ACTIVE_SESSION"
-    fi
-    rm -f "$backup"
-  fi
+  rm -rf "$ROOT/$TICKET"
 }
 trap cleanup EXIT
+mkdir -p "$ROOT/$TICKET"
+"$SM" --ticket "$TICKET" ensure >/dev/null
 
-# begin-run matches new-session allocation; exercise begin-run in smoke test
-id=$("$SM" begin-run "smoke-handoff-$$")
 tmpdir=$(mktemp)
 printf '%s\n' 'snapshot line' >"$tmpdir"
-"$SH" write-handoff merged "$tmpdir" >/dev/null
-"$SH" write-handoff specialist arc "$tmpdir" >/dev/null
+"$SH" --ticket "$TICKET" write-handoff merged "$tmpdir" >/dev/null
+"$SH" --ticket "$TICKET" write-handoff specialist jira "$tmpdir" >/dev/null
+"$SH" --ticket "$TICKET" write-handoff review "$tmpdir" >/dev/null
+"$SH" --ticket "$TICKET" write-handoff gate "$tmpdir" >/dev/null
 rm -f "$tmpdir"
 
-test -f "$ROOT/docs/sessions/$id/pre-plan/merged-brief.md"
-test -f "$ROOT/docs/sessions/$id/pre-plan/specialists/arc.md"
-grep -q '^kind: merged-brief' "$ROOT/docs/sessions/$id/pre-plan/merged-brief.md"
-grep -q '^specialist: arc' "$ROOT/docs/sessions/$id/pre-plan/specialists/arc.md"
-grep -q 'snapshot line' "$ROOT/docs/sessions/$id/pre-plan/merged-brief.md"
+test -f "$ROOT/$TICKET/pre-plan/merged-brief.md"
+test -f "$ROOT/$TICKET/pre-plan/specialists/jira.md"
+test -f "$ROOT/$TICKET/pre-plan/review.md"
+test -f "$ROOT/$TICKET/pre-plan/gate.md"
+test ! -d "$ROOT/$TICKET/_run/pre-plan"
+grep -q '^kind: merged-brief' "$ROOT/$TICKET/pre-plan/merged-brief.md"
+grep -q '^specialist: jira' "$ROOT/$TICKET/pre-plan/specialists/jira.md"
+grep -q '^kind: review' "$ROOT/$TICKET/pre-plan/review.md"
+grep -q '^kind: gate' "$ROOT/$TICKET/pre-plan/gate.md"
+grep -q 'snapshot line' "$ROOT/$TICKET/pre-plan/merged-brief.md"
 
-rel=$("$SM" session-root)
-[ "$rel" = "docs/sessions/$id" ]
+rel=$("$SM" --ticket "$TICKET" session-root)
+[ "$rel" = "$TICKET/_run" ]
 
-rm -rf "$ROOT/docs/sessions/$id"
 echo "OK session-handoff smoke test"

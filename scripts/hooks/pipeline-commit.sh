@@ -7,29 +7,17 @@ trap '' PIPE
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ACTIVE_SESSION_FILE="$ROOT/docs/sessions/ACTIVE_SESSION"
+TICKET=""
 ATTACH_TARGET_NAME="attach-target.txt"
 
-# Same ROAD-48 attach-target resolution as pipeline-finish.sh
+# Same attach-target resolution as pipeline-finish.sh (<ticket>/_run/attach-target.txt).
 resolve_git_root() {
-  if [ ! -f "$ACTIVE_SESSION_FILE" ]; then
+  if [ -z "$TICKET" ]; then
     printf '%s\n' "$ROOT"
     return 0
   fi
-  local id
-  id=$(head -n 1 "$ACTIVE_SESSION_FILE" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  if [ -z "${id:-}" ]; then
-    printf '%s\n' "$ROOT"
-    return 0
-  fi
-  case "$id" in
-    *..*|*/*|*\\*)
-      printf '%s\n' "$ROOT"
-      return 0
-      ;;
-  esac
   local attach_file line gr
-  attach_file="$ROOT/docs/sessions/$id/$ATTACH_TARGET_NAME"
+  attach_file="$ROOT/$TICKET/_run/$ATTACH_TARGET_NAME"
   if [ ! -f "$attach_file" ]; then
     printf '%s\n' "$ROOT"
     return 0
@@ -74,6 +62,11 @@ while [ $# -gt 0 ]; do
     --commit-file)
       [ $# -ge 2 ] || { echo "pipeline-commit: --commit-file requires a path" >&2; exit 1; }
       COMMIT_FILE="$2"
+      shift 2
+      ;;
+    --ticket)
+      [ $# -ge 2 ] || { echo "pipeline-commit: --ticket requires a value" >&2; exit 1; }
+      TICKET="$2"
       shift 2
       ;;
     --repo)

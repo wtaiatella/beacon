@@ -42,7 +42,7 @@ confidence:
     dev: 1.0
     sre: 1.5    # infra is higher-risk for this spec
     data: 2.0   # data changes are critical
-  threshold: 80  # override default 75%
+  threshold: 95  # override default 90%
 ---
 ```
 
@@ -51,7 +51,7 @@ confidence:
 - If **no weights declared**, all domains default to **1.0** (equal weight).
 - Higher weight = **stricter scoring** for that domain. `/scrum` multiplies domain score by weight when computing the aggregate.
 - Aggregate formula: `sum(domain_score_i × weight_i) / sum(weight_i)`
-- The `threshold` field overrides the workspace default of 75%. Reviewers and `/scrum` must respect it.
+- The `threshold` field overrides the workspace default of 90%. Reviewers and `/scrum` must respect it.
 - When a reviewer sees custom weights in the spec frontmatter, it should **note the domain weight** in its report header (e.g., "Domain weight: 1.5× (elevated)").
 
 ## Sub-Score Breakdown
@@ -122,7 +122,7 @@ the correct files/areas are being modified.
 | Project Type | Threshold | Rationale |
 |-------------|-----------|-----------|
 | Internal tools | **65%** | Lower blast radius; speed matters |
-| Customer-facing apps | **75%** (default) | Balanced quality vs velocity |
+| Customer-facing apps | **90%** (default) | Below this, the gate reworks once before asking the user |
 | Financial / regulated | **85%** | Compliance requirements; audit trail |
 | Security-critical | **90%** | Zero-tolerance for security gaps |
 
