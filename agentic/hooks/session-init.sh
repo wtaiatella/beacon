@@ -6,6 +6,14 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
 export HOOK_DIR="$DIR"
 export HOOK_INPUT="$(cat || true)"
+WS_ROOT=$(printf '%s' "$HOOK_INPUT" | node -e '
+const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
+const input = proto.readStdinJson();
+process.stdout.write(proto.workspaceRootOf(input, ""));
+' 2>/dev/null || true)
+if [ -n "$WS_ROOT" ] && [ -d "$WS_ROOT" ]; then
+  ROOT="$WS_ROOT"
+fi
 REPOS_OUT=""
 for d in "$ROOT"/*/; do
   [ -e "$d/.git" ] || continue

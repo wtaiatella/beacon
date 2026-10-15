@@ -43,7 +43,8 @@ Usage: scripts/setup-agentic.sh <claude|cursor|antigravity|all> [--dry-run] [--k
                rules, skills) plus .cursor/hooks.json. Also deactivates managed
                Claude and legacy .agents mirrors so / entries are not duplicated.
                Does not copy or link project skills, agents, or commands.
-  antigravity  Stub install into .agent/
+  antigravity  Install the framework as a global Google Antigravity plugin
+               (~/.gemini/config/plugins/beacon-sdd) + workspace control files (AGENTS.md).
   all          Run claude + cursor + antigravity (no Claude deactivation)
 
   --dry-run      Print actions only
@@ -80,6 +81,14 @@ Claude adapter:
   - agentic/adapters/claude/docs/ → docs/adapters/claude/
   - does not copy the framework into .claude/; prunes previously managed copies
   - optional overlay agentic/adapters/claude/hooks/* is not installed into the project
+
+Antigravity adapter:
+  - framework → ~/.gemini/config/plugins/beacon-sdd
+    (plugin.json, hooks.json, rules, skills, agents, hooks).
+  - skills and personas available as Antigravity progressive disclosure skills.
+  - agentic/AGENTS.md → ./AGENTS.md (canonical workspace contract).
+  - agentic/adapters/antigravity/docs/ → docs/adapters/antigravity/.
+  - prunes legacy .agent/ stub if previously managed.
 EOF
 }
 
@@ -587,16 +596,114 @@ install_cursor() {
   echo "    done (agents+hooks+rules+skills→.cursor/*/beacon/; legacy .agents skills removed)"
 }
 
+ANTIGRAVITY_PLUGIN_NAME="beacon-sdd"
+
+antigravity_plugin_root() {
+  printf '%s\n' "$HOME/.gemini/config/plugins/$ANTIGRAVITY_PLUGIN_NAME"
+}
+
+antigravity_plugin_source_stamp() {
+  {
+    tar -cf - \
+      -C "$SRC" agents skills commands hooks \
+      -C "$SRC/adapters/antigravity" plugin.json hooks.json rules
+  } | shasum -a 256 | awk '{print $1}'
+}
+
+adapt_antigravity_paths() {
+  local dest="$1"
+  [[ -d "$dest" ]] || return 0
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "DRY: adapt_antigravity_paths $dest"
+    return 0
+  fi
+
+  local skill_names=()
+  local s
+  for s in "$dest/skills"/*; do
+    [[ -e "$s" ]] || continue
+    skill_names+=("$(basename "$s")")
+  done
+
+  while IFS= read -r -d '' f; do
+    case "$f" in
+      *.png|*.jpg|*.jpeg|*.gif|*.webp|*.pdf) continue ;;
+    esac
+    local tmp
+    tmp="$(mktemp)"
+    sed \
+      -e 's|\.claude/agents/|~/.gemini/config/plugins/beacon-sdd/agents/|g' \
+      -e 's|\.claude/commands/|~/.gemini/config/plugins/beacon-sdd/skills/|g' \
+      -e 's|\.claude/hooks/|~/.gemini/config/plugins/beacon-sdd/hooks/|g' \
+      "$f" > "$tmp"
+
+    local name
+    for name in "${skill_names[@]}"; do
+      sed -i '' -e "s|\\.claude/skills/${name}/|~/.gemini/config/plugins/beacon-sdd/skills/${name}/|g" "$tmp"
+    done
+    mv "$tmp" "$f"
+  done < <(find "$dest" -type f -print0 2>/dev/null)
+}
+
+install_antigravity_plugin() {
+  local plugin stamp dest_stamp
+  plugin="$(antigravity_plugin_root)"
+  stamp="$(antigravity_plugin_source_stamp)"
+  dest_stamp="$plugin/.sdd-source-stamp"
+
+  if [[ -f "$dest_stamp" && "$(cat "$dest_stamp")" == "$stamp" ]]; then
+    echo "    plugin $ANTIGRAVITY_PLUGIN_NAME already installed (source unchanged)"
+    return 0
+  fi
+
+  echo "    sync Antigravity plugin → $plugin"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "DRY: would write plugin tree ($plugin) and stamp"
+    return 0
+  fi
+
+  mkdir -p "$plugin" "$plugin/skills" "$plugin/rules" "$plugin/hooks" "$plugin/agents"
+  rm -rf "$plugin/skills" "$plugin/rules" "$plugin/hooks" "$plugin/agents"
+  mkdir -p "$plugin/skills" "$plugin/rules" "$plugin/hooks" "$plugin/agents"
+
+  cp "$SRC/adapters/antigravity/plugin.json" "$plugin/plugin.json"
+  cp "$SRC/adapters/antigravity/hooks.json" "$plugin/hooks.json"
+  cp -R "$SRC/adapters/antigravity/rules/"* "$plugin/rules/"
+  cp -R "$SRC/hooks/"* "$plugin/hooks/"
+  cp -R "$SRC/skills/"* "$plugin/skills/"
+  cp -R "$SRC/agents/"* "$plugin/agents/"
+
+  # Map personas from agents/ into skills/<agent>/SKILL.md if not already present as a skill
+  local agent_file agent_name
+  for agent_file in "$SRC/agents"/*.md; do
+    [[ -f "$agent_file" ]] || continue
+    agent_name="$(basename "$agent_file" .md)"
+    if [[ ! -d "$plugin/skills/$agent_name" ]]; then
+      mkdir -p "$plugin/skills/$agent_name"
+      cp "$agent_file" "$plugin/skills/$agent_name/SKILL.md"
+    fi
+  done
+
+  chmod +x "$plugin/hooks/"*.sh 2>/dev/null || true
+  adapt_antigravity_paths "$plugin"
+  printf '%s\n' "$stamp" > "$dest_stamp"
+  echo "    installed $ANTIGRAVITY_PLUGIN_NAME globally (~/.gemini/config/plugins/$ANTIGRAVITY_PLUGIN_NAME)"
+}
+
 install_antigravity() {
-  echo "==> Installing Antigravity stub → .agent/"
+  echo "==> Installing Antigravity adapter → global user plugin + workspace control files"
+
   install_agents_md
-  managed_begin "$ROOT/.agent"
-  sync_dir_managed "$SRC/skills" "$ROOT/.agent/skills" "skills"
-  sync_dir_managed "$SRC/commands" "$ROOT/.agent/workflows" "workflows"
-  copy_file_managed "$SRC/adapters/antigravity/README.md" \
-    "$ROOT/.agent/README.agentic-adapter.md" "README.agentic-adapter.md"
-  managed_finish
-  echo "    done (stub — invoke_subagent mapping still TODO)"
+
+  # If legacy .agent stub was previously managed, prune it
+  if [[ -f "$ROOT/.agent/.agentic-managed" ]]; then
+    deactivate_managed_runtime "$ROOT/.agent" "legacy .agent stub"
+  fi
+
+  install_antigravity_plugin
+
+  install_adapter_docs "antigravity"
+  echo "    done (plugin is global at ~/.gemini/config/plugins/$ANTIGRAVITY_PLUGIN_NAME)"
 }
 
 case "$TARGET" in

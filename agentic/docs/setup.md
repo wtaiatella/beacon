@@ -14,7 +14,8 @@ Canonical setup guide. Installed tooling comes from **`agentic/`**; IDE runtimes
 # from repo root
 scripts/setup-agentic.sh claude        # → user plugin beacon-sdd + root CLAUDE.md
 scripts/setup-agentic.sh cursor        # → .cursor/ (agents, hooks, rules, skills)
-scripts/setup-agentic.sh all           # claude + cursor (+ antigravity stub)
+scripts/setup-agentic.sh antigravity   # → global plugin (~/.gemini/config/plugins/beacon-sdd) + root AGENTS.md
+scripts/setup-agentic.sh all           # claude + cursor + antigravity
 scripts/setup-agentic.sh cursor --dry-run
 scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framework mirror
 ```
@@ -25,7 +26,8 @@ scripts/setup-agentic.sh cursor --keep-claude   # dual-IDE: keep Claude framewor
 |---------|---------|
 | Claude | user plugin `beacon-sdd` (`/beacon-sdd:<name>`), root `CLAUDE.md`. Setup does not copy or link project skills, agents, or commands into `.claude/` |
 | Cursor | framework content under `.cursor/{agents,hooks,rules,skills}/beacon/` (gitignored). `.cursor/hooks.json` is generated at the top level. Project files elsewhere under `.cursor/` stay tracked |
-| Docs | `docs/adapters/{claude,cursor}/` |
+| Antigravity | global user plugin `~/.gemini/config/plugins/beacon-sdd/` (plugin.json, hooks.json, rules, skills, agents, hooks). Root `AGENTS.md` |
+| Docs | `docs/adapters/{claude,cursor,antigravity}/` |
 
 `.gitattributes` sets `.gitignore merge=union` so merging this SDD into a project keeps both ignore files. `scripts/setup-agentic.sh` restores that line if a merge removed it.
 

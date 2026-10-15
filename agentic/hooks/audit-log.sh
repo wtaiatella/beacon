@@ -11,8 +11,8 @@ export HOOK_INPUT="$(cat || true)"
 node <<'NODE'
 const fs = require("fs");
 const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
-const root = process.env.AUDIT_LOG_ROOT;
 const j = proto.readInput();
+const root = proto.workspaceRootOf(j, process.env.AUDIT_LOG_ROOT);
 const ts = new Date().toISOString().replace(/\.\d{3}Z/, "Z");
 const sessionId = proto.sessionIdOf(j);
 const reason = j.reason || j.end_reason || "";

@@ -13,9 +13,9 @@ export HOOK_INPUT="$(cat || true)"
 node <<'NODE'
 const fs = require("fs");
 const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
-const root = process.env.HOOK_ROOT;
-const cwd = process.env.HOOK_CWD || "";
 const input = proto.readInput();
+const root = proto.workspaceRootOf(input, process.env.HOOK_ROOT);
+const cwd = proto.cwdOf(input, process.env.HOOK_CWD || "");
 const cmd = proto.commandOf(input);
 if (!cmd) proto.allow(input);
 

@@ -1,0 +1,74 @@
+{
+  "beacon-shell-gate": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "command": "./hooks/before-shell.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "beacon-read-gate": {
+    "PreToolUse": [
+      {
+        "matcher": "view_file",
+        "hooks": [
+          {
+            "command": "./hooks/before-read.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "beacon-write-gate": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "command": "./hooks/subagent-gate.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "beacon-format-on-edit": {
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "command": "./hooks/format-on-edit.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "beacon-session-init": {
+    "PreInvocation": [
+      {
+        "command": "./hooks/session-init.sh",
+        "timeout": 30
+      }
+    ]
+  },
+  "beacon-session-end": {
+    "Stop": [
+      {
+        "command": "./hooks/audit-log.sh",
+        "timeout": 30
+      },
+      {
+        "command": "./hooks/session-verify.sh",
+        "timeout": 30
+      }
+    ]
+  }
+}

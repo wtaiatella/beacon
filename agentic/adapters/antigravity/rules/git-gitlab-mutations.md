@@ -1,0 +1,31 @@
+# Git and GitLab mutations (paramount)
+
+These rules override convenience. When in doubt, ask the user.
+
+## Personas / Skills
+
+- **Must never** run `git commit`, `git push`, or any mutating GitLab action.
+- Implement and propose; leave shipping commits to the **main orchestrator** + user consent
+  (`pipeline-commit.sh` mid-run and/or `pipeline-finish.sh` at Finish).
+
+## Main orchestrator (this chat when running `/run` or Finish)
+
+- **Never** silently auto-push, auto-create/open an MR, or call mutating GitLab APIs — except the `/rebase` push below.
+- **Commit — Finish (§ 9):** may run **`scripts/hooks/pipeline-finish.sh`** with **`--commit-message`** / **`--commit-file`** **only** when the user explicitly selects an orchestrator-offered commit message (or equivalent explicit intent). If they choose "do not commit" / "other-manual", pass **`--no-commit`**.
+- **Commit — mid-pipeline (`commit_policy`):** when the ticket folder's **`_state.json.commit_policy`** is set after an explicit `/run` policy prompt:
+  - **`mode: end`** (or policy unset): **no** mid-pipeline commits — Finish only.
+  - **`mode: per_task` | `per_phase`:** may run **`scripts/hooks/pipeline-commit.sh`** (commit only — **never** push, **never** audit) when the working tree is dirty at the skill-defined checkpoint.
+  - **`consent: batch`:** the policy answer **is** consent for those mid-pipeline commits; still use an orchestrator-composed conventional message (and `fix` type after § 6 REWORK when `rework_prefix` says so).
+  - **`consent: each`:** **ask_question** (or chat) with the proposed message **before every** `pipeline-commit.sh` invocation; skip that commit if the user declines.
+  - **Never** raw `git commit` in Shell — only **`pipeline-commit.sh`** / **`pipeline-finish.sh`**.
+- **Push:** may `git push` (including `--force-with-lease` when a confirmed rewrite requires it) **only** via **`pipeline-finish.sh --push true`** after an explicit user **Yes** to a Finish push prompt. Mid-pipeline commits **never** push.
+- **Exception — `/rebase`:** invoking `/rebase` **is** that consent. When a ticket key is given, checkout (or create a local tracking branch from an existing `origin` ref) without a second Yes — never invent a branch that does not exist on origin. After a clean rebase of a non-protected working branch, push with `git push --force-with-lease origin <working-branch>` (or `git push -u origin <working-branch>` when there is no upstream). Do **not** ask for a second Yes. Do **not** push on conflict, dirty-tree skip, failed pull, or when the current branch is the main/default. Never `--force` / `-f` without lease. Never push to `main` / `master` / `develop` / `development` / `release/*`.
+- **Branch create/switch** and every mutating GitLab action (MR create/update, write API) require **explicit confirmation at that step** — except `/rebase` creating a local branch that already exists on `origin`.
+- After MR confirmation: create/update via **GitLab MCP** (`call_mcp_tool` / project GitLab tools), always presenting title/body for review first. Body: `scripts/tools/mr-description-from-spec.sh`.
+- **`glab` is not used** in this workspace (not authenticated) — do not suggest it.
+- **`/rebase`** never creates/updates an MR via GitLab API and never transitions a Jira ticket. A git push of the rebased source branch is git-sync, not an MR API mutation.
+
+## Hooks (defense in depth)
+
+- `before-shell` blocks catastrophic deletes, destructive SQL, force-push to protected branches.
+- `subagent-gate` (PreToolUse write_to_file / replace_file_content) blocks writes into child repos on `main` / `master` / `develop` / `release/*`.

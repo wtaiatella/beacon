@@ -1,0 +1,14 @@
+{
+  "name": "beacon-sdd",
+  "version": "1.0.0",
+  "description": "Beacon SDD Framework Plugin (skills, personas, commands, hooks)",
+  "author": {
+    "name": "beacon"
+  },
+  "keywords": [
+    "sdd",
+    "beacon",
+    "agentic",
+    "spec-driven-development"
+  ]
+}

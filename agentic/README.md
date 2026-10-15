@@ -18,15 +18,15 @@ agentic/
 └── adapters/
     ├── claude/             # CLAUDE.md + settings.json + docs/
     ├── cursor/             # hooks.json + rules/*.mdc + docs/
-    └── antigravity/        # Antigravity stub (.agent/) mapping
+    └── antigravity/        # plugin.json + hooks.json + rules/ + docs/
 ```
 
 ## Install
 
 ```bash
-scripts/setup-agentic.sh claude        # → .claude/ + CLAUDE.md + docs/adapters/claude/
+scripts/setup-agentic.sh claude        # → user plugin (~/.claude/plugins/...) + root CLAUDE.md
 scripts/setup-agentic.sh cursor        # → .cursor/ (agents, hooks, rules, skills)
-scripts/setup-agentic.sh antigravity   # → .agent/ (stub)
+scripts/setup-agentic.sh antigravity   # → global plugin (~/.gemini/config/plugins/beacon-sdd) + root AGENTS.md
 scripts/setup-agentic.sh all           # claude + cursor + antigravity
 ```
 

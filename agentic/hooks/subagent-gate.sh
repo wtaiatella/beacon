@@ -17,9 +17,8 @@ const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
-const root = process.env.HOOK_ROOT;
-
 let input = proto.readInput();
+const root = proto.workspaceRootOf(input, process.env.HOOK_ROOT);
 const filePath = proto.filePathOf(input);
 if (!filePath) proto.allow(input);
 

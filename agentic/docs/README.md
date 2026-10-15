@@ -17,7 +17,9 @@ agentic/
     ├── cursor/
     │   ├── rules/*.mdc            # → .cursor/rules/
     │   └── docs/                  # → docs/adapters/cursor/ on setup
-    └── antigravity/               # stub
+    └── antigravity/
+        ├── plugin.json + hooks.json + rules/
+        └── docs/                  # → docs/adapters/antigravity/ on setup
 ```
 
 ## What stays in repo-root `docs/`

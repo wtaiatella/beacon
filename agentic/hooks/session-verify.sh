@@ -11,10 +11,12 @@ node <<'NODE'
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
-const root = process.env.SESSION_VERIFY_ROOT;
+const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
+let input = {};
 try {
-  JSON.parse(process.env.SESSION_VERIFY_INPUT || "{}");
+  input = JSON.parse(process.env.SESSION_VERIFY_INPUT || "{}");
 } catch (e) { /* session payload optional */ }
+const root = proto.workspaceRootOf(input, process.env.SESSION_VERIFY_ROOT);
 const warnings = [];
 
 function sh(cmd, opts) {
