@@ -19,6 +19,9 @@
 
 ## Workspace Identity
 
+> **Project Workspace Contract:** See [WORKSPACE.md](WORKSPACE.md) for target repository layout,
+> dev/prd environments, databases, ports, and architectural conventions.
+
 This is a spec-driven (SDD) development workspace with self-healing review loops: staged, gated,
 and token-efficient instead of free-form chat.
 

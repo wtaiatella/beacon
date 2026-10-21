@@ -702,6 +702,13 @@ install_antigravity() {
 
   install_antigravity_plugin
 
+  # Provision workspace rule for WORKSPACE.md if present
+  if [[ -f "$ROOT/WORKSPACE.md" ]]; then
+    mkdir -p "$ROOT/.agents/rules"
+    ln -sf "../../WORKSPACE.md" "$ROOT/.agents/rules/workspace.md"
+    echo "    linked .agents/rules/workspace.md → WORKSPACE.md"
+  fi
+
   install_adapter_docs "antigravity"
   echo "    done (plugin is global at ~/.gemini/config/plugins/$ANTIGRAVITY_PLUGIN_NAME)"
 }

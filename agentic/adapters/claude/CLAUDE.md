@@ -10,6 +10,7 @@
 > framework under a `beacon/` subfolder inside each `.cursor/` directory it uses.
 
 @AGENTS.md
+@WORKSPACE.md
 
 The import above pulls in the **shared, IDE-agnostic** SDD contract (workspace identity, ticket
 folder, personas, pipeline, confidence scoring, multi-repo, knowledge base, skills, hooks
