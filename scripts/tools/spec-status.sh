@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# List all specs in docs/specs/ with their lifecycle status, task progress, and dates.
-# Used by session-init hook and /scrum for spec discovery.
+# List ticket folders under docs/specs/*/ with ticket key, a one-line
+# description, and pipeline status from _state.json.
+# Used by the session-init hook and /scrum for spec discovery.
+# Loose docs/specs/*.md files are ignored.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -8,7 +10,7 @@ SPECS="$ROOT/docs/specs"
 
 usage() {
   echo "Usage: $(basename "$0")"
-  echo "  Lists spec files under docs/specs/ with frontmatter and task progress."
+  echo "  Lists ticket folders under docs/specs/*/ (not loose *.md files)."
 }
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -16,50 +18,90 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-if [[ ! -d "$SPECS" ]] || ! ls "$SPECS"/*.md >/dev/null 2>&1; then
-  echo "No specs found. Use /plan to create one."
+shopt -s nullglob
+dirs=("$SPECS"/*/)
+if [[ ${#dirs[@]} -eq 0 ]]; then
+  echo "No ticket folders in docs/specs/."
   exit 0
 fi
 
-parse_frontmatter() {
-  local f=$1
-  awk '
-    /^---$/ { if (++n == 1) next; if (n == 2) exit }
-    n == 1 {
-      line = $0
-      sub(/^[[:space:]]+/, "", line)
-      if (line ~ /^status:[[:space:]]*/) { sub(/^status:[[:space:]]*/, "", line); gsub(/^["'\'']|["'\'']$/, "", line); print "status=" line; next }
-      if (line ~ /^created:[[:space:]]*/) { sub(/^created:[[:space:]]*/, "", line); gsub(/^["'\'']|["'\'']$/, "", line); print "created=" line; next }
-      if (line ~ /^last-updated:[[:space:]]*|^last updated:[[:space:]]*/) {
-        sub(/^last-updated:[[:space:]]*|^last updated:[[:space:]]*/, "", line)
-        gsub(/^["'\'']|["'\'']$/, "", line)
-        print "last-updated=" line
-      }
-    }
-  ' "$f" 2>/dev/null
+md_cell() {
+  local s=$1
+  s=${s//$'\n'/ }
+  s=${s//$'\r'/ }
+  s=${s//|/\\| }
+  s=$(printf '%s' "$s" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
+  if [[ ${#s} -gt 120 ]]; then
+    s="${s:0:119}…"
+  fi
+  printf '%s' "$s"
 }
 
-sep=$(printf '%.0s-' {1..120})
-printf "%-36s | %-14s | %-12s | %-14s | %s\n" "Filename" "Status" "Created" "Last Updated" "Task Progress"
-printf "%s\n" "$sep"
+echo "| Pasta | Ticket | Descrição | Status |"
+echo "|---|---|---|---|"
 
-for f in "$SPECS"/*.md; do
-  [[ -f "$f" ]] || continue
-  base=$(basename "$f")
-  status="-"; created="-"; updated="-"
-  while IFS= read -r line; do
-    key="${line%%=*}"
-    val="${line#*=}"
-    case "$key" in
-      status) status="$val" ;;
-      created) created="$val" ;;
-      last-updated) updated="$val" ;;
-    esac
-  done < <(parse_frontmatter "$f")
-  x=$(grep -c '\[x\]' "$f" 2>/dev/null || true)
-  sp=$(grep -c '\[ \]' "$f" 2>/dev/null || true)
-  tot=$((x + sp))
-  prog="${x}/${tot}"
-  [[ "$tot" -eq 0 ]] && prog="0/0"
-  printf "%-36s | %-14s | %-12s | %-14s | %s\n" "$base" "$status" "$created" "$updated" "$prog"
+for d in "${dirs[@]}"; do
+  [[ -d "$d" ]] || continue
+  rel="${d#"$ROOT"/}"
+  rel="${rel%/}"
+  name="$(basename "$d")"
+
+  ticket=""
+  slug=""
+  status=""
+  has_state=0
+  if [[ -f "$d/_state.json" ]]; then
+    has_state=1
+    parsed=$(node -e '
+const fs = require("fs");
+let s;
+try {
+  s = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+} catch (e) {
+  process.stdout.write("\t\tunreadable _state.json");
+  process.exit(0);
+}
+if (!s || typeof s !== "object" || Array.isArray(s)) {
+  process.stdout.write("\t\tunreadable _state.json");
+  process.exit(0);
+}
+const ticket = s.ticket || s.ticket_key || "";
+const slug = s.slug || "";
+const step = s.current_step || "";
+let val = "";
+if (step && s.steps && typeof s.steps === "object" && !Array.isArray(s.steps) && s.steps[step] != null) {
+  val = typeof s.steps[step] === "string" ? s.steps[step] : String(s.steps[step]);
+}
+let status = "";
+if (step && val) status = step + ": " + val;
+else if (step) status = step;
+process.stdout.write([ticket, slug, status].join("\t"));
+' "$d/_state.json" 2>/dev/null || printf '\t\tunreadable _state.json')
+    ticket="${parsed%%$'\t'*}"
+    rest="${parsed#*$'\t'}"
+    slug="${rest%%$'\t'*}"
+    status="${rest#*$'\t'}"
+  else
+    status="legacy (no _state.json)"
+  fi
+
+  desc=""
+  if [[ -f "$d/ticket.md" ]]; then
+    desc=$(grep -m1 -E '^#+[[:space:]]+' "$d/ticket.md" 2>/dev/null | sed -E 's/^#+[[:space:]]+//' || true)
+  fi
+  if [[ -z "$desc" && -n "$slug" ]]; then
+    desc="$slug"
+  fi
+  if [[ -z "$desc" ]]; then
+    desc="$name"
+  fi
+  if [[ "$has_state" -eq 1 && -z "$status" ]]; then
+    status="-"
+  fi
+
+  printf '| %s | %s | %s | %s |\n' \
+    "$(md_cell "$rel")" \
+    "$(md_cell "$ticket")" \
+    "$(md_cell "$desc")" \
+    "$(md_cell "$status")"
 done

@@ -352,7 +352,7 @@ Exact event names, matchers, and script locations are IDE-specific — see your 
 | Hook | Purpose |
 |------|---------|
 | format-on-edit | Auto-format edited files with the project formatter |
-| session-init | Inject child-repo inventory + spec status + session memory at session start |
+| session-init | Inject child-repo inventory, the WORKSPACE.md body (Cursor and Antigravity), and the spec-folder table at session start |
 | audit-log | Append a session record to the local audit log |
 | session-verify | Verify no uncommitted secrets, hook health, spec inconsistencies |
 | before-shell | Block dangerous commands (`rm -rf`, destructive SQL, force-push to protected branches) |

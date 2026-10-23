@@ -10,7 +10,7 @@ Google Antigravity supports lifecycle hooks declared in `hooks.json`.
 | `PreToolUse` | `before-read.sh` | `view_file` | Blocks reading secrets, credentials, and private keys. |
 | `PreToolUse` | `subagent-gate.sh` | `write_to_file\|replace_file_content\|multi_replace_file_content` | Blocks editing files in repos on protected branches (`main`, `master`, `develop`, `release/*`). |
 | `PostToolUse` | `format-on-edit.sh` | `write_to_file\|replace_file_content\|multi_replace_file_content` | Auto-formats edited files with prettier/gofmt/black/ruff. |
-| `PreInvocation` | `session-init.sh` | — | Injects repository inventory, active spec status, and session context before model turn. |
+| `PreInvocation` | `session-init.sh` | — | Injects child-repo inventory, the WORKSPACE.md body, and the spec-folder table before the model turn. |
 | `Stop` | `audit-log.sh` | — | Appends session execution entry to `docs/audit.log`. |
 | `Stop` | `session-verify.sh` | — | Emits warnings on uncommitted secrets, broken specs, or security markers. |
 

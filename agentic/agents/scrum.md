@@ -111,7 +111,7 @@ Resolve spec, read frontmatter + body. Present pipeline status, scores, decision
 
 ## Sprint Board Workflow (`/scrum` or `/scrum all`)
 
-1. `spec-status.sh` to discover all specs. For each: read frontmatter, count tasks done/total, identify domain tags and repo refs.
+1. `spec-status.sh` to discover ticket folders. It prints one markdown row per `docs/specs/*/` directory (folder, ticket key, one-line description, pipeline status from `_state.json`). It does not list loose `docs/specs/*.md` files and it does not read `_notes.md`. For progress, domain tags, and repo refs, open that folder's `tasks.md` and count `[x]` / `[ ]` there.
 2. Produce sprint board: `Active Specs: {N}` + table (Spec, Status, Progress, Domains, Last Updated, Risk).
 3. **Cross-spec analysis:** Flag shared repos, overlapping domains on same repo, sequencing issues, merge conflicts. Recommend ordering.
 4. **Health signals:** Draft > 48h → stale; QA rejections > 2 → struggling; multiple specs on same repo → contention; spec in review with dependents → blocking.
