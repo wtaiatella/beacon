@@ -77,7 +77,7 @@ Atlassian’s own docs list example actions that **write** (e.g. create a page).
 
 Use this after editing `.cursor/mcp.json` or onboarding a new machine (no CI automation required).
 
-- [ ] **`./scripts/setup.sh`** exits **0** (includes JSON parse of `.cursor/mcp.json` and `.cursor/hooks.json`).
+- [ ] `.cursor/mcp.json` parses (`python3 -m json.tool .cursor/mcp.json`).
 - [ ] Cursor **Settings → MCP** lists the Atlassian server and shows **connected** / tools after OAuth (or token, per org policy).
 - [ ] **Sample Jira read:** Ask the agent to fetch a **known issue key** (e.g. `PROJ-123`) and confirm fields return.
 - [ ] **Sample Confluence read:** Ask the agent to **search** a space or page title you can access.

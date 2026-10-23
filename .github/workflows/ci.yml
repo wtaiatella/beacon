@@ -25,7 +25,7 @@ jobs:
       - name: Shell Syntax Check
         run: |
           FAIL=0
-          for f in agentic/hooks/*.sh agentic/adapters/*/hooks/*.sh scripts/tools/*.sh scripts/setup.sh scripts/setup-agentic.sh scripts/upgrade.sh; do
+          for f in agentic/hooks/*.sh agentic/adapters/*/hooks/*.sh scripts/tools/*.sh scripts/setup-agentic.sh scripts/upgrade.sh; do
             [ -f "$f" ] || continue
             HEAD=$(head -1 "$f")
             if ! echo "$HEAD" | grep -q '#!/usr/bin/env bash\|#!/bin/bash'; then
@@ -46,7 +46,7 @@ jobs:
       - name: Executable Permissions
         run: |
           FAIL=0
-          for f in agentic/hooks/*.sh agentic/adapters/*/hooks/*.sh scripts/tools/*.sh scripts/setup.sh scripts/setup-agentic.sh scripts/upgrade.sh; do
+          for f in agentic/hooks/*.sh agentic/adapters/*/hooks/*.sh scripts/tools/*.sh scripts/setup-agentic.sh scripts/upgrade.sh; do
             [ -f "$f" ] || continue
             if [ -x "$f" ]; then
               echo "OK $f"

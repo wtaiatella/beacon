@@ -71,7 +71,7 @@ When you **add** or **change** MCP servers (beyond the shipped optional blocks):
 1. Edit **`.cursor/mcp.json`** / **`.mcp.json`** (and/or your IDE's **global** MCP config) using **`${env:…}`** for tenant URLs and tokens where possible — never commit a real token or a company-internal URL as a literal default.
 2. Follow the integration guides under **`docs/reference/*-cursor-workflow.md`** for the server you're adding.
 3. Update **Toolbox** sections in **`agentic/agents/*.md`** for any persona that should prefer those tools when loaded, and align **`00-workspace-router.mdc`** (optional MCP / search-source table) if discovery order or tool names change.
-4. Run **`./scripts/setup.sh`** so JSON parse checks still pass.
+4. Confirm the MCP JSON still parses (`python3 -m json.tool` on the file you edited).
 
 **`/run --manual`** (manual **step** gates) is unrelated to MCP configuration; see **`agentic/skills/run-pipeline/SKILL.md`** and **`docs/run-pipeline-reference.md`**.
 
@@ -80,9 +80,8 @@ When you **add** or **change** MCP servers (beyond the shipped optional blocks):
 1. Create a feature branch from `main`
 2. Make changes following existing patterns
 3. Test: re-run `scripts/setup-agentic.sh <claude|cursor|all>` and confirm agents/skills/hooks install and activate
-4. Run `./scripts/setup.sh` to validate workspace integrity
-5. Open a pull request with a clear description
-6. Include a **Testing** section in the PR
+4. Open a pull request with a clear description
+5. Include a **Testing** section in the PR
 
 ### Workspace content linter (agents)
 
@@ -172,6 +171,6 @@ schema. (`agentic/skills/generate-spec/SKILL.md` is retained only as a reference
 4. Update `agentic/adapters/cursor/rules/00-workspace-router.mdc` to list the new trigger
 5. If a reviewer was added: update `agentic/skills/run-pipeline/SKILL.md` (and the router if needed) so orchestrated mode delegates to it
 6. Update `README.md` persona table
-7. Run `./scripts/setup.sh` to validate (no count updates needed — validation is automatic)
+7. Re-run `scripts/setup-agentic.sh <claude|cursor|all>` so the new persona is installed.
 
-**Note:** No trigger rule is needed for Cursor — it natively routes `/name` once installed. No hardcoded counts to update — `setup.sh` and CI validate structure and relationships dynamically.
+**Note:** No trigger rule is needed for Cursor — it natively routes `/name` once installed. No hardcoded counts to update — CI validates structure and relationships dynamically.

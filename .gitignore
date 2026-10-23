@@ -35,6 +35,9 @@ docs/adapters/
 agentic/models/*.yml
 !agentic/models/example.yml
 
+# Last upstream/main hash applied by scripts/upgrade.sh. Local to this checkout.
+agentic/.upgrade-state
+
 # User-local orchestrator prefs (PROJECTS_ROOT, optional future keys)
 /.env.local
 

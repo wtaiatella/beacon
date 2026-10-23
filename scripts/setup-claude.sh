@@ -2,7 +2,7 @@
 # Post-clone setup for agentic-workspace on CLAUDE CODE. Idempotent: safe to re-run.
 # Validates the .claude/ structure (agents, commands, skills, hooks) and settings.json
 # ↔ hook-script relationships, instead of hardcoded counts. Reports what exists.
-# For the Cursor variant, use scripts/setup.sh.
+# Install the framework with scripts/setup-agentic.sh <claude|cursor|antigravity|all>.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -35,7 +35,7 @@ else warn "Claude Code CLI not detected — install from https://claude.com/clau
 [[ "$PREREQ_OK" -eq 1 ]] || { echo ""; fail "Fix prerequisites, then re-run."; exit 1; }
 
 # --- 2. Executable bits & runtime dirs ---
-chmod +x scripts/tools/*.sh .claude/hooks/*.sh scripts/setup.sh scripts/setup-claude.sh scripts/upgrade.sh 2>/dev/null || true
+chmod +x scripts/tools/*.sh .claude/hooks/*.sh scripts/setup-claude.sh scripts/upgrade.sh 2>/dev/null || true
 mkdir -p docs/specs
 pass "Runtime dir: docs/specs"
 

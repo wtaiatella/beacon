@@ -14,7 +14,7 @@ This workspace treats **Glean** as an **optional** source of **organization-wide
 
 ## Project-level Glean MCP (`.cursor/mcp.json`)
 
-This repo may include an optional **`Glean`** entry so `scripts/setup.sh` can detect intent to use enterprise search. The **URL is tenant-specific**—do not copy a hostname from another organization.
+This repo may include an optional **`Glean`** entry in `.cursor/mcp.json`. The **URL is tenant-specific**—do not copy a hostname from another organization.
 
 **Recommended committed shape** (URL from your run of [Open MCP Configurator](https://app.glean.com/settings/install?mcpConfigure=true&mcpHost=cursor), stored in an environment variable—see [`cursor-mcp.md`](cursor-mcp.md) interpolation):
 
@@ -74,7 +74,7 @@ Glean’s MCP exposes tools such as **search**, **chat**, and **read_document** 
 
 | Symptom | What to check |
 |--------|----------------|
-| No Glean tools under **Settings → MCP** | Restart Cursor; confirm **`Glean`** (or a name matching `glean`) exists in `.cursor/mcp.json`; run **`./scripts/setup.sh`**. |
+| No Glean tools under **Settings → MCP** | Restart Cursor; confirm **`Glean`** (or a name matching `glean`) exists in `.cursor/mcp.json`. |
 | Connection errors / invalid URL | **`GLEAN_MCP_URL`** unset or wrong—re-copy from **MCP Configurator**; URL is **tenant-specific**. |
 | OAuth fails | Browser popup, SSO, ad blockers; Glean admin [MCP / OAuth](https://docs.glean.com/administration/oauth/authorization-server.md) settings. |
 | “No data” or empty results | Query too broad; or your user lacks access to that content in Glean (permissions follow identity). |
@@ -84,7 +84,7 @@ Glean’s MCP exposes tools such as **search**, **chat**, and **read_document** 
 
 Use this after editing `.cursor/mcp.json` or onboarding a new machine (no CI automation required).
 
-- [ ] **`./scripts/setup.sh`** exits **0** (JSON parse of `.cursor/mcp.json` unchanged).
+- [ ] `.cursor/mcp.json` parses (`python3 -m json.tool .cursor/mcp.json`).
 - [ ] Cursor **Settings → MCP** lists **Glean** (if configured) and shows **connected** / tools after auth.
 - [ ] **Sample search:** Ask the agent to **search Glean** for a known internal topic you can access.
 - [ ] **Policy:** Confirm **no** workflow **required** Glean for core **`/plan`**, **`/fix`**, **`/qa`**, or **`/run`** steps when Glean was disabled.
