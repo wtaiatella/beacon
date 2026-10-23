@@ -5,6 +5,8 @@
 # This does not merge upstream/main and does not stash the worktree. Install
 # trees (.cursor, .claude, .agents, plugins) and project skills outside beacon/
 # are left to the installer. Only the framework source paths below are updated.
+# A local backup/pre-upgrade-* branch guards a failed reinstall. A successful
+# --apply deletes those branches.
 #
 # "Up to date" is the commit hash recorded in agentic/.upgrade-state after the
 # last successful --apply, compared with upstream/main. It is not a count of
@@ -36,6 +38,8 @@ Usage: upgrade.sh [option]
   Update framework source from the upstream remote, then reinstall IDE copies.
   Does not merge upstream/main and does not stash or commit the worktree.
   Project files, including .cursor paths outside beacon/, are not touched.
+  On success, local backup/pre-upgrade-* branches are removed. A failed
+  reinstall keeps the backup created for that run.
 
   The applied version is the upstream/main hash stored in agentic/.upgrade-state
   (gitignored, with the UTC time of the last successful --apply).
@@ -180,6 +184,21 @@ sync_framework_path() {
   git checkout upstream/main -- "$p"
 }
 
+# The backup points at HEAD from before the checkout. Checkout does not move
+# HEAD, so -d is enough when the apply succeeded. Leave a branch that is not
+# contained in HEAD. Rebase backups use another name and are not matched.
+remove_upgrade_backups() {
+  local name
+  while IFS= read -r name; do
+    [[ -z "$name" ]] && continue
+    if git branch -d "$name" >/dev/null; then
+      echo "Removed backup branch: ${name}"
+    else
+      echo "warning: left backup branch ${name}" >&2
+    fi
+  done < <(git for-each-ref --format='%(refname:short)' 'refs/heads/backup/pre-upgrade-*')
+}
+
 run_apply() {
   fetch_upstream
   ensure_state_ignored
@@ -253,9 +272,10 @@ run_apply() {
     echo "Recorded ${upstream_sha} in agentic/.upgrade-state"
   fi
 
+  remove_upgrade_backups
+
   echo ""
   echo "Upgrade complete. No commit was created."
-  [[ -n "$backup_name" ]] && echo "Backup branch: ${backup_name}"
   local stat
   stat="$(git diff --cached --stat -- "${FRAMEWORK_PATHS[@]}" 2>/dev/null || true)"
   if [[ -n "$stat" ]]; then
