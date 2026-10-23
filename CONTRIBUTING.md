@@ -10,6 +10,11 @@ the **framework itself** (agents, skills, hooks, scripts under `agentic/`), this
 you're just using the framework for your own project's tickets, see `README.md` / `AGENTS.md`
 instead.
 
+Framework changes land only in the checkout whose `origin` is this repository and that has no
+`upstream` remote. A workspace that tracks Beacon as `upstream` updates the framework with
+`scripts/upgrade.sh` and does not merge framework work into its own `main`. The rule agents
+follow is **Git and GitLab mutations** in `agentic/AGENTS.md`.
+
 ## What You Can Contribute
 
 - New or improved subagent personas (`agentic/agents/*.md`) — keep **must-follow** rules in YAML

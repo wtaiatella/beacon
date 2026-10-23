@@ -30,6 +30,14 @@ These rules override convenience. When in doubt, ask the user.
 - **`glab` is not used** in this workspace (not authenticated) — do not suggest it.
 - **`/rebase`** never creates/updates an MR via GitLab API and never transitions a Jira ticket. A git push of the rebased source branch is git-sync, not an MR API mutation.
 
+## Framework home and consumer workspaces
+
+Tell the two checkouts apart by remotes.
+
+- The **framework home** is the checkout whose `origin` is the Beacon repository and that has no `upstream` remote. Framework changes are committed there, on a branch, and merge to `main` only in that repository, after review. That `main` is what every other workspace applies with `scripts/upgrade.sh`.
+- A **consumer workspace** has a remote named `upstream` pointing at Beacon; its `origin` is the project. There, Beacon is the framework. The only framework update is `scripts/upgrade.sh`. Do not commit framework paths (`agentic/`, `scripts/setup-agentic.sh`, `scripts/upgrade.sh`, shared hooks) to the consumer `origin`, and do not merge a framework branch into the consumer `main`.
+- A framework fix found while working in a consumer is made on a branch of the framework home. Project work in the consumer (ticket folders, knowledge, child repositories) still commits to that project's `origin`, under the Git rules above.
+
 ## Hooks (defense in depth)
 
 - `before-shell` blocks catastrophic deletes, destructive SQL, force-push to protected branches.
