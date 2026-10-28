@@ -6,7 +6,7 @@
 `mcp-arc`, `mcp-confluence`, `mcp-gitlab`, `mcp-jira`) é majoritariamente Avalara-específico e não
 serve a um SDD genérico.
 **Sequenciamento:** esta spec deve ser executada **antes** de
-[`2026-10-06-eliminate-sessions-ticket-scoped-state.md`](./2026-10-06-eliminate-sessions-ticket-scoped-state.md)
+[`2026-10-06-eliminate-sessions-ticket-scoped-state.md`](../2026-10-06-eliminate-sessions-ticket-scoped-state.md)
 — ver "Por que esta ordem" ao final.
 
 ## Problema
@@ -160,7 +160,7 @@ codebase-explorer (orientação geral — só se o diretório for desconhecido)
 ## Por que esta ordem (antes da migração de sessions)
 
 A reforma do pre-plan **apaga/substitui** vários `agentic/agents/mcp-*.md` que a migração de
-sessions ([spec irmã](./2026-10-06-eliminate-sessions-ticket-scoped-state.md)) teria que tocar só
+sessions ([spec irmã](../2026-10-06-eliminate-sessions-ticket-scoped-state.md)) teria que tocar só
 para trocar caminho `docs/sessions/...` → `_run/...`. Fazendo esta spec primeiro:
 
 1. Os agentes novos (especialistas + repro) já nascem escrevendo direto em
@@ -172,7 +172,7 @@ para trocar caminho `docs/sessions/...` → `_run/...`. Fazendo esta spec primei
 ## Abertos — resolvidos em 2026-10-07
 
 - **Modelo de cada especialista:** tratado separadamente — ver
-  [`2026-10-07-per-install-model-config.md`](./2026-10-07-per-install-model-config.md). Com esse
+  [`2026-10-07-per-install-model-config.md`](../2026-10-07-per-install-model-config.md). Com esse
   desenho, todo agente (incluindo os especialistas novos) nasce `inherit` por padrão; quem quiser
   um tier diferente por especialista configura no arquivo local por instalação, não no frontmatter
   canônico.
@@ -340,6 +340,6 @@ confundir.
 - Essas flags **assumem** que, se usadas em invocações separadas, o usuário sempre lembra de
   passar `--resume` depois da primeira. Nenhuma validação automática impede esquecer isso hoje —
   esquecer gera uma sessão nova (comportamento padrão do `--resume` ausente), não um erro.
-- Quando a migração de sessions ([spec irmã](./2026-10-06-eliminate-sessions-ticket-scoped-state.md))
+- Quando a migração de sessions ([spec irmã](../2026-10-06-eliminate-sessions-ticket-scoped-state.md))
   acontecer, esse encadeamento fica mais robusto por natureza (estado por ticket, não por sessão
   rotativa) — vale revisitar esta seção depois dessa migração.
