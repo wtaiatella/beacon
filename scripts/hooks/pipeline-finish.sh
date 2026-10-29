@@ -10,42 +10,102 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 AUDIT_PY="$ROOT/scripts/tools/audit-session-trace.py"
 TICKET=""
+REPO_OVERRIDE=""
 ATTACH_TARGET_NAME="attach-target.txt"
 
-# When <ticket>/_run/attach-target.txt names a directory, git add/commit/push run there.
+# Git root resolution order:
+# 1. --repo <dir>
+# 2. <ticket>/_run/attach-target.txt
+# 3. <ticket>/_state.json field "repo" (or single-element "repos")
+# 4. $ROOT (only when no ticket repo is declared)
 resolve_git_root() {
+  if [ -n "$REPO_OVERRIDE" ]; then
+    local target_dir="$REPO_OVERRIDE"
+    case "$target_dir" in
+      /*) ;;
+      *) [ -d "$target_dir" ] || target_dir="$ROOT/$target_dir" ;;
+    esac
+    if [ ! -d "$target_dir" ]; then
+      echo "pipeline-finish: --repo is not a directory: $REPO_OVERRIDE" >&2
+      return 1
+    fi
+    (cd "$target_dir" && pwd -P)
+    return 0
+  fi
   if [ -z "$TICKET" ]; then
     printf '%s\n' "$ROOT"
     return 0
   fi
-  local attach_file line gr
+  local attach_file line gr state_file state_repo
   attach_file="$ROOT/$TICKET/_run/$ATTACH_TARGET_NAME"
-  if [ ! -f "$attach_file" ]; then
-    printf '%s\n' "$ROOT"
+  if [ -f "$attach_file" ]; then
+    line=$(head -n 1 "$attach_file" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [ -z "$line" ] || [ ! -d "$line" ]; then
+      echo "pipeline-finish: attach-target.txt must name an existing directory (ROAD-48); got: ${line:-<empty>}" >&2
+      return 1
+    fi
+    gr=$(cd "$line" && pwd -P)
+    printf '%s\n' "$gr"
     return 0
   fi
-  line=$(head -n 1 "$attach_file" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  if [ -z "$line" ] || [ ! -d "$line" ]; then
-    echo "pipeline-finish: attach-target.txt must name an existing directory (ROAD-48); got: ${line:-<empty>}" >&2
-    return 1
+  state_file="$ROOT/$TICKET/_state.json"
+  if [ -f "$state_file" ]; then
+    state_repo=$(python3 -c '
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+r = data.get("repo") or data.get("repos")
+if isinstance(r, str) and r.strip():
+    print(r.strip())
+elif isinstance(r, list):
+    items = [str(x).strip() for x in r if str(x).strip()]
+    if len(items) == 1:
+        print(items[0])
+    elif len(items) > 1:
+        print("__MULTI__:" + ",".join(items))
+' "$state_file" 2>/dev/null || true)
+    if [ -n "$state_repo" ]; then
+      case "$state_repo" in
+        __MULTI__:*)
+          echo "pipeline-finish: ticket _state.json lists multiple repos (${state_repo#__MULTI__:}); pass --repo <dir> explicitly" >&2
+          return 1
+          ;;
+      esac
+      local repo_path="$state_repo"
+      case "$repo_path" in
+        /*) ;;
+        *) repo_path="$ROOT/$repo_path" ;;
+      esac
+      if [ ! -d "$repo_path" ]; then
+        echo "pipeline-finish: _state.json repo directory does not exist: $state_repo (resolved: $repo_path)" >&2
+        return 1
+      fi
+      gr=$(cd "$repo_path" && pwd -P)
+      printf '%s\n' "$gr"
+      return 0
+    fi
   fi
-  gr=$(cd "$line" && pwd -P)
-  printf '%s\n' "$gr"
+  printf '%s\n' "$ROOT"
 }
 
 usage() {
   cat <<'EOF'
-Usage: pipeline-finish.sh [--no-commit] [--commit-message <msg> | --commit-file <path>] [--push true|false]
+Usage: pipeline-finish.sh [--ticket <folder>] [--repo <dir>] [--no-commit]
+                          [--commit-message <msg> | --commit-file <path>] [--push true|false]
                           [--pre-audit-delay-seconds <N>] [--] [extra-args for audit-session-trace.py ...]
 
+  --ticket <folder>        Ticket folder path (workspace-relative).
+  --repo <dir>             Override git root (else attach-target.txt > _state.json repo > workspace root).
   --no-commit              Do not run git add / git commit.
   --commit-message <msg>   If there are changes, run git add -A and git commit -m <msg>.
   --commit-file <path>     Like -m but uses git commit -F <path> (for messages with quotes/newlines).
   --push true|false        Default false. Push only if explicitly true (matches §9 explicit Yes).
 
-Git steps run in the orchestrator workspace root by default. When --ticket is set and
-<ticket>/_run/attach-target.txt exists, git add/commit/push run in the target directory named on the first line;
-if that path is missing or not a directory, pipeline-finish exits with an error before git.
+Git root resolution order: --repo <dir> > <ticket>/_run/attach-target.txt > <ticket>/_state.json "repo"
+field ($ROOT/<repo>) > orchestrator workspace root ($ROOT). If _state.json declares "repo" and that
+directory does not exist, pipeline-finish exits with an error rather than silently falling back to $ROOT.
 
 Mirrors Automatic commit execution: git status first; if nothing to commit when a commit was requested,
 skip add/commit (exit 0 for that step).
@@ -53,14 +113,15 @@ skip add/commit (exit 0 for that step).
 After git: runs python3 on scripts/tools/audit-session-trace.py from the orchestrator root (session
 paths and PROJECT_HASH behavior unchanged). Optional audit flags go after -- or as --pre-audit-delay-seconds.
 
-Never pushes unless --push true.
+Never pushes unless --push true, and refuses to push protected branches (main/master/develop/development/release/*).
 
-Exit codes: attach-target invalid → non-zero; git commit hook failure → non-zero; audit returns its own exit code (propagated).
+Exit codes: invalid repo/attach-target → non-zero; git commit/push failure → non-zero; audit returns its own exit code (propagated).
 EOF
 }
 
 NO_COMMIT=0
 TICKET=""
+REPO_OVERRIDE=""
 COMMIT_MSG=""
 COMMIT_FILE=""
 PUSH="false"
@@ -79,6 +140,11 @@ while [ $# -gt 0 ]; do
     --ticket)
       [ $# -ge 2 ] || { echo "pipeline-finish: --ticket requires a value" >&2; exit 1; }
       TICKET="$2"
+      shift 2
+      ;;
+    --repo)
+      [ $# -ge 2 ] || { echo "pipeline-finish: --repo requires a path" >&2; exit 1; }
+      REPO_OVERRIDE="$2"
       shift 2
       ;;
     --no-commit) NO_COMMIT=1; shift ;;
@@ -165,6 +231,13 @@ fi
 
 echo "=== git-push ==="
 if [ "$PUSH" = "true" ]; then
+  cur_branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  case "$cur_branch" in
+    main|master|develop|development|release/*)
+      echo "pipeline-finish: refusing to push protected branch '$cur_branch' in $GIT_ROOT" >&2
+      exit 1
+      ;;
+  esac
   git push || exit 1
 else
   echo "Skipped (push not requested; use --push true for explicit push)."

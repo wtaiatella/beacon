@@ -9,7 +9,7 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
-export HOOK_ROOT="$ROOT"
+export HOOK_FALLBACK_ROOT="$ROOT"
 export HOOK_DIR="$DIR"
 export HOOK_INPUT="$(cat)"
 node <<'NODE'
@@ -18,7 +18,8 @@ const path = require("path");
 const { execSync } = require("child_process");
 const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
 let input = proto.readInput();
-const root = proto.workspaceRootOf(input, process.env.HOOK_ROOT);
+const root = proto.workspaceRootOf(input, process.env.HOOK_FALLBACK_ROOT);
+if (!proto.isBeaconWorkspace(root)) proto.allow(input);
 const filePath = proto.filePathOf(input);
 if (!filePath) proto.allow(input);
 

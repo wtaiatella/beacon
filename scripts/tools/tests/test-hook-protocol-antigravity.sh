@@ -53,6 +53,26 @@ const readCall = {
 if (proto.filePathOf(readCall) !== "/path/to/readme.md") { console.error("filePathOf AbsolutePath failed"); process.exit(1); }
 if (proto.toolNameOf(readCall) !== "Read") { console.error("toolNameOf Read failed"); process.exit(1); }
 
+const readFileCall = {
+  conversationId: "conv-12345",
+  toolCall: {
+    name: "read_file",
+    args: { Path: "/path/to/spec.md" }
+  }
+};
+if (proto.filePathOf(readFileCall) !== "/path/to/spec.md") { console.error("filePathOf Path failed"); process.exit(1); }
+if (proto.toolNameOf(readFileCall) !== "Read") { console.error("toolNameOf read_file failed"); process.exit(1); }
+
+const editFileCall = {
+  conversationId: "conv-12345",
+  toolCall: {
+    name: "edit_file",
+    args: { Path: "/path/to/code.ts" }
+  }
+};
+if (proto.filePathOf(editFileCall) !== "/path/to/code.ts") { console.error("filePathOf edit_file Path failed"); process.exit(1); }
+if (proto.toolNameOf(editFileCall) !== "Write") { console.error("toolNameOf edit_file failed"); process.exit(1); }
+
 console.log("OK2");
 ' "$PROTO")
 
@@ -107,9 +127,34 @@ const cursorInput = { hook_event_name: "beforeShellExecution", command: "npm tes
 if (proto.isAntigravity(cursorInput)) { console.error("Cursor misidentified as AGY"); process.exit(1); }
 if (proto.ideOf(cursorInput) !== "cursor") { console.error("Cursor ideOf failed"); process.exit(1); }
 
+// Claude workspaceRootOf via cwd and CLAUDE_PROJECT_DIR
+const claudeSessionInput = { hook_event_name: "SessionStart", cwd: "/tmp/claude-ws", session_id: "s1" };
+if (proto.workspaceRootOf(claudeSessionInput, "") !== "/tmp/claude-ws") {
+  console.error("Claude cwd workspaceRootOf failed");
+  process.exit(1);
+}
+process.env.CLAUDE_PROJECT_DIR = "/tmp/claude-proj-dir";
+if (proto.workspaceRootOf(claudeSessionInput, "") !== "/tmp/claude-proj-dir") {
+  console.error("CLAUDE_PROJECT_DIR workspaceRootOf failed");
+  process.exit(1);
+}
+delete process.env.CLAUDE_PROJECT_DIR;
+
 console.log("OK6");
 ' "$PROTO")
 
 [[ "$RES" == "OK6" ]] || { echo "Failed backward compatibility test"; exit 1; }
+
+# 7. Test PostToolUse JSON output on Antigravity
+POST_OUT=$(node -e '
+const proto = require(process.argv[1]);
+const input = {
+  conversationId: "conv-12345",
+  toolCall: { name: "edit_file", args: { Path: "/tmp/a.js" } }
+};
+proto.postToolUseDone(input);
+' "$PROTO")
+
+[[ "$POST_OUT" == '{}' ]] || { echo "Failed postToolUseDone test: $POST_OUT"; exit 1; }
 
 echo "All hook-protocol Antigravity self-tests passed!"

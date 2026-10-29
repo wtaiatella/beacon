@@ -10,41 +10,98 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TICKET=""
 ATTACH_TARGET_NAME="attach-target.txt"
 
-# Same attach-target resolution as pipeline-finish.sh (<ticket>/_run/attach-target.txt).
+# Git root resolution order:
+# 1. --repo <dir>
+# 2. <ticket>/_run/attach-target.txt
+# 3. <ticket>/_state.json field "repo" (or single-element "repos")
+# 4. $ROOT (only when no ticket repo is declared)
 resolve_git_root() {
+  if [ -n "$REPO_OVERRIDE" ]; then
+    local target_dir="$REPO_OVERRIDE"
+    case "$target_dir" in
+      /*) ;;
+      *) [ -d "$target_dir" ] || target_dir="$ROOT/$target_dir" ;;
+    esac
+    if [ ! -d "$target_dir" ]; then
+      echo "pipeline-commit: --repo is not a directory: $REPO_OVERRIDE" >&2
+      return 1
+    fi
+    (cd "$target_dir" && pwd -P)
+    return 0
+  fi
   if [ -z "$TICKET" ]; then
     printf '%s\n' "$ROOT"
     return 0
   fi
-  local attach_file line gr
+  local attach_file line gr state_file state_repo
   attach_file="$ROOT/$TICKET/_run/$ATTACH_TARGET_NAME"
-  if [ ! -f "$attach_file" ]; then
-    printf '%s\n' "$ROOT"
+  if [ -f "$attach_file" ]; then
+    line=$(head -n 1 "$attach_file" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [ -z "$line" ] || [ ! -d "$line" ]; then
+      echo "pipeline-commit: attach-target.txt must name an existing directory (ROAD-48); got: ${line:-<empty>}" >&2
+      return 1
+    fi
+    gr=$(cd "$line" && pwd -P)
+    printf '%s\n' "$gr"
     return 0
   fi
-  line=$(head -n 1 "$attach_file" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  if [ -z "$line" ] || [ ! -d "$line" ]; then
-    echo "pipeline-commit: attach-target.txt must name an existing directory (ROAD-48); got: ${line:-<empty>}" >&2
-    return 1
+  state_file="$ROOT/$TICKET/_state.json"
+  if [ -f "$state_file" ]; then
+    state_repo=$(python3 -c '
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+r = data.get("repo") or data.get("repos")
+if isinstance(r, str) and r.strip():
+    print(r.strip())
+elif isinstance(r, list):
+    items = [str(x).strip() for x in r if str(x).strip()]
+    if len(items) == 1:
+        print(items[0])
+    elif len(items) > 1:
+        print("__MULTI__:" + ",".join(items))
+' "$state_file" 2>/dev/null || true)
+    if [ -n "$state_repo" ]; then
+      case "$state_repo" in
+        __MULTI__:*)
+          echo "pipeline-commit: ticket _state.json lists multiple repos (${state_repo#__MULTI__:}); pass --repo <dir> explicitly" >&2
+          return 1
+          ;;
+      esac
+      local repo_path="$state_repo"
+      case "$repo_path" in
+        /*) ;;
+        *) repo_path="$ROOT/$repo_path" ;;
+      esac
+      if [ ! -d "$repo_path" ]; then
+        echo "pipeline-commit: _state.json repo directory does not exist: $state_repo (resolved: $repo_path)" >&2
+        return 1
+      fi
+      gr=$(cd "$repo_path" && pwd -P)
+      printf '%s\n' "$gr"
+      return 0
+    fi
   fi
-  gr=$(cd "$line" && pwd -P)
-  printf '%s\n' "$gr"
+  printf '%s\n' "$ROOT"
 }
 
 usage() {
   cat <<'EOF'
 Usage: pipeline-commit.sh --commit-message <msg> | --commit-file <path>
-                          [--repo <dir>]
+                          [--ticket <folder>] [--repo <dir>]
 
   Mid-pipeline commit only (run-pipeline commit_policy). No push. No audit.
 
   --commit-message <msg>   git add -A && git commit -m <msg> when dirty.
   --commit-file <path>     Same with git commit -F <path>.
-  --repo <dir>             Override git root (else attach-target / orchestrator root).
+  --ticket <folder>        Ticket folder path (workspace-relative).
+  --repo <dir>             Override git root (else attach-target.txt > _state.json repo > orchestrator root).
 
 If the working tree is clean, skips add/commit and exits 0.
 
-Exit: attach-target invalid or commit hook failure → non-zero.
+Exit: invalid repo/attach-target or commit hook failure → non-zero.
 EOF
 }
 
@@ -100,15 +157,7 @@ if [ -n "$COMMIT_FILE" ]; then
   esac
 fi
 
-if [ -n "$REPO_OVERRIDE" ]; then
-  if [ ! -d "$REPO_OVERRIDE" ]; then
-    echo "pipeline-commit: --repo is not a directory: $REPO_OVERRIDE" >&2
-    exit 1
-  fi
-  GIT_ROOT=$(cd "$REPO_OVERRIDE" && pwd -P)
-else
-  GIT_ROOT="$(resolve_git_root)" || exit 1
-fi
+GIT_ROOT="$(resolve_git_root)" || exit 1
 
 set +e
 echo "=== pipeline-commit ==="

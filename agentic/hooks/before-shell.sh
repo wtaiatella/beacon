@@ -6,7 +6,7 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
-export HOOK_ROOT="$ROOT"
+export HOOK_FALLBACK_ROOT="$ROOT"
 export HOOK_CWD="$(pwd)"
 export HOOK_DIR="$DIR"
 export HOOK_INPUT="$(cat || true)"
@@ -14,7 +14,7 @@ node <<'NODE'
 const fs = require("fs");
 const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
 const input = proto.readInput();
-const root = proto.workspaceRootOf(input, process.env.HOOK_ROOT);
+const root = proto.workspaceRootOf(input, process.env.HOOK_FALLBACK_ROOT);
 const cwd = proto.cwdOf(input, process.env.HOOK_CWD || "");
 const cmd = proto.commandOf(input);
 if (!cmd) proto.allow(input);
@@ -24,9 +24,11 @@ const lc = c.toLowerCase();
 
 function block(reason) {
   try {
-    fs.mkdirSync(root + "/docs", { recursive: true });
-    const ts = new Date().toISOString().replace(/\.\d{3}Z/, "Z");
-    fs.appendFileSync(root + "/docs/audit.log", ts + "\tshell blocked\t" + reason + "\t" + c + "\n");
+    if (proto.isBeaconWorkspace(root)) {
+      fs.mkdirSync(root + "/docs", { recursive: true });
+      const ts = new Date().toISOString().replace(/\.\d{3}Z/, "Z");
+      fs.appendFileSync(root + "/docs/audit.log", ts + "\tshell blocked\t" + reason + "\t" + c + "\n");
+    }
   } catch (e) { /* fail-open on logging */ }
   proto.deny(input, "Blocked by before-shell hook: " + reason);
 }

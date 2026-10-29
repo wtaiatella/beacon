@@ -4,24 +4,36 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 export HOOK_DIR="$DIR"
-INPUT=$(cat)
-FILE_PATH=$(printf '%s' "$INPUT" | node -e '
+INPUT=$(cat || true)
+export HOOK_INPUT="$INPUT"
+
+finish() {
+  node -e '
 const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
-let input = {};
-try { input = JSON.parse(require("fs").readFileSync(0, "utf8")); } catch (_) {}
+const input = proto.readInput();
+proto.postToolUseDone(input);
+' 2>/dev/null || true
+  exit 0
+}
+
+FILE_PATH=$(node -e '
+const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
+const input = proto.readInput();
 process.stdout.write(proto.filePathOf(input));
-')
-[ -z "$FILE_PATH" ] || [ ! -f "$FILE_PATH" ] && exit 0
+' 2>/dev/null || true)
+if [ -z "$FILE_PATH" ] || [ ! -f "$FILE_PATH" ]; then
+  finish
+fi
 DIR_FILE=$(cd "$(dirname "$FILE_PATH")" && pwd)
 EXT="${FILE_PATH##*.}"
 
 if [ "$EXT" = "go" ] && command -v gofmt >/dev/null 2>&1; then
-  gofmt -w "$FILE_PATH"
-  exit 0
+  gofmt -w "$FILE_PATH" >/dev/null 2>&1 || true
+  finish
 fi
 if [ "$EXT" = "rs" ] && command -v rustfmt >/dev/null 2>&1; then
-  rustfmt "$FILE_PATH"
-  exit 0
+  rustfmt "$FILE_PATH" >/dev/null 2>&1 || true
+  finish
 fi
 
 has_prettier() {
@@ -44,11 +56,13 @@ while [ "$d" != "/" ]; do
   d=$(dirname "$d")
 done
 
-[ -z "$ROOT" ] && exit 0
+if [ -z "$ROOT" ]; then
+  finish
+fi
 case "$EXT" in
-  ts|tsx|js|jsx) (cd "$ROOT" && npx --yes prettier --write "$FILE_PATH") ;;
+  ts|tsx|js|jsx) (cd "$ROOT" && npx --yes prettier --write "$FILE_PATH" >/dev/null 2>&1 || true) ;;
   py)
-    if has_black "$ROOT"; then (cd "$ROOT" && black "$FILE_PATH")
-    elif has_ruff_fmt "$ROOT"; then (cd "$ROOT" && ruff format "$FILE_PATH"); fi ;;
+    if has_black "$ROOT"; then (cd "$ROOT" && black "$FILE_PATH" >/dev/null 2>&1 || true)
+    elif has_ruff_fmt "$ROOT"; then (cd "$ROOT" && ruff format "$FILE_PATH" >/dev/null 2>&1 || true); fi ;;
 esac
-exit 0
+finish

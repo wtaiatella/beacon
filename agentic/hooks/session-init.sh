@@ -14,10 +14,25 @@ const proto = require(process.env.HOOK_DIR + "/lib/hook-protocol");
 const input = proto.readInput();
 const root = proto.workspaceRootOf(input, "");
 const ide = proto.ideOf(input);
-process.stdout.write(String(root) + "\n" + String(ide) + "\n");
+const convId = proto.sessionIdOf(input);
+const execNum = input && input.executionNum !== undefined ? String(input.executionNum) : "";
+process.stdout.write([String(root), String(ide), String(convId), execNum].join("\n") + "\n");
 ' 2>/dev/null || true)
 WS_ROOT=$(printf '%s\n' "$META" | sed -n '1p')
 IDE=$(printf '%s\n' "$META" | sed -n '2p')
+CONV_ID=$(printf '%s\n' "$META" | sed -n '3p')
+EXEC_NUM=$(printf '%s\n' "$META" | sed -n '4p')
+
+# In Antigravity, PreInvocation fires before every model step (including after every tool call).
+# Deduplicate per conversationId so workspace context is injected only once per conversation.
+if [ "$IDE" = "antigravity" ] && [ -n "$CONV_ID" ]; then
+  AGY_STAMP="${TMPDIR:-/tmp}/beacon-agy-session-init-${CONV_ID}"
+  if [ -f "$AGY_STAMP" ] || { [ -n "$EXEC_NUM" ] && [ "$EXEC_NUM" != "0" ]; }; then
+    printf '{}\n'
+    exit 0
+  fi
+  touch "$AGY_STAMP" 2>/dev/null || true
+fi
 
 # Payload root wins. Otherwise walk up from the script until the workspace
 # that contains scripts/tools/spec-status.sh. The installed Cursor copy lives

@@ -684,8 +684,8 @@ install_antigravity_plugin() {
     fi
   done
 
-  chmod +x "$plugin/hooks/"*.sh 2>/dev/null || true
   adapt_antigravity_paths "$plugin"
+  chmod +x "$plugin/hooks/"*.sh 2>/dev/null || true
   printf '%s\n' "$stamp" > "$dest_stamp"
   echo "    installed $ANTIGRAVITY_PLUGIN_NAME globally (~/.gemini/config/plugins/$ANTIGRAVITY_PLUGIN_NAME)"
 }

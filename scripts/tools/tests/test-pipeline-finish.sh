@@ -50,6 +50,36 @@ rc=0
 "$PF" --ticket "$TICKET" --no-commit >/dev/null 2>&1 || rc=$?
 [ "$rc" -ne 0 ] || fail "expected non-zero exit for bad attach-target"
 
+# --- _state.json repo fallback (when attach-target.txt is absent) ---
+rm -f "$ROOT/$TICKET/_run/attach-target.txt"
+cat >"$ROOT/$TICKET/_state.json" <<EOF
+{
+  "ticket": "TEST-1",
+  "repo": "$fake_canon",
+  "branch": "fix/TEST-1"
+}
+EOF
+out_state=$("$PF" --ticket "$TICKET" --no-commit 2>&1) || fail "pipeline-finish with _state.json repo"
+root_line_state=$(printf '%s\n' "$out_state" | awk '/^=== git-root ===$/{getline; print; exit}')
+[ "$root_line_state" = "$fake_canon" ] || fail "_state.json repo: expected $fake_canon, got $root_line_state"
+
+# --- --repo flag overrides _state.json ---
+out_repo_flag=$("$PF" --ticket "$TICKET" --repo "$fake_canon" --no-commit 2>&1) || fail "pipeline-finish with --repo"
+root_line_flag=$(printf '%s\n' "$out_repo_flag" | awk '/^=== git-root ===$/{getline; print; exit}')
+[ "$root_line_flag" = "$fake_canon" ] || fail "--repo: expected $fake_canon, got $root_line_flag"
+
+# --- Invalid _state.json repo fails closed (does not fall back to $ROOT) ---
+cat >"$ROOT/$TICKET/_state.json" <<EOF
+{
+  "ticket": "TEST-1",
+  "repo": "non-existent-child-repo-xyz"
+}
+EOF
+rc=0
+"$PF" --ticket "$TICKET" --no-commit >/dev/null 2>&1 || rc=$?
+[ "$rc" -ne 0 ] || fail "expected non-zero exit for missing _state.json repo"
+rm -f "$ROOT/$TICKET/_state.json"
+
 # --- detach-workspace: only removes session.code-workspace ---
 touch "$ROOT/$TICKET/_run/session.code-workspace"
 printf '%s\n' 'keep timeline' >>"$ROOT/$TICKET/_run/timeline.md"

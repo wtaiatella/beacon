@@ -76,15 +76,23 @@ gating); you do not have the authority to request one that wasn't registered.
   have been scheduled and wasn't)?
 - **Ambiguity / actionability for `/prd`**: /100 — can `/prd` act on each finding without having
   to guess what it means? Vague findings ("there might be an issue in auth") score low; concrete
-  ones (file path, what exists, what's missing) score high.
+  ones (file path, what exists, what's missing) score high. **Business rule ambiguity gate (HITL):**
+  if the ticket contains underspecified business rules (e.g., physical hard-delete vs. soft-delete/archiving,
+  execution cadence/trigger mechanism for a "periodic routine", retention window, or permission boundary)
+  and a specialist brief or the merged brief populates that business rule with an unconfirmed agent
+  assumption instead of surfacing it as an explicit open question / unverified premise for human
+  confirmation, flag the brief as **INCOMPLETE** and score this factor below the pass threshold so
+  `Task(scrum)` emits **`ASK_USER`** or **`REWORK`** before technical specification (`Task(spectech)`).
 - **Evidence quality**: /100 — every claim a later step might treat as scope is tagged
-  `[executed]`, `[code]`, or `[inferred]`. An `[inferred]` claim that decides scope is listed
+  `[executed]`, `[code]`, or `[inferred]`. An `[inferred]` claim that decides scope (or an unconfirmed
+  agent assumption about a business rule) is listed
   under **Unverified premises**, with what would verify it. Score below the pass threshold when
   such a claim is unlabeled or is written as established fact. Keep the score below the pass
   threshold when a scope-determining premise was checked once and still cannot be confirmed
   by a file read or a documented run; fill **Human check** instead of asking for the same
-  attempt again. A product choice stays an open question; do not treat it as an unverified
-  premise.
+  attempt again. A product choice or ambiguous business rule (e.g. deletion policy, trigger cadence)
+  stays an explicit open question requiring human confirmation (`ASK_USER`); never let an agent
+  assumption close it silently.
 - **Repro quality** (bug tickets where `repro-specialist` attempted reproduction, or a project
   skill or agent with `role: replace` and `covers: repro` did): /100 — if it reproduced, is the
   evidence concrete (verbatim error, command)? If it didn't attempt or couldn't, is that honestly
