@@ -5,7 +5,7 @@
         "matcher": "run_command",
         "hooks": [
           {
-            "command": "./hooks/before-shell.sh",
+            "command": "bash ./hooks/before-shell.sh",
             "timeout": 30
           }
         ]
@@ -15,10 +15,10 @@
   "beacon-read-gate": {
     "PreToolUse": [
       {
-        "matcher": "view_file",
+        "matcher": "view_file|read_file",
         "hooks": [
           {
-            "command": "./hooks/before-read.sh",
+            "command": "bash ./hooks/before-read.sh",
             "timeout": 30
           }
         ]
@@ -28,10 +28,10 @@
   "beacon-write-gate": {
     "PreToolUse": [
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|write_file|edit_file",
         "hooks": [
           {
-            "command": "./hooks/subagent-gate.sh",
+            "command": "bash ./hooks/subagent-gate.sh",
             "timeout": 30
           }
         ]
@@ -41,10 +41,10 @@
   "beacon-format-on-edit": {
     "PostToolUse": [
       {
-        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|write_file|edit_file",
         "hooks": [
           {
-            "command": "./hooks/format-on-edit.sh",
+            "command": "bash ./hooks/format-on-edit.sh",
             "timeout": 30
           }
         ]
@@ -54,7 +54,7 @@
   "beacon-session-init": {
     "PreInvocation": [
       {
-        "command": "./hooks/session-init.sh",
+        "command": "bash ./hooks/session-init.sh",
         "timeout": 30
       }
     ]
@@ -62,11 +62,11 @@
   "beacon-session-end": {
     "Stop": [
       {
-        "command": "./hooks/audit-log.sh",
+        "command": "bash ./hooks/audit-log.sh",
         "timeout": 30
       },
       {
-        "command": "./hooks/session-verify.sh",
+        "command": "bash ./hooks/session-verify.sh",
         "timeout": 30
       }
     ]

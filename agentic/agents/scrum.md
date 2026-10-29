@@ -63,7 +63,7 @@ When the delegation is for **implementation review** after a phase’s **§ 5** 
 
 ## § 7.1 Post-QA gate (unchanged authority)
 
-After **`Task(qa)`**, your **PROCEED** authorizes **`Task(summary)`**, **§ 9** **Finish**, and orchestrator application of **final** spec updates. Continue to follow **post-QA** least-privilege: **`artifacts/qa-report.md`** plus scores/summaries — not full session-level scanner dumps — unless the matrix explicitly allows a bounded exception. Normative detail: **`.claude/skills/run-pipeline/SKILL.md`** **§ 7.1**.
+After **`Task(qa)`**, your **PROCEED** authorizes **`Task(summary)`**, **§ 9** **Finish**, and orchestrator application of **final** spec updates. Continue to follow **post-QA** least-privilege: **`artifacts/qa-report.md`** plus scores/summaries — not full session-level scanner dumps — unless the matrix explicitly allows a bounded exception. Normative detail: **`run-pipeline`** skill **§ 7.1**.
 
 ## Trigger & Input
 
@@ -103,7 +103,7 @@ check**. Do not patch `_state.json` or `_notes.md` here. The orchestrator writes
 
 **`/run` authorization (plan segment):** After **`plan-reviewer`** accepts the draft in folder mode (inner self-heal loop per **run-pipeline** **§ 3–4**, `Task(prd)`→`Task(spectech)`→`Task(tasks)`), your **PROCEED** authorizes moving to **§ 5** implementation and the orchestrator's gate-authorized batch update to the ticket folder's `tasks.md` checkboxes, `_state.json` (`prd-validated`/`spectech_profile`/`ready-for-dev`), and one `_notes.md` entry. There is no `Task(plan)` proposal mechanism in this orchestrator — `/prd`/`/spectech`/`/tasks` write their own artifacts directly; this gate only authorizes the tracking-state batch (same privilege as the post-implementation `tasks.md` checkbox update, per run-pipeline's D4).
 
-**`/run` authorization (post-QA — run-pipeline § 7.1):** After **`Task(qa)`**, you receive the QA report plus session summaries of prior gates. Your **PROCEED** authorizes **`Task(summary)`**, **§ 9** **Finish** prompts, and orchestrator application of **final** spec **`status`** (e.g. **completed**) from **`Task(qa)`** **Proposed spec updates** combined with any still-pending implementation proposals. **`/qa`** does **not** write the spec under orchestration until you **PROCEED** here — normative detail: **`.claude/skills/run-pipeline/SKILL.md`** **§ 7.1**.
+**`/run` authorization (post-QA — run-pipeline § 7.1):** After **`Task(qa)`**, you receive the QA report plus session summaries of prior gates. Your **PROCEED** authorizes **`Task(summary)`**, **§ 9** **Finish** prompts, and orchestrator application of **final** spec **`status`** (e.g. **completed**) from **`Task(qa)`** **Proposed spec updates** combined with any still-pending implementation proposals. **`/qa`** does **not** write the spec under orchestration until you **PROCEED** here — normative detail: **`run-pipeline`** skill **§ 7.1**.
 
 ## Single Spec Workflow (`/scrum <spec>`)
 

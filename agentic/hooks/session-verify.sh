@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # session-verify — SessionEnd / sessionEnd companion: warn on secrets churn,
 # security markers, non-executable hooks, and review-status specs with open tasks.
-# Never blocks. Checks both .claude/hooks and .cursor/hooks for executability.
+# Never blocks. Checks active hook directory and .cursor/hooks/beacon for executability.
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
+export HOOK_DIR="$DIR"
 export SESSION_VERIFY_ROOT="$ROOT"
 export SESSION_VERIFY_INPUT="$(cat || true)"
 node <<'NODE'
@@ -17,6 +18,9 @@ try {
   input = JSON.parse(process.env.SESSION_VERIFY_INPUT || "{}");
 } catch (e) { /* session payload optional */ }
 const root = proto.workspaceRootOf(input, process.env.SESSION_VERIFY_ROOT);
+if (!proto.isBeaconWorkspace(root)) {
+  proto.allow(input);
+}
 const warnings = [];
 
 function sh(cmd, opts) {
@@ -52,19 +56,20 @@ for (const rel of files) {
   } catch (e) { /* skip */ }
 }
 
-function checkHookDir(relDir) {
-  const hookDir = path.join(root, relDir);
+function checkHookDir(hookDir, label) {
   try {
     for (const name of fs.readdirSync(hookDir)) {
       if (!name.endsWith(".sh")) continue;
       const hp = path.join(hookDir, name);
       const st = fs.statSync(hp);
-      if ((st.mode & 0o111) === 0) warnings.push("Hook script not executable: " + relDir + "/" + name);
+      if ((st.mode & 0o111) === 0) warnings.push("Hook script not executable: " + label + "/" + name);
     }
   } catch (e) { /* skip missing dir */ }
 }
-checkHookDir(".claude/hooks");
-checkHookDir(".cursor/hooks");
+if (process.env.HOOK_DIR) {
+  checkHookDir(process.env.HOOK_DIR, "hooks");
+}
+checkHookDir(path.join(root, ".cursor", "hooks", "beacon"), ".cursor/hooks/beacon");
 
 const specsDir = path.join(root, "docs", "specs");
 try {
@@ -105,4 +110,5 @@ try {
 if (warnings.length) {
   process.stderr.write("session-verify warnings:\n- " + warnings.join("\n- ") + "\n");
 }
+proto.allow(input);
 NODE

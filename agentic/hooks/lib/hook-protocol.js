@@ -109,11 +109,17 @@ function commandOf(input) {
 function filePathOf(input) {
    const ti = toolInput(input);
    return (
+      ti.Path ||
       ti.TargetFile ||
       ti.AbsolutePath ||
       ti.file_path ||
       ti.filePath ||
-      (input && (input.file_path || input.filePath || input.TargetFile || input.AbsolutePath)) ||
+      (input &&
+         (input.Path ||
+            input.file_path ||
+            input.filePath ||
+            input.TargetFile ||
+            input.AbsolutePath)) ||
       ''
    );
 }
@@ -131,17 +137,67 @@ function cwdOf(input, fallback) {
    );
 }
 
+const path = require('path');
+
+/**
+ * Walk up from a candidate directory looking for a Beacon workspace marker
+ * (scripts/tools/spec-status.sh or WORKSPACE.md). When a user opens Claude/Cursor/AGY
+ * inside a child repo (e.g. <workspace>/br-tax-engine), this resolves the outer
+ * workspace root. If the candidate does not exist on disk (e.g. unit test virtual path)
+ * or no ancestor has a marker, returns the original candidate unchanged.
+ */
+function findBeaconWorkspaceRoot(candidate) {
+   if (!candidate || typeof candidate !== 'string') return '';
+   try {
+      if (!fs.existsSync(candidate)) return candidate;
+      let cur = path.resolve(candidate);
+      while (cur && cur !== path.dirname(cur)) {
+         if (
+            fs.existsSync(path.join(cur, 'scripts', 'tools', 'spec-status.sh')) ||
+            fs.existsSync(path.join(cur, 'WORKSPACE.md')) ||
+            fs.existsSync(path.join(cur, 'agentic', 'AGENTS.md'))
+         ) {
+            return cur;
+         }
+         cur = path.dirname(cur);
+      }
+   } catch (_) {
+      // fail-open
+   }
+   return candidate;
+}
+
+function isBeaconWorkspace(root) {
+   if (!root || typeof root !== 'string') return false;
+   try {
+      return (
+         fs.existsSync(path.join(root, 'scripts', 'tools', 'spec-status.sh')) ||
+         fs.existsSync(path.join(root, 'WORKSPACE.md')) ||
+         fs.existsSync(path.join(root, 'agentic', 'AGENTS.md')) ||
+         fs.existsSync(path.join(root, 'docs', 'specs'))
+      );
+   } catch (_) {
+      return false;
+   }
+}
+
 function workspaceRootOf(input, fallback = process.cwd()) {
    if (input && Array.isArray(input.workspacePaths) && input.workspacePaths.length > 0) {
-      return input.workspacePaths[0];
+      return findBeaconWorkspaceRoot(input.workspacePaths[0]);
    }
    if (input && Array.isArray(input.workspace_roots) && input.workspace_roots.length > 0) {
-      return input.workspace_roots[0];
+      return findBeaconWorkspaceRoot(input.workspace_roots[0]);
    }
    if (process.env.HOOK_ROOT) {
-      return process.env.HOOK_ROOT;
+      return findBeaconWorkspaceRoot(process.env.HOOK_ROOT);
    }
-   return fallback;
+   if (process.env.CLAUDE_PROJECT_DIR) {
+      return findBeaconWorkspaceRoot(process.env.CLAUDE_PROJECT_DIR);
+   }
+   if (input && typeof input.cwd === 'string' && input.cwd) {
+      return findBeaconWorkspaceRoot(input.cwd);
+   }
+   return fallback ? findBeaconWorkspaceRoot(fallback) : fallback;
 }
 
 function sessionIdOf(input) {
@@ -178,14 +234,16 @@ function toolNameOf(input) {
    const s = String(raw || '').trim();
    if (!s) return 'unknown';
    if (s === 'Bash' || s === 'run_command') return 'Shell';
-   if (s === 'ReadFile' || s === 'view_file') return 'Read';
+   if (s === 'ReadFile' || s === 'view_file' || s === 'read_file') return 'Read';
    if (
       s === 'Write' ||
       s === 'Edit' ||
       s === 'MultiEdit' ||
       s === 'write_to_file' ||
       s === 'replace_file_content' ||
-      s === 'multi_replace_file_content'
+      s === 'multi_replace_file_content' ||
+      s === 'write_file' ||
+      s === 'edit_file'
    )
       return 'Write';
    return s;
@@ -210,6 +268,13 @@ function allow(input) {
    } else if (isCursor(input)) {
       // Gating hooks expect a permission decision; observers can ignore it.
       process.stdout.write(JSON.stringify({ permission: 'allow' }));
+   }
+   process.exit(0);
+}
+
+function postToolUseDone(input) {
+   if (isAntigravity(input)) {
+      process.stdout.write(JSON.stringify({}));
    }
    process.exit(0);
 }
@@ -242,6 +307,11 @@ function deny(input, reason) {
 function emitSessionStartContext(input, text) {
    const ctx = String(text || '');
    if (isAntigravity(input)) {
+      // Avoid re-injecting the full workspace context on tool-call continuation steps within the same turn
+      if (Number(input.executionNum) > 0 || !ctx.trim()) {
+         process.stdout.write(JSON.stringify({}));
+         process.exit(0);
+      }
       process.stdout.write(
          JSON.stringify({
             injectSteps: [
@@ -275,12 +345,15 @@ module.exports = {
    commandOf,
    filePathOf,
    cwdOf,
+   findBeaconWorkspaceRoot,
+   isBeaconWorkspace,
    workspaceRootOf,
    sessionIdOf,
    ideOf,
    toolNameOf,
    durationOf,
    allow,
+   postToolUseDone,
    deny,
    emitSessionStartContext,
 };
