@@ -37,6 +37,7 @@ Two ideas sit on top of each other:
 - [Platform reference docs](#platform-reference-docs)
 - [Rules of engagement](#rules-of-engagement)
 - [Extending the workspace](#extending-the-workspace)
+- [License](#license)
 
 ---
 
@@ -53,25 +54,26 @@ Procedure: [run-pipeline skill](agentic/skills/run-pipeline/SKILL.md) · [human-
 The SDD framework (agents, skills, commands, hooks) has **one canonical source**: `agentic/`. It is **installed** into whichever IDE runtime(s) you use — nothing under `.claude/` or `.cursor/` that came from `agentic/` should be hand-edited; edit the source and reinstall.
 
 ```bash
-scripts/setup-agentic.sh claude   # → user-level Claude plugin `beacon-sdd` (/beacon-sdd:<name>) + root CLAUDE.md
-scripts/setup-agentic.sh cursor   # → .cursor/{agents,hooks,hooks.json,rules,skills}
-scripts/setup-agentic.sh all      # claude + cursor (+ antigravity stub)
+scripts/setup-agentic.sh claude       # → user-level Claude plugin `beacon-sdd` (/beacon-sdd:<name>) + root CLAUDE.md
+scripts/setup-agentic.sh cursor       # → .cursor/{agents,hooks,hooks.json,rules,skills}
+scripts/setup-agentic.sh antigravity  # → user-level Antigravity plugin `beacon-sdd` (~/.gemini/config/plugins/beacon-sdd)
+scripts/setup-agentic.sh all          # claude + cursor + antigravity
 ```
 
-| Layer | Canonical source | Claude Code | Cursor |
-|---|---|---|---|
-| Personas / subagents | `agentic/agents/` | `beacon-sdd` plugin subagents (Task tool) | `.cursor/agents/beacon/` |
-| Commands | `agentic/commands/` | `/beacon-sdd:<name>` slash commands | — (Cursor does not mirror commands as skills) |
-| Skills | `agentic/skills/` | `beacon-sdd` plugin skills | `.cursor/skills/beacon/` |
-| Hooks | `agentic/hooks/` + `agentic/adapters/<ide>/hooks/` | `beacon-sdd` plugin `hooks/hooks.json` | `.cursor/hooks.json` + `.cursor/hooks/beacon/` |
-| **Shared SDD contract** | `agentic/AGENTS.md` | root `AGENTS.md` (generated; imported via `@AGENTS.md` in `CLAUDE.md`) | root `AGENTS.md` (generated; read natively) |
-| Always-on identity (IDE-specific wiring only) | `agentic/adapters/claude/CLAUDE.md` | root `CLAUDE.md` (generated — do not edit) | — |
-| Always-on identity (IDE-specific wiring only) | `agentic/adapters/cursor/rules/00-workspace-router.mdc` | — | `.cursor/rules/00-workspace-router.mdc` (generated) |
+| Layer | Canonical source | Claude Code | Cursor | Google Antigravity |
+|---|---|---|---|---|
+| Personas / subagents | `agentic/agents/` | `beacon-sdd` plugin subagents (Task tool) | `.cursor/agents/beacon/` | `beacon-sdd` plugin agents |
+| Commands | `agentic/commands/` | `/beacon-sdd:<name>` slash commands | — (Cursor does not mirror commands as skills) | `beacon-sdd` plugin skills |
+| Skills | `agentic/skills/` | `beacon-sdd` plugin skills | `.cursor/skills/beacon/` | `beacon-sdd` plugin skills |
+| Hooks | `agentic/hooks/` + `agentic/adapters/<ide>/hooks/` | `beacon-sdd` plugin `hooks/hooks.json` | `.cursor/hooks.json` + `.cursor/hooks/beacon/` | `beacon-sdd` plugin `hooks/hooks.json` |
+| **Shared SDD contract** | `agentic/AGENTS.md` | root `AGENTS.md` (generated; imported via `@AGENTS.md` in `CLAUDE.md`) | root `AGENTS.md` (generated; read natively) | root `AGENTS.md` (generated; read natively) |
+| Always-on identity (IDE-specific wiring only) | `agentic/adapters/claude/CLAUDE.md` | root `CLAUDE.md` (generated — do not edit) | — | — |
+| Always-on identity (IDE-specific wiring only) | `agentic/adapters/cursor/rules/00-workspace-router.mdc` | — | `.cursor/rules/00-workspace-router.mdc` (generated) | — |
+| Always-on identity (IDE-specific wiring only) | `agentic/adapters/antigravity/rules/beacon-router.md` | — | — | `beacon-sdd` plugin `rules/beacon-router.md` |
 
 **`agentic/AGENTS.md`** is the single normative source for workspace identity, the ticket-folder
 contract, personas, the `/run` pipeline, confidence scoring, multi-repo rules, and the error
-protocol — written once, read by both IDEs, so it can't drift between a Claude-flavored and a
-Cursor-flavored copy of the same rules. `CLAUDE.md` and `00-workspace-router.mdc` now hold **only**
+protocol — written once, read by all supported IDEs, so it can't drift between IDE-flavored copies of the same rules. `CLAUDE.md`, `00-workspace-router.mdc`, and `beacon-router.md` now hold **only**
 what genuinely differs per tool: exact invocation mechanics, model-selection tables, and hook
 event/matcher names.
 
@@ -84,7 +86,7 @@ event/matcher names.
 Every unit of work — a support ticket or a feature — lives in **one folder**:
 
 ```
-docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with a Jira key, e.g. BG-10965
+docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with a Jira key, e.g. PROJ-101
 docs/specs/{YYYY-MM-DD}-{slug}/                   # without a ticket key
 ├── _state.json      # machine state — the ONLY control file (never context.json)
 ├── _notes.md        # human/agent running log — decisions + "where to resume"
@@ -491,7 +493,13 @@ default. See [model-catalog](docs/model-catalog.md).
 
 ## Extending the workspace
 
-Add agents under `agentic/agents/`, skills under `agentic/skills/`, commands under `agentic/commands/`, hooks under `agentic/hooks/` (or the per-IDE `agentic/adapters/<ide>/hooks/`) — then reinstall with `scripts/setup-agentic.sh <claude|cursor|all>`. Project-specific skills, agents, and commands stay in the project and are not installed by that script. See [CONTRIBUTING.md](CONTRIBUTING.md) and `scripts/upgrade.sh`.
+Add agents under `agentic/agents/`, skills under `agentic/skills/`, commands under `agentic/commands/`, hooks under `agentic/hooks/` (or the per-IDE `agentic/adapters/<ide>/hooks/`) — then reinstall with `scripts/setup-agentic.sh <claude|cursor|antigravity|all>`. Project-specific skills, agents, and commands stay in the project and are not installed by that script. See [CONTRIBUTING.md](CONTRIBUTING.md) and `scripts/upgrade.sh`.
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE).
 
 ---
 

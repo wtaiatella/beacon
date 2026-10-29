@@ -29,6 +29,7 @@ docs/adapters/
 # Personal working notes / scratch (diagrams, analysis drafts, etc.) — not
 # part of the framework or a project's own tracked history.
 /myDocs/
+/docs/myDocs/
 
 # Per-install, per-IDE model override (optional, local to this checkout/
 # machine — see agentic/models/example.yml, the only tracked file in that dir).

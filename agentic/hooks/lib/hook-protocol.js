@@ -142,7 +142,7 @@ const path = require('path');
 /**
  * Walk up from a candidate directory looking for a Beacon workspace marker
  * (scripts/tools/spec-status.sh or WORKSPACE.md). When a user opens Claude/Cursor/AGY
- * inside a child repo (e.g. <workspace>/br-tax-engine), this resolves the outer
+ * inside a child repo (e.g. <workspace>/orders-service), this resolves the outer
  * workspace root. If the candidate does not exist on disk (e.g. unit test virtual path)
  * or no ancestor has a marker, returns the original candidate unchanged.
  */

@@ -57,7 +57,7 @@ From the user’s `/run` line, extract:
 
 - **Targets:** a **ticket-folder path** or a **Jira key** — never a single-file `spec.md` path (FR-4, FR-5, AC-6):
   - **Ticket folder:** `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (with Jira key) or `docs/specs/{YYYY-MM-DD}-{slug}/` (without key) — folder containing `prd.md`, `spectech.md`, `tasks.md`, `_state.json`, `_notes.md` (see AGENTS.md — Spec Format).
-  - **Jira key:** e.g. `BG-10965` — resolves to an existing ticket folder (matched via `_state.json.ticket`) or scaffolds a new one; see **Ticket-folder resolution (Jira-key primary argument)** below.
+  - **Jira key:** e.g. `PROJ-101` — resolves to an existing ticket folder (matched via `_state.json.ticket`) or scaffolds a new one; see **Ticket-folder resolution (Jira-key primary argument)** below.
   - **Shorthand:** slug match (finds the folder), `latest` (most recent).
   - Single-file `spec.md` paths and bare target-directory discovery for a spec-authoring persona are **not** accepted — the required orchestrator's front end is always **`Task(prd)`**→**`Task(spectech)`**→**`Task(tasks)`** (FR-3); there is no `Task(plan)` and no `/plan` in this orchestrator (FR-4).
 - **Goal text:** remainder after targets/flags.
@@ -68,7 +68,7 @@ Implements spectech's **D8**. When the primary argument matches a Jira-key patte
 
 1. Search `docs/specs/*/_state.json` for a `.ticket` field matching the key.
 2. **If found:** use that folder — proceed to **§3-4** using the existing `_state.json`/`_notes.md`.
-3. **If not found:** create the folder scaffold `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (date = today, `{TICKET-KEY}` is the Jira key as-is e.g. `BG-10965`, slug is a short kebab-case description derived from the key) with a bare `_state.json` (ticket key set, `steps` empty) + `_notes.md` (per AGENTS.md's Spec Format section), then proceed to **§3-4** with the Jira key passed through as context to `Task(prd)`.
+3. **If not found:** create the folder scaffold `docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/` (date = today, `{TICKET-KEY}` is the Jira key as-is e.g. `PROJ-101`, slug is a short kebab-case description derived from the key) with a bare `_state.json` (ticket key set, `steps` empty) + `_notes.md` (per AGENTS.md's Spec Format section), then proceed to **§3-4** with the Jira key passed through as context to `Task(prd)`.
 4. **Does not** run project-specific intake/repro tools — FR-10 is explicit that optional
    project overlays are not wired into the required orchestrator. If the ticket folder is not
    ready yet, scaffold it here (or the user prepares it first), then proceed with
@@ -131,7 +131,7 @@ score/decision that authorized stopping, and the **exact next command**, e.g.:
 ```
 STAGE COMPLETE: plan
 prd.md, spectech.md, tasks.md written and reviewed (plan-reviewer: 86%, scrum: PROCEED).
-Next: /run docs/specs/2026-04-10-BG-123-example/ --dev --resume
+Next: /run docs/specs/2026-04-10-PROJ-123-example/ --dev --resume
 ```
 
 This is **not** a failure or a partial run to apologize for — treat it as a normal, successful

@@ -212,12 +212,12 @@ After all servers and specialists, print a summary table:
 ```
 | Tool / specialist | Kind       | Status      | Key config                  |
 |--------------------|-----------|-------------|------------------------------|
-| figma              | mcp       | verified ✓  | Project: "BR Tax UI Design"  |
-| confluence         | mcp       | verified ✓  | Space: BR-TAX                |
+| figma              | mcp       | verified ✓  | Project: "Checkout UI Design"|
+| confluence         | mcp       | verified ✓  | Space: ENG                   |
 | glean              | mcp       | verified ✓  | No workspace config needed   |
 | payments-domain    | specialist| registered  | Grounds tickets in payments  |
 | reproduce-issue    | skill     | registered  | Boots this stack and reproduces |
-| tax-investigator   | agent     | registered  | Investigates this framework's failures |
+| order-investigator | agent     | registered  | Investigates this framework's failures |
 ```
 
 Then remind:
@@ -304,7 +304,7 @@ health-check; the entry either exists (and its agent file is assumed to exist) o
 
 **Suggested use examples (adapt to what was discovered):**
 - "Activate when PRD involves UI, screens, or component design in web-ui."
-- "Activate when ticket involves Migrate Standard integration or ISS retention rules."
+- "Activate when ticket involves webhook retry logic or order retention rules."
 - "Activate for broad enterprise knowledge search when ticket context is ambiguous."
 - *(specialist)* "Activate when the ticket touches payment processing or billing cycles."
 - *(skill)* "Boots this project's services and reproduces the reported issue end to end."

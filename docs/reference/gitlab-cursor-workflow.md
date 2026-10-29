@@ -4,9 +4,9 @@ This workspace **ships through GitLab** merge requests. Agents **document** and 
 
 ## Supported GitLab MCP (`@zereight/mcp-gitlab`)
 
-Avalara SCM is **GitLab 17.5**. The **native** GitLab HTTP MCP (`/api/v4/mcp`) requires **18.3+**. The **Cursor marketplace GitLab plugin** OAuths to **gitlab.com** by default and must **not** be installed — it fights the working server.
+Self-managed GitLab instances prior to **18.3+** do not expose the **native** GitLab HTTP MCP (`/api/v4/mcp`). In addition, the **Cursor marketplace GitLab plugin** OAuths to **gitlab.com** by default and must **not** be installed when targeting a self-managed GitLab host — it conflicts with the stdio server.
 
-Use the **stdio** server **`@zereight/mcp-gitlab`** against the SCM REST API.
+Use the **stdio** server **`@zereight/mcp-gitlab`** against your GitLab REST API.
 
 **Live config (Cursor):** `~/.cursor/mcp.json` (user-global). Do **not** put PATs in git.
 
@@ -16,7 +16,7 @@ Use the **stdio** server **`@zereight/mcp-gitlab`** against the SCM REST API.
   "args": ["-y", "@zereight/mcp-gitlab"],
   "env": {
     "GITLAB_PERSONAL_ACCESS_TOKEN": "${env:GITLAB_PERSONAL_ACCESS_TOKEN}",
-    "GITLAB_API_URL": "https://scm.platform.us-west-2.avalara.io/api/v4",
+    "GITLAB_API_URL": "${env:GITLAB_API_URL}",
     "GITLAB_READ_ONLY_MODE": "false",
     "USE_GITLAB_WIKI": "false",
     "USE_MILESTONE": "false",
@@ -27,19 +27,19 @@ Use the **stdio** server **`@zereight/mcp-gitlab`** against the SCM REST API.
 
 **Requirements:**
 
-- Env var **`GITLAB_PERSONAL_ACCESS_TOKEN`** (PAT on SCM with `api` scope as needed). Cursor interpolates `${env:…}` — no token in the JSON file.
-- **`GITLAB_API_URL`** must include **`/api/v4`** (API root, not the web UI host alone).
+- Env var **`GITLAB_PERSONAL_ACCESS_TOKEN`** (PAT on your GitLab instance with `api` scope as needed). Cursor interpolates `${env:…}` — no token in the JSON file.
+- **`GITLAB_API_URL`** (e.g. `https://gitlab.example.com/api/v4`) must include **`/api/v4`** (API root, not the web UI host alone).
 - Node on `PATH` (or an absolute `command` / `PATH` in `env`, as on some nvm setups).
 
 **Do not:**
 
-- Install the Cursor **GitLab** marketplace plugin.
-- Point MCP at `https://gitlab.com/api/v4/mcp` or `https://scm…/api/v4/mcp` (native MCP is not on this instance).
+- Install the Cursor **GitLab** marketplace plugin when using a self-managed host.
+- Point MCP at `https://gitlab.com/api/v4/mcp` or `https://gitlab.example.com/api/v4/mcp` unless your instance is on 18.3+ with native MCP enabled.
 - Commit tokens or OAuth client secrets.
 
 **Not using GitLab MCP:** omit the **`GitLab`** block from `~/.cursor/mcp.json`. Personas degrade gracefully.
 
-After a config change: **Settings → Tools & MCP**, confirm a single **GitLab** / `user-GitLab` server (no `plugin-gitlab-GitLab`). Smoke test: `health_check` then `whoami` — URL must be the SCM API, user your Avalara account.
+After a config change: **Settings → Tools & MCP**, confirm a single **GitLab** / `user-GitLab` server (no `plugin-gitlab-GitLab`). Smoke test: `health_check` then `whoami` — URL must be your GitLab API, user your authenticated account.
 
 ## Human-in-the-loop MR flow (summary)
 

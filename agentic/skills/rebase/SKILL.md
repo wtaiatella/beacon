@@ -30,9 +30,9 @@ Do not ask again for those confirmations after a clean run.
 
 - **Trigger:** `/rebase [repo ...] [ticket-key]` — arrives as `$ARGUMENTS`.
 - Split `$ARGUMENTS` on whitespace. Classify each token independently (order does not matter):
-  - **Ticket key:** matches `^[A-Za-z][A-Za-z0-9]+-[0-9]+$` (e.g. `BG-11320`, `AVT-102897`).
+  - **Ticket key:** matches `^[A-Za-z][A-Za-z0-9]+-[0-9]+$` (e.g. `PROJ-123`, `ACME-456`).
     At most **one**. More than one → stop-gate.
-  - **Explicit branch:** contains `/` and is not a child-repo name (e.g. `feat/BG-11320`). Treat
+  - **Explicit branch:** contains `/` and is not a child-repo name (e.g. `feat/PROJ-123`). Treat
     as the exact branch name; skip ticket-key globbing. At most **one** of {ticket key, explicit
     branch}.
   - **Repo name:** anything else — exact child-folder name or unambiguous prefix (`engine` →
@@ -54,7 +54,7 @@ walk every ticket folder to pick a key.
 **A. Ticket key**
 
 1. Collect Jira keys matching `^[A-Za-z][A-Za-z0-9]+-[0-9]+$` that are the **subject** of this
-   conversation (e.g. `/run BG-11374`, the in-progress ticket). Ignore keys that appear only as
+   conversation (e.g. `/run PROJ-142`, the in-progress ticket). Ignore keys that appear only as
    incidental file names, stash messages, or related-ticket asides.
 2. **Zero** subject tickets, or **two or more** competing subjects → **all** child repos, current
    branch unchanged. Announce: `no single ticket — rebasing all child repos`. Stop here (do not
@@ -80,7 +80,7 @@ existing child-folder names wins.
 3. **Unresolved repo** → stop-gate. Do **not** rebase every clone. Ask the user which repo, or
    to pass `/rebase <repo> <ticket>`.
 
-Announce, e.g. `inferred ticket BG-11374 from conversation; repo payments-api (conversation
+Announce, e.g. `inferred ticket PROJ-142 from conversation; repo payments-api (conversation
 changes)` or `… repo payments-api (_state.json)`.
 
 **C. Branch** for each resolved repo: run **Ticket branch** with the inferred key. If
@@ -110,8 +110,8 @@ targeted repo is on that branch and in sync with `origin`.
 2. **Resolve `<ticket-branch>`:**
    - Explicit branch token → use it as-is (must exist locally or on `origin`).
    - Ticket key → collect local (`git branch --list`) and remote (`git branch -r`) names whose
-     **last path segment** equals the key (case-insensitive), e.g. `feat/BG-11320`,
-     `fix/BG-11320`, `BG-11320`. Also accept a last segment that **starts with** `KEY-` or
+     **last path segment** equals the key (case-insensitive), e.g. `feat/PROJ-123`,
+     `fix/PROJ-123`, `PROJ-123`. Also accept a last segment that **starts with** `KEY-` or
      `KEY_` (slug suffix) when there is no exact segment match.
    - **Ignore** names under `backup/`.
    - Strip the `origin/` prefix from remotes; compare unique short names.
@@ -122,7 +122,7 @@ targeted repo is on that branch and in sync with `origin`.
 4. If there is **no local** branch but `origin/<ticket-branch>` exists:
    `git -C <repo> checkout --track origin/<ticket-branch>`
    (creates the local branch at the remote tip). **Do not** invent a name that does not exist
-   on `origin` (never `git checkout -b feat/BG-11320` from main).
+   on `origin` (never `git checkout -b feat/PROJ-123` from main).
 5. If the local branch exists but HEAD is elsewhere: `git -C <repo> checkout <ticket-branch>`.
 6. **Sync with origin:** `git -C <repo> pull --ff-only` (or fast-forward to `origin/<ticket-branch>`
    if upstream is not set but the remote ref exists). If ff-only fails (diverged), **stop-gate**

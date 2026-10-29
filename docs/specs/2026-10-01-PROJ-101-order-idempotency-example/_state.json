@@ -1,0 +1,16 @@
+{
+  "ticket_key": "PROJ-101",
+  "slug": "order-idempotency-example",
+  "repo": "orders-service",
+  "branch": "feature/PROJ-101-order-idempotency",
+  "commit_policy": "manual",
+  "steps": {
+    "prd": "done",
+    "spectech": "done",
+    "tasks": "done",
+    "implement": "done",
+    "code_review": "done",
+    "summary": "done"
+  }
+}
+

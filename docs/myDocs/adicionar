@@ -1,7 +1,0 @@
-.gitignore merge=union no setup-agentic.sh
-
-no gitignore, em .cursor, ignorar somente as sub pastas beacon, não todo o conteúdo
-
-
-fazer o setup-workspace usar as skills e agentes locais também no pre-plan
-

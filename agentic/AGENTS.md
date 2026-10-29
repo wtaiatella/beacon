@@ -81,7 +81,7 @@ definitions) are documented in your IDE's adapter file.
 Every unit of work — a support ticket or a feature — lives in one **ticket working folder**:
 
 ```
-docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with Jira key (e.g. BG-10965)
+docs/specs/{YYYY-MM-DD}-{TICKET-KEY}-{slug}/      # with Jira key (e.g. PROJ-101)
 docs/specs/{YYYY-MM-DD}-{slug}/                   # without ticket key
 ├── _state.json      # machine state — the ONLY control file (see Spec Format below)
 ├── _notes.md        # human/agent notes: decisions + "where to resume" per step

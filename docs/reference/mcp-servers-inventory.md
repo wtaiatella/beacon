@@ -27,12 +27,12 @@ Optional MCP servers used with this workspace. **GitLab** is a local **stdio** p
 |--|--|
 | **`mcp.json` key** | `GitLab` (Cursor namespace `user-GitLab`) |
 | **Transport** | **stdio** — `@zereight/mcp-gitlab` |
-| **API** | `GITLAB_API_URL` = `https://scm.platform.us-west-2.avalara.io/api/v4` |
+| **API** | `GITLAB_API_URL` = `${env:GITLAB_API_URL}` (e.g. `https://gitlab.example.com/api/v4`) |
 | **Auth** | `${env:GITLAB_PERSONAL_ACCESS_TOKEN}` — never commit the PAT |
 | **Config path** | `~/.cursor/mcp.json` (not a committed HTTP `gitlab.com` / native `/api/v4/mcp` entry) |
 | **Typical use** | Project / MR / issue metadata; MR create/update only after explicit Finish confirmation. |
 
-**Do not install** the Cursor marketplace **GitLab** plugin (OAuth to gitlab.com). Avalara SCM is GitLab **17.5** and has no native `/api/v4/mcp`.
+**Do not install** the Cursor marketplace **GitLab** plugin (OAuth to gitlab.com) when using a self-managed GitLab instance prior to **18.3+** without native `/api/v4/mcp`.
 
 **Tools:** depend on the zereight server version (e.g. `health_check`, `whoami`, `get_project`, `search_repositories`, `list_merge_requests`, `get_merge_request`, approval/protection reads, plus write tools when not in read-only mode). Verify in **Settings → Tools & MCP**.
 
